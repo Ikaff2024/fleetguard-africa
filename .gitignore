@@ -1,0 +1,39 @@
+# Dépendances
+node_modules/
+.pnp/
+.pnp.js
+
+# Build
+dist/
+build/
+server.js
+*.tsbuildinfo
+
+# Tests & qualité
+coverage/
+.vitest/
+playwright-report/
+test-results/
+
+# Environnement & secrets — ne JAMAIS versionner
+.env
+.env.*
+!.env.example
+
+# Outils
+.eslintcache
+.cache/
+.vite/
+
+# OS & éditeurs
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Archives et artefacts lourds (passer par les releases, pas par git)
+*.zip
+*.tar.gz

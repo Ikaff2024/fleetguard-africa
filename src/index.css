@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg-app: #f8fafc;
+    --bg-card: #ffffff;
+    --border-card: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+  }
+
+  html.dark {
+    --bg-app: #0b0f19;
+    --bg-card: #151c2c;
+    --border-card: #222d43;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    color-scheme: dark;
+  }
+
+  html.night-dispatcher {
+    --bg-app: #050811;
+    --bg-card: #0c1220;
+    --border-card: #172033;
+    --text-primary: #f1f5f9;
+    --text-secondary: #8899ac;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Custom scrollbars for Dark & Night Shift Dispatcher modes */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #222d43;
+  border-radius: 4px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ==========================================
+   NATIVE PRINTING STYLES (@media print)
+   ========================================== */
+@media print {
+  /* Hide non-printable interface elements */
+  aside,
+  header,
+  nav,
+  button,
+  .no-print,
+  .offline-sync-drawer {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 10pt !important;
+  }
+
+  /* Printable document container styling */
+  .printable-document {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Force print table background and borders */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+  }
+
+  th, td {
+    border: 1px solid #94a3b8 !important;
+    padding: 6px 8px !important;
+    color: #0f172a !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+}
+
