@@ -7,7 +7,7 @@ export interface OfflineQueueItem {
     | 'GPS_TELEMETRY'
     | 'ROUTE_DISPATCH'
     | 'GEOFENCE_RULE';
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   timestamp: string;
   status: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED';
   errorMessage?: string;
@@ -68,7 +68,7 @@ class OfflineSyncService {
    */
   async enqueueItem(
     type: OfflineQueueItem['type'],
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     tenantOrgId: string,
   ): Promise<OfflineQueueItem> {
     const db = await this.getDB();
@@ -253,13 +253,13 @@ class OfflineSyncService {
           status: syncedIds.includes(i.id) ? 'SYNCED' : 'FAILED',
         })),
       };
-    } catch (err: any) {
+    } catch (err) {
       // Rollback items to FAILED / PENDING on network error
       for (const item of pendingItems) {
         await this.updateStatus(
           item.id,
           'FAILED',
-          err.message || 'Erreur réseau lors de la synchronisation.',
+          err instanceof Error ? err.message : 'Erreur réseau lors de la synchronisation.',
         );
       }
 
@@ -271,7 +271,7 @@ class OfflineSyncService {
         details: pendingItems.map(i => ({
           id: i.id,
           status: 'FAILED',
-          message: err.message,
+          message: err instanceof Error ? err.message : String(err),
         })),
       };
     }
