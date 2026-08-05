@@ -22,6 +22,9 @@ import path from 'node:path';
 import pg from 'pg';
 
 const SQL_FILES = [
+  // Les extensions d'abord : les index de recherche et les colonnes
+  // géographiques en dépendent.
+  'prisma/sql/000_extensions.sql',
   'prisma/sql/001_rls_policies.sql',
   'prisma/sql/002_postgis_and_partitions.sql',
   'prisma/sql/003_auth_functions.sql',
@@ -62,12 +65,12 @@ async function waitForDatabase(connectionString, attempts = 60) {
   }
 }
 
-async function applySqlFiles(connectionString) {
+async function applySqlFiles(connectionString, files = SQL_FILES) {
   const client = new pg.Client({ connectionString });
   await client.connect();
 
   try {
-    for (const file of SQL_FILES) {
+    for (const file of files) {
       const sql = readFileSync(path.join(process.cwd(), file), 'utf8')
         // Les méta-commandes psql (\c, \echo) n'ont pas de sens hors du client
         // interactif ; elles sont retirées avant exécution.
@@ -114,6 +117,10 @@ async function prepareDatabase() {
   }
 
   await waitForDatabase(ownerUrl);
+
+  // Les extensions précèdent les migrations : le schéma déclare des colonnes
+  // `geography`, dont le type n'existe pas sans PostGIS.
+  await applySqlFiles(ownerUrl, ['prisma/sql/000_extensions.sql']);
 
   log('application des migrations Prisma');
   run('npx', ['prisma', 'migrate', 'deploy']);
