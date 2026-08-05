@@ -1,5 +1,6 @@
-# mermaidDiagram
+# Diagramme de flux
 
+```mermaid
 graph TD
     subgraph Mobile_Android ["App Mobile Native Kotlin (Chauffeur / Boîtier)"]
         A[GPS Receiver] --> B[GpsForegroundService]
@@ -31,3 +32,4 @@ graph TD
         P -->|API Requests| G
         P -->|Gemini Prompts| Q[Fleet Intelligence Hub]
     end
+```

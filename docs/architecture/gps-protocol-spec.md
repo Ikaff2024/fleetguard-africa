@@ -1,4 +1,4 @@
-# gpsProtocolSpec
+# Protocole d'ingestion GPS
 
 ### Protocole d'Ingestion GPS & Synchronisation Hors Ligne
 

@@ -1,6 +1,7 @@
-# 9. Plan de Tests et Critères d'Acceptation
+# Plan de tests
 
 ### Stratégie de Test Exhaustive
+
 1. **Tests Unitaires (Moteur de Scoring & Ingestion)** :
    - Vérification du calcul explicable du Driver Safety Score sur 100.
    - Validation des limites d'excès de vitesse selon le type de zone (urbaine 50 km/h, nationale 90 km/h).

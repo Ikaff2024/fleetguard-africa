@@ -1,5 +1,6 @@
-# prismaSchemaText
+# Schéma de données initial
 
+```prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -283,3 +284,4 @@ model AuditLog {
   @@index([organizationId, timestamp])
   @@map("audit_logs")
 }
+```

@@ -1,4 +1,4 @@
-# 2. Structure Complète du Monorepo
+# Structure du monorepo
 
 ```
 fleetguard-africa/

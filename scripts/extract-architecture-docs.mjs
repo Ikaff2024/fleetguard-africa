@@ -23,6 +23,22 @@ const slug = key =>
     .replace(/^-/, '');
 
 const skip = new Set(['title', 'version', 'date', 'author']);
+
+/**
+ * Titres lisibles et langage des blocs de code.
+ *
+ * Les contenus qui ne sont pas de la prose (diagramme, schéma) sont enveloppés
+ * dans un bloc de code : GitHub les rend correctement, et le formateur Markdown
+ * n'en écrase pas l'indentation — ce qui rendrait un diagramme Mermaid invalide.
+ */
+const META = {
+  architectureDecisions: { title: "Décisions d'architecture" },
+  monorepoStructure: { title: 'Structure du monorepo' },
+  mermaidDiagram: { title: 'Diagramme de flux', fence: 'mermaid' },
+  prismaSchemaText: { title: 'Schéma de données initial', fence: 'prisma' },
+  gpsProtocolSpec: { title: "Protocole d'ingestion GPS" },
+  testPlan: { title: 'Plan de tests' },
+};
 const written = [];
 
 for (const [key, value] of Object.entries(SPRINT_0_DOCS)) {
@@ -40,8 +56,14 @@ for (const [key, value] of Object.entries(SPRINT_0_DOCS)) {
 
   if (!body) continue;
 
+  const meta = META[key] ?? {};
+  const heading = meta.title ?? title;
+  const content = meta.fence
+    ? `\`\`\`${meta.fence}\n${String(body).trim()}\n\`\`\``
+    : String(body).trim();
+
   const file = path.join(outputDir, `${slug(key)}.md`);
-  writeFileSync(file, `# ${title}\n\n${String(body).trim()}\n`, 'utf8');
+  writeFileSync(file, `# ${heading}\n\n${content}\n`, 'utf8');
   written.push(path.basename(file));
 }
 
