@@ -56,19 +56,20 @@ docker exec -i fleetguard-postgres psql -U fleetguard -d fleetguard_db \
 
 ## Commandes
 
-| Commande                          | Rôle                                                |
-| --------------------------------- | --------------------------------------------------- |
-| `npm run dev`                     | Serveur de développement (API + Vite)               |
-| `npm run build`                   | Compile le front et le serveur                      |
-| `npm start`                       | Démarre la version compilée                         |
-| `npm run verify`                  | Types + lint + tests — à lancer avant chaque commit |
-| `npm test`                        | Tests unitaires et d'intégration                    |
-| `npm run test:coverage`           | Tests avec couverture                               |
-| `npm run db:migrate`              | Applique les migrations (développement)             |
-| `npm run db:deploy`               | Applique les migrations (production)                |
-| `npm run db:seed`                 | Peuple le jeu de démonstration                      |
-| `npm run db:studio`               | Explorateur de base Prisma                          |
-| `npm run infra:up` / `infra:down` | Services Docker locaux                              |
+| Commande                          | Rôle                                                                    |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| `npm run dev`                     | Serveur de développement (API + Vite)                                   |
+| `npm run build`                   | Compile le front et le serveur                                          |
+| `npm start`                       | Démarre la version compilée                                             |
+| `npm run verify`                  | Types + lint + tests — à lancer avant chaque commit                     |
+| `npm test`                        | Tests unitaires et d'intégration                                        |
+| `npm run test:coverage`           | Tests avec couverture                                                   |
+| `npm run test:smoke <url>`        | Charge la page dans un navigateur et échoue sur toute erreur JavaScript |
+| `npm run db:migrate`              | Applique les migrations (développement)                                 |
+| `npm run db:deploy`               | Applique les migrations (production)                                    |
+| `npm run db:seed`                 | Peuple le jeu de démonstration                                          |
+| `npm run db:studio`               | Explorateur de base Prisma                                              |
+| `npm run infra:up` / `infra:down` | Services Docker locaux                                                  |
 
 ---
 
