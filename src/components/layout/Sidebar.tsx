@@ -1,20 +1,10 @@
 import React from 'react';
-import {
-  FileCode2,
-  MapPin,
-  Truck,
-  Award,
-  Wrench,
-  Sparkles,
-  ShieldAlert,
-  ChevronRight,
-  Database,
-  Cpu,
-  Gift,
-} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { initials, roleLabel } from '../../lib/roles';
+import { MapPin, Truck, Award, Wrench, Sparkles, ShieldAlert, ChevronRight, Cpu, Gift } from 'lucide-react';
 
 export type NavigationTab =
-  'sprint0' | 'live-map' | 'alerts' | 'fleet' | 'scoring' | 'rewards' | 'maintenance-fuel' | 'ai-hub';
+  'live-map' | 'alerts' | 'fleet' | 'scoring' | 'rewards' | 'maintenance-fuel' | 'ai-hub';
 
 interface SidebarProps {
   activeTab: NavigationTab;
@@ -29,6 +19,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingGpsCount = 0,
   alertsCount = 2,
 }) => {
+  const { user } = useAuth();
+
   const menuItems: {
     id: NavigationTab;
     label: string;
@@ -37,57 +29,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badgeColor?: string;
   }[] = [
     {
-      id: 'sprint0',
-      label: 'Dossier Sprint 0 (PRD & Arch)',
-      icon: FileCode2,
-      badge: 'Livrables 1-10',
-      badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-    },
-    {
       id: 'live-map',
-      label: 'Carte Live & Ingestion GPS',
+      label: 'Carte & suivi temps réel',
       icon: MapPin,
       badge: pendingGpsCount > 0 ? `${pendingGpsCount} GPS Sync` : 'Temps Réel',
       badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     },
     {
       id: 'alerts',
-      label: "Centre d'Alertes Unifié",
+      label: "Centre d'alertes",
       icon: ShieldAlert,
-      badge: 'Alertes Directes',
+      badge: 'Directes',
       badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30 animate-pulse',
     },
     {
       id: 'fleet',
-      label: 'Flotte, Véhicules & Chauffeurs',
+      label: 'Flotte & chauffeurs',
       icon: Truck,
     },
     {
       id: 'scoring',
-      label: 'Driver Safety Score (Explicable)',
+      label: 'Score de conduite',
       icon: Award,
-      badge: 'Score / 100',
+      badge: '/ 100',
       badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
     },
     {
       id: 'rewards',
-      label: 'Programme Rewards & Primes',
+      label: 'Primes & récompenses',
       icon: Gift,
-      badge: 'Badges & Cash',
+      badge: 'Primes',
       badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     },
     {
       id: 'maintenance-fuel',
-      label: 'Maintenance & Carburant',
+      label: 'Maintenance & carburant',
       icon: Wrench,
       badge: alertsCount > 0 ? `${alertsCount} Anomalies` : undefined,
       badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30',
     },
     {
       id: 'ai-hub',
-      label: 'Fleet Intelligence Hub (Gemini)',
+      label: 'Analyses & recommandations',
       icon: Sparkles,
-      badge: 'IA Powered',
+      badge: 'IA',
       badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
     },
   ];
@@ -96,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 text-slate-300 p-4 flex flex-col justify-between shrink-0">
       <div>
         <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-          <span>Navigation Module</span>
+          <span>Navigation</span>
           <Cpu className="w-3.5 h-3.5 text-slate-500" />
         </div>
 
@@ -142,32 +127,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* User Profile & Tech Stack Banner in Sidebar */}
-      <div className="mt-6 pt-4 border-t border-slate-800 space-y-3">
-        <div className="flex items-center gap-3 px-2 py-2 bg-slate-950/60 rounded-lg border border-slate-800/80">
-          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-            DB
+      {/* Identité de l'utilisateur connecté */}
+      <div className="mt-6 pt-4 border-t border-slate-800">
+        {user ? (
+          <div className="flex items-center gap-3 px-2 py-2 bg-slate-950/60 rounded-lg border border-slate-800/80">
+            <div className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {initials(user.fullName)}
+            </div>
+            <div className="overflow-hidden text-xs">
+              <p className="font-semibold text-white truncate">{user.fullName}</p>
+              <p className="text-[10px] text-slate-400 truncate">
+                {roleLabel(user.role)} · {user.organizationName}
+              </p>
+            </div>
           </div>
-          <div className="overflow-hidden text-xs">
-            <p className="font-semibold text-white truncate">Djibril Bakayoko</p>
-            <p className="text-[10px] text-slate-400 truncate">Sahara Logistics SARL</p>
-          </div>
-        </div>
-
-        <div className="text-[11px] text-slate-400 space-y-1 px-1">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-300 font-semibold flex items-center gap-1 text-[11px]">
-              <Database className="w-3.5 h-3.5 text-emerald-400" />
-              Stack Sprint 0
-            </span>
-            <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
-              PostgreSQL
-            </span>
-          </div>
-          <p className="text-[10px] leading-relaxed text-slate-500">
-            Node NestJS • Android Kotlin Native • Redis BullMQ • Gemini AI
-          </p>
-        </div>
+        ) : (
+          <div className="px-2 py-2 text-[10px] text-slate-500">Session de démonstration</div>
+        )}
       </div>
     </aside>
   );

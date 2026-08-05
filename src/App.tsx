@@ -33,9 +33,6 @@ const FleetManagementView = lazy(() =>
 const FleetIntelligenceHub = lazy(() =>
   import('./components/ai/FleetIntelligenceHub').then(m => ({ default: m.FleetIntelligenceHub })),
 );
-const Sprint0DocViewer = lazy(() =>
-  import('./components/sprint0/Sprint0DocViewer').then(m => ({ default: m.Sprint0DocViewer })),
-);
 import { OfflineSyncProvider, useOfflineSync } from './context/OfflineSyncContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MOCK_ORGANIZATIONS } from './data/mock-data';
@@ -145,7 +142,6 @@ function AppContent() {
               changement d'écran : un module en échec ne bloque pas la navigation. */}
           <ErrorBoundary key={activeTab} moduleName={activeTab}>
             <Suspense fallback={<ModuleLoader />}>
-              {activeTab === 'sprint0' && <Sprint0DocViewer />}
               {activeTab === 'live-map' && <LiveFleetMap currentOrg={currentOrg} />}
               {activeTab === 'alerts' && (
                 <AlertsCenter currentOrg={currentOrg} onNavigateToMap={() => setActiveTab('live-map')} />
@@ -163,16 +159,14 @@ function AppContent() {
       {/* Footer Status Bar */}
       <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-2.5 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2 shrink-0 transition-colors">
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-slate-700 dark:text-slate-300">
-            FleetGuard Africa MVP © 2026
-          </span>
+          <span className="font-semibold text-slate-700 dark:text-slate-300">FleetGuard Africa © 2026</span>
           <span>•</span>
           <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-            IndexedDB Offline Queue Active
+            Sauvegarde hors ligne active
           </span>
           <span>•</span>
           <span>
-            Tenant Actif: <strong className="text-slate-800 dark:text-slate-200">{currentOrg.name}</strong> (
+            Organisation : <strong className="text-slate-800 dark:text-slate-200">{currentOrg.name}</strong> (
             {currentOrg.code})
           </span>
         </div>
@@ -199,7 +193,7 @@ function AppContent() {
             className="text-orange-600 dark:text-orange-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
           >
             <Database className="w-3.5 h-3.5" />
-            <span>IndexedDB Queue ({pendingCount})</span>
+            <span>En attente d’envoi ({pendingCount})</span>
           </button>
 
           {status === 'demonstration' ? (

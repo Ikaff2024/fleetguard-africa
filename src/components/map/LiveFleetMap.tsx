@@ -507,11 +507,10 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-orange-500" />
-            <span>Suivi Télématique & Carte des Corridors en Temps Réel</span>
+            <span>Carte de la flotte en temps réel</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Supervision multi-tenant de la flotte, alertes météo, trafic routier et stations de ravitaillement
-            zone isolée.
+            Position des véhicules, alertes météo, trafic routier et stations de ravitaillement.
           </p>
         </div>
 
@@ -526,7 +525,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             ) : (
               <Send className="w-4 h-4" />
             )}
-            <span>Simuler Ingestion Batch Mobile (X-Batch-Id)</span>
+            <span>Simuler une remontée terrain</span>
           </button>
           {simulatedBatchCount > 0 && (
             <span className="px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 text-xs font-semibold flex items-center gap-1">

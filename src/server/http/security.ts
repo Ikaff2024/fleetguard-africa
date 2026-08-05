@@ -77,12 +77,24 @@ export function applySecurity(app: Express) {
       // et feuilles de style — l'application se bloque elle-même.
       const forwardedHost = req.headers['x-forwarded-host'];
       const host = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || req.headers.host;
-      const forwardedProto = req.headers['x-forwarded-proto'];
-      const proto =
-        (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto) ||
-        (isProduction ? 'https' : 'http');
 
-      if (host && origin === `${proto}://${host}`) {
+      /**
+       * La comparaison porte sur l'hôte seul, pas sur le schéma.
+       *
+       * Comparer `https://hôte` supposait la présence de `x-forwarded-proto`.
+       * Sans proxy en amont — exécution locale, conteneur testé directement —
+       * cet en-tête est absent, l'origine réelle est en `http`, et
+       * l'application rejetait ses propres requêtes. HSTS impose déjà HTTPS en
+       * production ; le schéma n'apporte rien à cette décision.
+       */
+      let originHost: string | null = null;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        // Origine malformée : traitée comme tierce.
+      }
+
+      if (host && originHost === host) {
         return callback(null, { origin: true, credentials: true, maxAge: 86_400 });
       }
 

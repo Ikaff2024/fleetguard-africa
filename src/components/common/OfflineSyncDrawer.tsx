@@ -133,7 +133,7 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm">Gestionnaire Offline IndexedDB</h3>
+                <h3 className="font-bold text-sm">Envois en attente</h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   Local Room Store
                 </span>
@@ -191,7 +191,7 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>File IndexedDB ({queueItems.length})</span>
+            <span>File d’attente ({queueItems.length})</span>
             {pendingCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-orange-500 text-white text-[10px] font-mono font-extrabold">
                 {pendingCount}
@@ -244,7 +244,7 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
                   <button
                     onClick={clearAllQueue}
                     className="text-xs text-red-500 hover:text-red-700 font-medium border border-slate-200 rounded-lg px-2.5 py-1.5 hover:bg-slate-50 cursor-pointer"
-                    title="Vider toute la file IndexedDB"
+                    title="Vider toute la file d’attente"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

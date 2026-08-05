@@ -118,15 +118,15 @@ try {
       await page.fill('#password', password);
       await page.getByRole('button', { name: /se connecter/i }).click();
 
-      await page.waitForSelector('text=Carte Live', { timeout: 20_000 });
+      await page.waitForSelector('text=Carte & suivi temps réel', { timeout: 20_000 });
       console.log('  [OK] Connexion réussie, navigation affichée');
 
       // Attendre le contenu du module, pas seulement son entrée de menu : le
       // chargement paresseux fait que le menu s'affiche bien avant l'écran.
       // Sans cette attente, un module en échec passerait pour un succès.
-      await page.waitForSelector('text=Suivi Télématique', { timeout: 30_000 });
+      await page.waitForSelector('text=Carte de la flotte en temps réel', { timeout: 30_000 });
       await page.waitForSelector('text=VÉHICULES EN CIRCULATION', { timeout: 30_000 });
-      console.log('  [OK] Module Carte Live réellement chargé');
+      console.log('  [OK] Module carte réellement chargé');
 
       const workspaceText = (await page.locator('body').innerText()).trim().length;
       console.log(`  [OK] Espace de travail affiché (${workspaceText} caractères)`);
@@ -134,7 +134,7 @@ try {
       console.log('  [i]  SMOKE_EMAIL/SMOKE_PASSWORD absents : connexion non testée');
     }
   } else {
-    await page.waitForSelector('text=Carte Live', { timeout: 10_000 });
+    await page.waitForSelector('text=Carte & suivi temps réel', { timeout: 10_000 });
     console.log('  [OK] Espace de travail affiché (mode démonstration)');
   }
 

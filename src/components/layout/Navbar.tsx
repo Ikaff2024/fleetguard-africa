@@ -35,18 +35,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               FleetGuard <span className="text-orange-500 font-extrabold italic">Africa</span>
             </h1>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30">
-              Sprint 0 MVP
+              Bêta
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-            SaaS B2B Multi-Tenant de Gestion Intelligente de Flotte
+            Suivi de flotte, sécurité et coûts
           </p>
         </div>
       </div>
 
       {/* Multi-Tenant Switcher, Theme Switcher & Context Bar */}
       <div className="flex items-center flex-wrap gap-3 text-xs">
-        {/* Network & IndexedDB Queue Button Trigger */}
+        {/* État réseau et file d'envoi */}
         <button
           onClick={onOpenOfflineDrawer}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition shadow-2xs ${
@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               ? 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
               : 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
           }`}
-          title="Ouvrir le gestionnaire de synchronisation IndexedDB"
+          title="Ouvrir le suivi des envois en attente"
         >
           <span
             className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}
