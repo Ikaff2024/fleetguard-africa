@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../http/errors.js';
-import { requireTenant, resolveTenant } from '../http/tenant.js';
+import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import { logger } from '../logger.js';
 
 export const syncRouter = Router();
@@ -40,20 +40,20 @@ syncRouter.post(
   '/sync/offline-batch',
   resolveTenant,
   asyncHandler(async (req, res) => {
-    const tenant = requireTenant(req);
+    const organizationId = requireTenantId(req);
     const { items } = syncBatchSchema.parse(req.body);
 
     // Un poste hors ligne peut avoir changé d'organisation entre-temps :
     // on refuse d'appliquer des éléments appartenant à un autre tenant.
-    const foreign = items.filter(item => item.tenantOrgId !== tenant.id);
+    const foreign = items.filter(item => item.tenantOrgId !== organizationId);
     if (foreign.length > 0) {
       logger.warn(
-        { organizationId: tenant.id, foreignCount: foreign.length },
+        { organizationId, foreignCount: foreign.length },
         'Éléments de synchronisation rattachés à une autre organisation — rejetés',
       );
     }
 
-    const accepted = items.filter(item => item.tenantOrgId === tenant.id);
+    const accepted = items.filter(item => item.tenantOrgId === organizationId);
 
     const results = accepted.map(item => ({
       id: item.id,
@@ -64,7 +64,7 @@ syncRouter.post(
     }));
 
     logger.info(
-      { organizationId: tenant.id, accepted: accepted.length, rejected: foreign.length },
+      { organizationId, accepted: accepted.length, rejected: foreign.length },
       'Lot de synchronisation hors-ligne traité',
     );
 

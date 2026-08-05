@@ -50,8 +50,19 @@ const envSchema = z.object({
     .default('false')
     .transform(v => v === 'true'),
 
-  // Phase 1 — optionnels tant que la persistance n'est pas branchée.
+  // Optionnels en développement (mode démonstration sans infrastructure),
+  // obligatoires en production — voir les garde-fous ci-dessous.
+  // Connexion propriétaire : migrations, seed, outillage.
   DATABASE_URL: z.string().optional(),
+  /**
+   * Connexion applicative, soumise au Row-Level Security.
+   *
+   * Doit désigner un rôle NON superutilisateur et NON BYPASSRLS. PostgreSQL
+   * exempte les superutilisateurs du RLS **même avec FORCE ROW LEVEL SECURITY** :
+   * utiliser le propriétaire de la base ici annule silencieusement toute
+   * l'isolation entre clients. Le démarrage vérifie ce point.
+   */
+  DATABASE_APP_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET doit faire au moins 32 caractères').optional(),
 });
@@ -79,8 +90,18 @@ function loadEnv(): Env {
         'AI_DEMO_MODE=true est interdit en production : des analyses simulées seraient servies à de vrais clients.',
       );
     }
-    if (env.DATABASE_URL && !env.JWT_SECRET) {
-      fatals.push('JWT_SECRET est requis dès lors que DATABASE_URL est défini.');
+
+    // Sans base de données, l'API bascule en mode démonstration : elle accepte
+    // un en-tête `X-Organization-Id` sans authentification. Servir cela en
+    // production reviendrait à exposer une API ouverte. Le service doit refuser
+    // de démarrer plutôt que de se dégrader silencieusement.
+    if (!env.DATABASE_URL) {
+      fatals.push(
+        "DATABASE_URL est requis en production : sans base, l'API fonctionnerait sans authentification.",
+      );
+    }
+    if (!env.JWT_SECRET) {
+      fatals.push('JWT_SECRET est requis en production : sans lui, aucune session ne peut être signée.');
     }
 
     if (fatals.length > 0) {

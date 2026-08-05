@@ -27,6 +27,7 @@ import {
   MOCK_VEHICLES,
 } from '../src/data/mock-data.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
+import { hashPassword } from '../src/server/services/password.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -293,7 +294,80 @@ async function main() {
   }
   console.log(`  ${MOCK_COMPLIANCE_DOCS.length} documents de conformité`);
 
+  // --- Comptes utilisateurs ------------------------------------------------
+  // Un compte par rôle sur l'organisation principale, plus un compte sur une
+  // seconde organisation : c'est ce second compte qui permet de vérifier
+  // l'isolation multi-tenant sur des données réelles.
+  //
+  // Le mot de passe de démonstration est volontairement lisible ici : ces
+  // comptes n'existent que dans un environnement de développement. La
+  // configuration refuse de démarrer en production sans base ni secret JWT.
+  const DEMO_PASSWORD = process.env.SEED_PASSWORD ?? 'FleetGuard2026!Demo';
+  const passwordHash = await hashPassword(DEMO_PASSWORD);
+
+  const accounts = [
+    {
+      email: 'admin@transafrik.bj',
+      fullName: 'Aïcha Sanogo',
+      role: 'ORGANIZATION_ADMIN' as const,
+      org: 'org_transafrik_cotonou',
+      phone: '+229 97 00 11 22',
+    },
+    {
+      email: 'manager@transafrik.bj',
+      fullName: 'Djibril Bakayoko',
+      role: 'FLEET_MANAGER' as const,
+      org: 'org_transafrik_cotonou',
+      phone: '+229 97 00 11 23',
+    },
+    {
+      email: 'securite@transafrik.bj',
+      fullName: 'Fatou Kponou',
+      role: 'SAFETY_OFFICER' as const,
+      org: 'org_transafrik_cotonou',
+      phone: '+229 97 00 11 24',
+    },
+    {
+      email: 'atelier@transafrik.bj',
+      fullName: 'Koffi Mensah',
+      role: 'MAINTENANCE_TECH' as const,
+      org: 'org_transafrik_cotonou',
+      phone: '+229 97 00 11 25',
+    },
+    {
+      email: 'manager@sahelexpress.sn',
+      fullName: 'Ousmane Ndiaye',
+      role: 'FLEET_MANAGER' as const,
+      org: 'org_sahel_express',
+      phone: '+221 77 123 45 67',
+    },
+  ];
+
+  for (const account of accounts) {
+    const id = stableUuid(`user:${account.email}`);
+    await prisma.user.upsert({
+      where: { email: account.email },
+      update: { passwordHash, role: account.role, isActive: true },
+      create: {
+        id,
+        organizationId: stableUuid(account.org),
+        email: account.email,
+        fullName: account.fullName,
+        phone: account.phone,
+        role: account.role,
+        passwordHash,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`  ${accounts.length} comptes utilisateurs`);
+
   console.log('\nPeuplement terminé.');
+  console.log('\nComptes de démonstration :');
+  for (const account of accounts) {
+    console.log(`  ${account.email.padEnd(30)} ${account.role}`);
+  }
+  console.log(`  Mot de passe : ${DEMO_PASSWORD}`);
   console.log(`Réseau (référence enum) : ${Object.values(NETWORK_MAP).join(', ')}`);
 }
 

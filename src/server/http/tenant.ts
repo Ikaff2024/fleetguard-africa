@@ -1,55 +1,74 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { Organization } from '../../types';
-import { findOrganizationById } from '../repositories/fleet-repository.js';
+import { isDatabaseEnabled } from '../db/prisma.js';
+import { isProduction } from '../env.js';
+import { requireAuth } from './auth.js';
 import { ApiError } from './errors.js';
-
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      tenant?: Organization;
-    }
-  }
-}
+import type { Role } from './rbac.js';
 
 /**
- * Résolution du tenant courant.
+ * Détermination du tenant courant.
  *
- * ⚠️ CE MIDDLEWARE N'EST PAS UNE AUTHENTIFICATION.
+ * Chemin nominal : l'organisation provient du jeton signé (`requireAuth`).
+ * Elle est donc **prouvée**, et non déclarée par le client — c'est ce qui
+ * distingue ce mécanisme de l'en-tête `X-Organization-Id` qu'il remplace.
  *
- * Il normalise la provenance du tenant (en-tête `X-Organization-Id`) et rejette
- * les organisations inconnues, mais n'importe qui peut encore désigner
- * n'importe quel tenant : l'identifiant n'est pas prouvé.
- *
- * L'isolation réelle arrive en Phase 1 et repose sur deux niveaux :
- *   1. le tenant lu dans un JWT signé, jamais dans une entrée client ;
- *   2. le Row-Level Security PostgreSQL, qui protège même en cas de bug applicatif.
- *
- * Tant que ces deux niveaux ne sont pas en place, l'API ne doit héberger que
- * des données de démonstration. Voir PRODUCTION_PLAN.md § Phase 1.
+ * Chemin de démonstration : sans base de données, aucun compte n'existe et
+ * l'authentification est impossible. L'API accepte alors `X-Organization-Id`
+ * pour naviguer dans le jeu de démonstration. Ce mode est cantonné au
+ * développement : la configuration exige `DATABASE_URL` en production
+ * (voir env.ts), le repli y est donc inatteignable.
  */
-export function resolveTenant(req: Request, _res: Response, next: NextFunction) {
+
+/**
+ * En démonstration, tous les modules doivent être explorables : le rôle le plus
+ * large est donc retenu. Ce mode n'existe qu'hors production.
+ */
+const DEMO_ROLE: Role = 'ORGANIZATION_ADMIN';
+
+export function resolveTenant(req: Request, res: Response, next: NextFunction) {
+  // Un jeton présent est toujours prioritaire, même en mode démonstration.
+  const hasBearer = req.headers.authorization?.startsWith('Bearer ');
+
+  if (hasBearer || isDatabaseEnabled() || isProduction) {
+    return requireAuth(req, res, next);
+  }
+
   const raw = (req.header('x-organization-id') || req.query.organizationId) as string | undefined;
 
   if (!raw) {
-    return next(ApiError.badRequest("Organisation non précisée : renseignez l'en-tête X-Organization-Id."));
+    return next(
+      ApiError.badRequest(
+        "Organisation non précisée : authentifiez-vous, ou renseignez l'en-tête X-Organization-Id en mode démonstration.",
+      ),
+    );
   }
 
-  const organization = findOrganizationById(raw);
-  if (!organization) {
-    // Message volontairement identique à celui d'un tenant non autorisé :
-    // on ne confirme pas l'existence d'une organisation à un tiers.
-    return next(ApiError.forbidden('Organisation inconnue ou non autorisée.'));
-  }
+  // Le jeu de démonstration est en mémoire : la validation reste synchrone.
+  import('../../data/mock-data.js')
+    .then(({ MOCK_ORGANIZATIONS }) => {
+      const org = MOCK_ORGANIZATIONS.find(o => o.id === raw);
+      if (!org) {
+        // Message identique à celui d'un accès non autorisé : on ne confirme
+        // pas l'existence d'une organisation à un tiers.
+        return next(ApiError.forbidden('Organisation inconnue ou non autorisée.'));
+      }
 
-  req.tenant = organization;
-  next();
+      req.auth = {
+        userId: 'demo-user',
+        organizationId: org.id,
+        role: DEMO_ROLE,
+        email: 'demonstration@fleetguard.africa',
+      };
+      res.setHeader('X-FleetGuard-Mode', 'demonstration');
+      next();
+    })
+    .catch(next);
 }
 
-/** Récupère le tenant résolu, ou échoue bruyamment si le middleware a été oublié. */
-export function requireTenant(req: Request): Organization {
-  if (!req.tenant) {
+/** Identifiant de l'organisation courante. */
+export function requireTenantId(req: Request): string {
+  if (!req.auth) {
     throw new ApiError(500, 'Tenant non résolu : middleware resolveTenant manquant sur cette route.');
   }
-  return req.tenant;
+  return req.auth.organizationId;
 }

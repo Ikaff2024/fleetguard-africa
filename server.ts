@@ -5,6 +5,7 @@ import { createApp } from './src/server/app.js';
 import { env, isProduction } from './src/server/env.js';
 import { logger } from './src/server/logger.js';
 import { startIdempotencyPurge, stopIdempotencyPurge } from './src/server/services/idempotency.js';
+import { assertRlsEnforced, disconnectDatabase } from './src/server/db/prisma.js';
 
 /** Sert le frontend : middleware Vite en développement, build statique en production. */
 async function mountFrontend(app: Express) {
@@ -40,6 +41,11 @@ async function mountFrontend(app: Express) {
 }
 
 async function startServer() {
+  // Contrôle préalable : une isolation multi-tenant inopérante ne se voit pas
+  // à l'usage, elle se constate quand un client signale voir les données d'un
+  // autre. Mieux vaut refuser de démarrer.
+  await assertRlsEnforced();
+
   const app = await createApp({ mountFrontend });
 
   startIdempotencyPurge();
@@ -67,6 +73,7 @@ async function startServer() {
     logger.info({ signal }, 'Arrêt en cours — plus aucune nouvelle connexion acceptée');
 
     stopIdempotencyPurge();
+    void disconnectDatabase();
 
     server.close(err => {
       if (err) {

@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { aiRateLimit } from '../http/security.js';
-import { requireTenant, resolveTenant } from '../http/tenant.js';
+import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requirePermission } from '../http/rbac.js';
+import { findOrganizationById } from '../repositories/fleet-repository.js';
 import {
   findDriver,
   listDrivers,
@@ -31,25 +33,33 @@ const analyzeSchema = z.object({
 intelligenceRouter.post(
   '/intelligence/analyze',
   resolveTenant,
+  requirePermission('intelligence:use'),
   aiRateLimit,
   asyncHandler(async (req, res) => {
-    const tenant = requireTenant(req);
+    const organizationId = requireTenantId(req);
     const { prompt } = analyzeSchema.parse(req.body ?? {});
 
     const question =
       prompt ??
       'Analyse la santé globale de ma flotte, la consommation de carburant et les risques chauffeurs.';
 
+    const organization = await findOrganizationById(organizationId);
+    if (!organization) {
+      throw ApiError.notFound('Organisation introuvable.');
+    }
+
+    // Les lectures sont parallélisées : l'invite ne peut être construite
+    // qu'une fois l'ensemble des données de flotte rassemblées.
+    const [vehicles, drivers, fuelLogs, maintenance] = await Promise.all([
+      listVehicles(organizationId),
+      listDrivers(organizationId),
+      listFuelLogs(organizationId),
+      listMaintenanceLogs(organizationId),
+    ]);
+
     const result = await generateFleetAnalysis(
-      buildFleetAnalysisPrompt({
-        organization: tenant,
-        vehicles: listVehicles(tenant.id),
-        drivers: listDrivers(tenant.id),
-        fuelLogs: listFuelLogs(tenant.id),
-        maintenance: listMaintenanceLogs(tenant.id),
-        question,
-      }),
-      demoFleetAnalysis(tenant),
+      buildFleetAnalysisPrompt({ organization, vehicles, drivers, fuelLogs, maintenance, question }),
+      demoFleetAnalysis(organization),
     );
 
     res.json({ statusCode: 200, data: result });
@@ -65,28 +75,25 @@ const safetyTipsSchema = z.object({
 intelligenceRouter.post(
   '/scoring/safety-tips',
   resolveTenant,
+  requirePermission('intelligence:use'),
   aiRateLimit,
   asyncHandler(async (req, res) => {
-    const tenant = requireTenant(req);
+    const organizationId = requireTenantId(req);
     const { driverId, focusArea } = safetyTipsSchema.parse(req.body ?? {});
 
-    const driver = findDriver(tenant.id, driverId);
+    const driver = await findDriver(organizationId, driverId);
     if (!driver) {
       throw ApiError.notFound('Chauffeur introuvable dans cette organisation.');
     }
 
-    const assignedVehicle = driver.assignedVehicleId
-      ? findVehicle(tenant.id, driver.assignedVehicleId)
-      : undefined;
+    const [assignedVehicle, events, fuelLogs] = await Promise.all([
+      driver.assignedVehicleId ? findVehicle(organizationId, driver.assignedVehicleId) : undefined,
+      listSafetyEvents(organizationId, driver.id),
+      listFuelLogs(organizationId, driver.id),
+    ]);
 
     const result = await generateSafetyCoaching(
-      buildSafetyCoachingPrompt({
-        driver,
-        assignedVehicle,
-        events: listSafetyEvents(tenant.id, driver.id),
-        fuelLogs: listFuelLogs(tenant.id, driver.id),
-        focusArea,
-      }),
+      buildSafetyCoachingPrompt({ driver, assignedVehicle, events, fuelLogs, focusArea }),
       demoSafetyCoaching(driver),
     );
 

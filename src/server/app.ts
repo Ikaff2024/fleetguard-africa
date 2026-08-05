@@ -3,6 +3,7 @@ import express, { type Express } from 'express';
 import { errorHandler, notFoundHandler } from './http/errors.js';
 import { applySecurity, globalRateLimit } from './http/security.js';
 import { httpLogger } from './logger.js';
+import { authRouter } from './routes/auth.js';
 import { fleetRouter } from './routes/fleet.js';
 import { healthRouter } from './routes/health.js';
 import { intelligenceRouter } from './routes/intelligence.js';
@@ -36,6 +37,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   const api = express.Router();
   api.use(globalRateLimit);
   api.use(healthRouter);
+  api.use(authRouter);
   api.use(fleetRouter);
   api.use(scoringRouter);
   api.use(trackingRouter);

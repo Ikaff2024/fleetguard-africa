@@ -1,10 +1,18 @@
 /**
  * Couche d'accès aux données.
  *
- * Implémentation actuelle : jeu de démonstration en mémoire.
- * En Phase 1, seul le corps de ces fonctions change (requêtes Prisma) ; les
- * routes et leurs contrats restent identiques. C'est précisément l'intérêt de
- * cette indirection : la bascule vers PostgreSQL ne touche pas les routes.
+ * Deux implémentations derrière une seule interface :
+ *   - PostgreSQL via Prisma dès que `DATABASE_URL` est renseignée ;
+ *   - jeu de démonstration en mémoire sinon.
+ *
+ * Ce repli n'est pas un raccourci : il permet de démarrer le projet sans
+ * infrastructure et de faire tourner les tests sans base. En production, la
+ * configuration exige `DATABASE_URL` (voir env.ts), le repli y est donc
+ * inatteignable.
+ *
+ * Toutes les lectures sont bornées à une organisation. Avec PostgreSQL, cette
+ * borne est doublée par le Row-Level Security : même une requête sans filtre ne
+ * renverrait rien.
  */
 import {
   MOCK_COMPLIANCE_DOCS,
@@ -26,57 +34,175 @@ import type {
   SafetyEvent,
   Vehicle,
 } from '../../types';
+import { db, isDatabaseEnabled, withTenant } from '../db/prisma.js';
+import {
+  mapComplianceDoc,
+  mapDriver,
+  mapFuelLog,
+  mapMaintenanceLog,
+  mapOrganization,
+  mapSafetyEvent,
+  mapVehicle,
+  toNumber,
+} from './mappers.js';
 
-export function findOrganizationById(id: string): Organization | undefined {
-  return MOCK_ORGANIZATIONS.find(o => o.id === id);
+export async function findOrganizationById(id: string): Promise<Organization | undefined> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_ORGANIZATIONS.find(o => o.id === id);
+  }
+
+  // Lecture hors `withTenant` : c'est la requête qui établit le contexte.
+  const row = await db().organization.findFirst({
+    where: { id, isActive: true, deletedAt: null },
+  });
+  return row ? mapOrganization(row) : undefined;
 }
 
-export function listOrganizations(): Organization[] {
-  return MOCK_ORGANIZATIONS;
+export async function listVehicles(organizationId: string): Promise<Vehicle[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_VEHICLES.filter(v => v.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.vehicle.findMany({
+      where: { deletedAt: null },
+      orderBy: { immatriculation: 'asc' },
+    });
+    return rows.map(mapVehicle);
+  });
 }
 
-export function listVehicles(organizationId: string): Vehicle[] {
-  return MOCK_VEHICLES.filter(v => v.organizationId === organizationId);
+export async function findVehicle(organizationId: string, vehicleId: string): Promise<Vehicle | undefined> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_VEHICLES.find(v => v.id === vehicleId && v.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const row = await tx.vehicle.findFirst({ where: { id: vehicleId, deletedAt: null } });
+    return row ? mapVehicle(row) : undefined;
+  });
 }
 
-export function listDrivers(organizationId: string): Driver[] {
-  return MOCK_DRIVERS.filter(d => d.organizationId === organizationId);
+export async function listDrivers(organizationId: string): Promise<Driver[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_DRIVERS.filter(d => d.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.driver.findMany({
+      where: { deletedAt: null },
+      orderBy: { fullName: 'asc' },
+    });
+    return rows.map(mapDriver);
+  });
 }
 
 /**
  * Recherche d'un chauffeur **bornée au tenant**.
- * Toute lecture par identifiant doit être filtrée par organisation : c'est la
- * fuite inter-tenants la plus banale (identifiant deviné ou énuméré).
+ * Une lecture par identifiant non filtrée est la fuite inter-tenants la plus
+ * banale : il suffit de deviner ou d'énumérer un identifiant.
  */
-export function findDriver(organizationId: string, driverId: string): Driver | undefined {
-  return MOCK_DRIVERS.find(d => d.id === driverId && d.organizationId === organizationId);
+export async function findDriver(organizationId: string, driverId: string): Promise<Driver | undefined> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_DRIVERS.find(d => d.id === driverId && d.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const row = await tx.driver.findFirst({ where: { id: driverId, deletedAt: null } });
+    return row ? mapDriver(row) : undefined;
+  });
 }
 
-export function findVehicle(organizationId: string, vehicleId: string): Vehicle | undefined {
-  return MOCK_VEHICLES.find(v => v.id === vehicleId && v.organizationId === organizationId);
+export async function listSafetyEvents(organizationId: string, driverId?: string): Promise<SafetyEvent[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_SAFETY_EVENTS.filter(
+      e => e.organizationId === organizationId && (!driverId || e.driverId === driverId),
+    );
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.safetyEvent.findMany({
+      where: driverId ? { driverId } : undefined,
+      orderBy: { recordedAt: 'desc' },
+      take: 500,
+    });
+    return rows.map(mapSafetyEvent);
+  });
 }
 
-export function listSafetyEvents(organizationId: string, driverId?: string): SafetyEvent[] {
-  return MOCK_SAFETY_EVENTS.filter(
-    e => e.organizationId === organizationId && (!driverId || e.driverId === driverId),
-  );
+export async function listMaintenanceLogs(organizationId: string): Promise<MaintenanceLog[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_MAINTENANCE_LOGS.filter(m => m.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.maintenanceLog.findMany({ orderBy: { performedAt: 'desc' }, take: 500 });
+    return rows.map(mapMaintenanceLog);
+  });
 }
 
-export function listMaintenanceLogs(organizationId: string): MaintenanceLog[] {
-  return MOCK_MAINTENANCE_LOGS.filter(m => m.organizationId === organizationId);
+export async function listFuelLogs(organizationId: string, driverId?: string): Promise<FuelLog[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_FUEL_LOGS.filter(
+      f => f.organizationId === organizationId && (!driverId || f.driverId === driverId),
+    );
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.fuelLog.findMany({
+      where: driverId ? { driverId } : undefined,
+      orderBy: { loggedAt: 'desc' },
+      take: 500,
+    });
+    return rows.map(mapFuelLog);
+  });
 }
 
-export function listFuelLogs(organizationId: string, driverId?: string): FuelLog[] {
-  return MOCK_FUEL_LOGS.filter(
-    f => f.organizationId === organizationId && (!driverId || f.driverId === driverId),
-  );
+export async function listComplianceDocs(organizationId: string): Promise<ComplianceDoc[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_COMPLIANCE_DOCS.filter(c => c.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.complianceDoc.findMany({
+      where: { deletedAt: null },
+      orderBy: { expiryDate: 'asc' },
+    });
+    return rows.map(mapComplianceDoc);
+  });
 }
 
-export function listComplianceDocs(organizationId: string): ComplianceDoc[] {
-  return MOCK_COMPLIANCE_DOCS.filter(c => c.organizationId === organizationId);
-}
+/**
+ * Configuration active du score.
+ * Versionnée : un score recalculé plus tard avec d'autres pondérations ne
+ * serait pas défendable devant un chauffeur.
+ */
+export async function getScoreConfig(organizationId: string): Promise<DriverScoreConfig> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_SCORE_CONFIG;
+  }
 
-export function getScoreConfig(_organizationId: string): DriverScoreConfig {
-  // En Phase 1 : configuration versionnée par organisation, lue en base.
-  return MOCK_SCORE_CONFIG;
+  return withTenant(organizationId, async tx => {
+    const row = await tx.driverScoreConfig.findFirst({
+      where: { isActive: true },
+      orderBy: { version: 'desc' },
+    });
+
+    if (!row) return MOCK_SCORE_CONFIG;
+
+    return {
+      id: row.id,
+      organizationId: row.organizationId,
+      version: row.version,
+      weights: {
+        overspeedWeight: toNumber(row.overspeedWeight),
+        harshBrakingWeight: toNumber(row.harshBrakingWeight),
+        rapidAccelWeight: toNumber(row.rapidAccelWeight),
+        fatigueNightWeight: toNumber(row.fatigueNightWeight),
+        geofenceBreachWeight: toNumber(row.geofenceBreachWeight),
+      },
+      normalizationDistanceKm: row.normalizationDistanceKm,
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  });
 }

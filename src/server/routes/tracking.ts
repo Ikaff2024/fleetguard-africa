@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../http/errors.js';
 import { ingestionRateLimit } from '../http/security.js';
-import { requireTenant, resolveTenant } from '../http/tenant.js';
+import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requirePermission } from '../http/rbac.js';
 import { logger } from '../logger.js';
 import { findVehicle } from '../repositories/fleet-repository.js';
 import { ApiError } from '../http/errors.js';
@@ -56,17 +57,18 @@ const batchSchema = z.object({
 trackingRouter.post(
   '/tracking/telemetry/batch',
   resolveTenant,
+  requirePermission('tracking:ingest'),
   ingestionRateLimit,
   asyncHandler(async (req, res) => {
-    const tenant = requireTenant(req);
+    const organizationId = requireTenantId(req);
     const payload = batchSchema.parse(req.body);
 
-    const vehicle = findVehicle(tenant.id, payload.vehicleId);
+    const vehicle = await findVehicle(organizationId, payload.vehicleId);
     if (!vehicle) {
       throw ApiError.forbidden("Ce véhicule n'appartient pas à votre organisation.");
     }
 
-    const duplicate = registerBatch(tenant.id, payload.batchId, payload.points.length);
+    const duplicate = registerBatch(organizationId, payload.batchId, payload.points.length);
 
     if (duplicate) {
       logger.info(
@@ -88,7 +90,7 @@ trackingRouter.post(
 
     logger.info(
       {
-        organizationId: tenant.id,
+        organizationId,
         vehicleId: payload.vehicleId,
         points: payload.points.length,
       },
