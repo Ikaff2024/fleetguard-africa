@@ -40,3 +40,6 @@ npm-debug.log*
 
 # Client Prisma genere (recree par `npm run db:generate`)
 src/generated/
+
+# Capture du controle de fumee
+smoke-screenshot.png

@@ -57,17 +57,21 @@ export default tseslint.config(
 
   // Serveur / scripts Node
   {
-    files: ['server.ts', 'prisma/**/*.ts', 'tests/**/*.ts', 'src/server/**/*.ts'],
+    files: [
+      'server.ts',
+      'prisma/**/*.ts',
+      'prisma.config.ts',
+      'tests/**/*.ts',
+      'src/server/**/*.ts',
+      'scripts/**/*.{ts,mjs,js}',
+    ],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.node,
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
 

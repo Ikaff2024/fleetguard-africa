@@ -53,19 +53,48 @@ export function applySecurity(app: Express) {
   );
 
   app.use(
-    cors({
-      origin(origin, callback) {
-        // Requêtes même origine (le navigateur n'envoie pas d'Origin) et outils serveur.
-        if (!origin) return callback(null, true);
-        if (corsOrigins.length === 0) {
-          return callback(isProduction ? new Error('Origine non autorisée') : null, !isProduction);
-        }
-        if (corsOrigins.includes(origin)) return callback(null, true);
-        logger.warn({ origin }, 'Origine CORS rejetée');
-        return callback(new Error('Origine non autorisée'));
-      },
-      credentials: true,
-      maxAge: 86_400,
+    cors((req, callback) => {
+      const origin = req.headers.origin;
+
+      // Pas d'en-tête Origin : navigation classique, appel serveur à serveur,
+      // sonde de disponibilité. Rien à arbitrer.
+      if (!origin) {
+        return callback(null, { origin: true, credentials: true, maxAge: 86_400 });
+      }
+
+      // Une requête vers sa propre origine est toujours légitime.
+      //
+      // Ce cas doit être traité avant la liste blanche : les navigateurs
+      // envoient un en-tête `Origin` sur des requêtes same-origin (POST,
+      // ressources en mode no-cors). Sans cette exception, une liste blanche
+      // vide ou mal renseignée empêche la page de charger ses propres scripts
+      // et feuilles de style — l'application se bloque elle-même.
+      const forwardedHost = req.headers['x-forwarded-host'];
+      const host = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || req.headers.host;
+      const forwardedProto = req.headers['x-forwarded-proto'];
+      const proto =
+        (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto) ||
+        (isProduction ? 'https' : 'http');
+
+      if (host && origin === `${proto}://${host}`) {
+        return callback(null, { origin: true, credentials: true, maxAge: 86_400 });
+      }
+
+      // Origine tierce : soumise à la liste blanche.
+      if (corsOrigins.includes(origin)) {
+        return callback(null, { origin: true, credentials: true, maxAge: 86_400 });
+      }
+
+      // Hors production, on n'entrave pas le travail local (outils, ports variés).
+      if (!isProduction) {
+        return callback(null, { origin: true, credentials: true, maxAge: 86_400 });
+      }
+
+      logger.warn({ origin, host }, 'Origine CORS tierce rejetée');
+      // Pas d'erreur levée : le navigateur applique la politique en constatant
+      // l'absence d'en-tête `Access-Control-Allow-Origin`. Lever une exception
+      // transformerait un refus CORS en erreur 500 côté serveur.
+      return callback(null, { origin: false });
     }),
   );
 }
