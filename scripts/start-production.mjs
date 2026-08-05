@@ -107,7 +107,7 @@ async function configureAppRole(connectionString, password) {
   }
 }
 
-async function main() {
+async function prepareDatabase() {
   const ownerUrl = process.env.DATABASE_URL;
   if (!ownerUrl) {
     throw new Error('DATABASE_URL est requis pour préparer la base.');
@@ -131,12 +131,34 @@ async function main() {
     log('peuplement du jeu de démonstration');
     run('node', ['dist/seed.js']);
   }
+}
+
+async function main() {
+  try {
+    await prepareDatabase();
+    log('base prête');
+  } catch (err) {
+    /**
+     * La préparation a échoué — mais le serveur démarre quand même.
+     *
+     * Un conteneur qui meurt avant d'ouvrir son port n'écrit rien d'exploitable
+     * dans les journaux de la plateforme : on constate un « service
+     * indisponible » sans jamais connaître la cause. En démarrant malgré tout,
+     * la sonde de vivacité répond, les journaux remontent, et
+     * `/api/v1/health/ready` expose l'état réel.
+     *
+     * Les routes métier échoueront explicitement tant que la base n'est pas
+     * prête : c'est préférable à un service muet.
+     */
+    console.error(`[démarrage] ÉCHEC de la préparation de la base : ${err.message}`);
+    console.error('[démarrage] le serveur démarre en mode dégradé pour rester diagnosticable');
+  }
 
   log('démarrage du serveur');
   await import(path.join(process.cwd(), 'dist', 'server.js'));
 }
 
 main().catch(err => {
-  console.error(`[démarrage] ÉCHEC : ${err.message}`);
+  console.error(`[démarrage] ÉCHEC irrécupérable : ${err.stack ?? err.message}`);
   process.exit(1);
 });

@@ -51,9 +51,22 @@ export function isDatabaseEnabled(): boolean {
 export async function assertRlsEnforced(): Promise<void> {
   if (!client) return;
 
-  const rows = await client.$queryRaw<
-    { rolname: string; rolsuper: boolean; rolbypassrls: boolean }[]
-  >`SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`;
+  let rows: { rolname: string; rolsuper: boolean; rolbypassrls: boolean }[];
+
+  try {
+    rows = await client.$queryRaw<
+      { rolname: string; rolsuper: boolean; rolbypassrls: boolean }[]
+    >`SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`;
+  } catch (err) {
+    // Base injoignable : ce n'est pas le contrôle d'isolation qui échoue, c'est
+    // la connexion. Tuer le processus ici priverait l'exploitant des journaux
+    // nécessaires au diagnostic. Les routes métier échoueront explicitement.
+    logger.error(
+      { err },
+      "Vérification du Row-Level Security impossible : base injoignable. L'API démarre en mode dégradé.",
+    );
+    return;
+  }
 
   const role = rows[0];
   if (!role) return;
