@@ -4,6 +4,8 @@ import {
   MOCK_VEHICLES,
   MOCK_DRIVERS,
 } from '../../data/mock-data';
+import { ApiClientError, apiClient } from '../../lib/api-client';
+import type { SafetyCoachingResponse } from '../scoring/ProactiveSafetyTips';
 import { FuelAnomalyDetector } from './FuelAnomalyDetector';
 import {
   ShieldAlert,
@@ -257,6 +259,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
   const [aiModalAlert, setAiModalAlert] = useState<UnifiedAlert | null>(null);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSimulated, setAiSimulated] = useState<boolean>(false);
 
   const [resolveModalAlert, setResolveModalAlert] = useState<UnifiedAlert | null>(null);
   const [resolutionNote, setResolutionNote] = useState<string>('');
@@ -371,56 +375,39 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
     setAiAnalysisResult(null);
     setAiLoading(true);
 
-    const driver = orgDrivers.find((d) => d.id === alert.driverId);
-    const vehicle = orgVehicles.find((v) => v.id === alert.vehicleId);
+    setAiError(null);
+
+    if (!alert.driverId) {
+      setAiError("Cette alerte n'est rattachée à aucun chauffeur : aucune analyse ne peut être produite.");
+      setAiLoading(false);
+      return;
+    }
 
     try {
-      const prompt = `En tant qu'expert en sécurité routière et gestion de flotte de camions en Afrique de l'Ouest, analyse l'alerte suivante et propose 3 recommandations pratiques pour le gestionnaire :
-Titre Alerte : ${alert.title}
-Catégorie : ${alert.category}
-Sévérité : ${alert.severity}
-Chauffeur : ${driver ? driver.fullName : 'Non spécifié'}
-Véhicule : ${vehicle ? `${vehicle.immatriculation} (${vehicle.make} ${vehicle.model})` : 'Camion'}
-Lieu : ${alert.locationName || 'Non spécifié'}
-Métrique : ${alert.metricValue || 'N/A'}
-Description : ${alert.description}`;
+      const data = await apiClient.post<SafetyCoachingResponse>(
+        '/scoring/safety-tips',
+        { driverId: alert.driverId, focusArea: alert.title },
+        { organizationId: currentOrg.id },
+      );
 
-      const res = await fetch('/api/v1/scoring/safety-tips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          driverId: alert.driverId || 'drv_moussa_04',
-          focusArea: alert.title,
-          organizationId: currentOrg.id,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.data && data.data.profileSummary) {
-          setAiAnalysisResult(`ANALYSE IA GEMINI :
-${data.data.profileSummary}
-
-CONSEILS CONCRETS POUR LE GESTIONNAIRE :
-${(data.data.actionableTips || [])
-  .map(
-    (t: any, i: number) =>
-      `${i + 1}. [${t.category}] ${t.title}: ${t.recommendation} (Impact estimé: ${t.expectedImpact})`
-  )
-  .join('\n')}`);
-        } else {
-          throw new Error('Fallback response');
-        }
-      } else {
-        throw new Error('API request failed');
-      }
-    } catch (e) {
-      setAiAnalysisResult(`ANALYSE ET RECOMMANDATION IA :
-• Diagnostic du risque : Cette alerte de niveau ${alert.severity} nécessite une vérification immédiate avec le chauffeur.
-• Mesures correctives recommandées :
-  1. Contacter le chauffeur par radio / appel pour confirmer la sécurité du véhicule.
-  2. Ajuster le limiteur de vitesse GPS si l'excès persiste.
-  3. Reporter l'incident sur le score de sécurité mensuel du chauffeur.`);
+      setAiSimulated(data.isSimulated);
+      setAiAnalysisResult(
+        [
+          data.profileSummary,
+          '',
+          'CONSEILS POUR LE GESTIONNAIRE :',
+          ...data.actionableTips.map(
+            (t, i) => `${i + 1}. [${t.category}] ${t.title} : ${t.recommendation} (Impact estimé : ${t.expectedImpact})`,
+          ),
+        ].join('\n'),
+      );
+    } catch (err) {
+      // Auparavant, un échec produisait une « ANALYSE IA » écrite en dur, que
+      // rien ne distinguait d'une vraie. Un échec doit rester un échec.
+      setAiAnalysisResult(null);
+      setAiError(
+        err instanceof ApiClientError ? err.message : "L'analyse n'a pas pu être produite.",
+      );
     } finally {
       setAiLoading(false);
     }
@@ -1095,9 +1082,28 @@ ${(data.data.actionableTips || [])
                 <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
                 <p className="text-xs font-bold text-slate-700">Calcul du risque & recommandation IA en cours...</p>
               </div>
+            ) : aiError ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-900 space-y-2">
+                <div className="flex items-center gap-2 font-bold">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Analyse non produite</span>
+                </div>
+                <p className="leading-relaxed">{aiError}</p>
+              </div>
             ) : (
-              <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 text-xs text-slate-800 space-y-2 whitespace-pre-line leading-relaxed font-mono">
-                {aiAnalysisResult}
+              <div className="space-y-3">
+                {aiSimulated && (
+                  <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-[11px] text-amber-900 font-semibold flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>
+                      Exemple de démonstration — ce texte ne résulte pas de l'analyse de cette
+                      alerte. Ne fondez aucune décision disciplinaire dessus.
+                    </span>
+                  </div>
+                )}
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 text-xs text-slate-800 space-y-2 whitespace-pre-line leading-relaxed font-mono">
+                  {aiAnalysisResult}
+                </div>
               </div>
             )}
 

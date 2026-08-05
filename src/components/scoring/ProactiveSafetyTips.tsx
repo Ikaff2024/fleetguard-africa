@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Organization } from '../../types';
 import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
+import { ApiClientError, apiClient, type AiGenerated } from '../../lib/api-client';
 import {
   Sparkles,
   BrainCircuit,
@@ -52,13 +53,17 @@ export interface SafetyTipsResponse {
   targetMilestone: TargetMilestone;
 }
 
+/** Fiche de coaching accompagnée de sa provenance (réelle ou démonstration). */
+export type SafetyCoachingResponse = SafetyTipsResponse & AiGenerated;
+
 export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ currentOrg }) => {
   const drivers = MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
   const [selectedDriverId, setSelectedDriverId] = useState<string>(drivers[0]?.id || MOCK_DRIVERS[0]?.id || '');
   const [focusArea, setFocusArea] = useState<string>('Toutes catégories');
   
   const [loading, setLoading] = useState<boolean>(false);
-  const [tipsData, setTipsData] = useState<SafetyTipsResponse | null>(null);
+  const [tipsData, setTipsData] = useState<SafetyCoachingResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [completedTips, setCompletedTips] = useState<Record<number, boolean>>({});
   const [copiedText, setCopiedText] = useState<boolean>(false);
 
@@ -68,29 +73,23 @@ export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ curren
   const fetchSafetyTips = async (driverId: string, focus: string) => {
     setLoading(true);
     setCopiedText(false);
+    setErrorMessage(null);
     try {
-      const response = await fetch('/api/v1/scoring/safety-tips', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          driverId,
-          focusArea: focus,
-          organizationId: currentOrg.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const resJson = await response.json();
-      if (resJson.data) {
-        setTipsData(resJson.data);
-      }
+      const data = await apiClient.post<SafetyCoachingResponse>(
+        '/scoring/safety-tips',
+        { driverId, focusArea: focus },
+        { organizationId: currentOrg.id },
+      );
+      setTipsData(data);
     } catch (err) {
-      console.error('Failed to fetch safety tips:', err);
+      // Une fiche de coaching absente doit se voir : sans cela, l'écran garde
+      // la fiche du chauffeur précédent et le manager coache la mauvaise personne.
+      setTipsData(null);
+      setErrorMessage(
+        err instanceof ApiClientError
+          ? err.message
+          : "La fiche de coaching n'a pas pu être générée.",
+      );
     } finally {
       setLoading(false);
     }
@@ -263,9 +262,37 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
         </div>
       )}
 
+      {/* Échec de génération — l'écran ne doit jamais rester sur la fiche précédente */}
+      {!loading && errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-xs flex items-start gap-3">
+          <ShieldAlert className="w-6 h-6 text-red-600 shrink-0" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-red-900">Fiche de coaching non générée</h3>
+            <p className="text-xs text-red-800">{errorMessage}</p>
+            <button
+              onClick={handleGenerate}
+              className="mt-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+            >
+              Réessayer
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Generated Coaching Sheet */}
       {!loading && tipsData && (
         <div className="space-y-6">
+          {/* Une fiche d'exemple ne doit jamais passer pour une analyse réelle du chauffeur. */}
+          {tipsData.isSimulated && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <p className="text-xs text-amber-900 font-semibold">
+                Fiche de démonstration — elle n'est pas fondée sur les données réelles de{' '}
+                {selectedDriver?.fullName}. Ne l'utilisez pas comme support d'entretien : configurez
+                le moteur d'analyse pour obtenir un coaching personnalisé.
+              </p>
+            </div>
+          )}
           {/* Driver Card Summary Header */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4">

@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { MOCK_VEHICLES, MOCK_DRIVERS, MOCK_GEOFENCES, MOCK_ROUTE_POINTS, MOCK_FUEL_STATIONS } from '../../data/mock-data';
 import { Organization, GpsPoint } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
@@ -97,15 +99,10 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
   const selectedStation = sortedFuelStations.find(s => s.id === selectedFuelStationId) || null;
 
   useEffect(() => {
-    // Dynamically load Leaflet styles & script if not available
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
-
-    let L = (window as any).L;
 
     const initMap = () => {
       if (!mapContainerRef.current) return;
-      L = (window as any).L;
-      if (!L) return;
 
       // Center map around West Africa / East Africa based on organization country
       const centerLat = currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
@@ -362,7 +359,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
       }
 
       // 5. Draw Primary Route Polyline
-      const latLngs = routePoints.map(p => [p.latitude, p.longitude]);
+      const latLngs: L.LatLngTuple[] = routePoints.map(p => [p.latitude, p.longitude]);
       if (latLngs.length > 0) {
         const polyline = L.polyline(latLngs, { color: '#f59e0b', weight: 4, opacity: 0.95 }).addTo(map);
         layerGroupRef.current.route = polyline;
@@ -433,20 +430,11 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
       }
     };
 
-    if (!(window as any).L) {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.async = true;
-      script.onload = initMap;
-      document.head.appendChild(script);
-
-      const style = document.createElement('link');
-      style.rel = 'stylesheet';
-      style.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(style);
-    } else {
-      initMap();
-    }
+    // Leaflet est empaqueté avec l'application, plus chargé depuis unpkg.com.
+    // Trois raisons : la carte ne dépend plus de la disponibilité d'un CDN
+    // tiers, la CSP peut interdire tout script externe, et le chargement ne
+    // paie plus un aller-retour supplémentaire sur les liaisons à forte latence.
+    initMap();
   }, [currentOrg, routePoints, selectedVehicleId, baseMapStyle, showTraffic, showWeather, showGeofences, showFuelStations, selectedFuelStationId, isDark]);
 
   // Simulate Mobile GPS Batch Ingestion

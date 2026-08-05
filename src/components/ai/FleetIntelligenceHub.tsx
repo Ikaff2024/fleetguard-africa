@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
+import { ApiClientError, apiClient, type FleetAnalysisResponse } from '../../lib/api-client';
 import { Sparkles, Send, Bot, User, RefreshCw, AlertCircle, Zap, Fuel, MessageSquare, Wrench, Compass, FileSpreadsheet } from 'lucide-react';
 import { FuelAnalyticsDashboard } from './FuelAnalyticsDashboard';
 import { MaintenanceForecast } from './MaintenanceForecast';
@@ -11,11 +12,20 @@ interface FleetIntelligenceHubProps {
   currentOrg: Organization;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  /** Réponse issue d'un exemple de démonstration, pas d'une analyse réelle. */
+  isSimulated?: boolean;
+  isError?: boolean;
+}
+
 export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ currentOrg }) => {
   const [activeTab, setActiveTab] = useState<'analytics' | 'route-opt' | 'maintenance' | 'copilot' | 'reports' | 'anomaly'>('reports');
   const [promptInput, setPromptInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string; timestamp: string }[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
       content: `Bonjour ! Je suis l'assistant d'Intelligence de Flotte de FleetGuard Africa pour **${currentOrg.name}** (${currentOrg.country}).\n\nJ'analyse en continu vos données de télémétrie GPS, vos scores de conduite chauffeurs, vos consommations de carburant et vos échéances de maintenance.\n\nComment puis-je vous aider aujourd'hui ?`,
@@ -46,33 +56,36 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/intelligence/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: promptToSend,
-          organizationId: currentOrg.id,
-        }),
-      });
-
-      const data = await response.json();
-      const answer = data.data?.answer || "Analyse indisponible.";
+      const result = await apiClient.post<FleetAnalysisResponse>(
+        '/intelligence/analyze',
+        { prompt: promptToSend },
+        { organizationId: currentOrg.id },
+      );
 
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: answer,
+          content: result.answer,
           timestamp: new Date().toLocaleTimeString(),
+          isSimulated: result.isSimulated,
         },
       ]);
-    } catch (err: any) {
+    } catch (err) {
+      // Le message réel du serveur est affiché : « clé API non configurée » et
+      // « quota dépassé » n'appellent pas la même action de la part de l'utilisateur.
+      const message =
+        err instanceof ApiClientError
+          ? err.message
+          : "Une erreur inattendue s'est produite lors de la connexion au serveur.";
+
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: "Désolé, une erreur s'est produite lors de la connexion au serveur FleetGuard AI.",
+          content: message,
           timestamp: new Date().toLocaleTimeString(),
+          isError: true,
         },
       ]);
     } finally {
@@ -234,7 +247,11 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
                     className={`p-4 rounded-xl max-w-[80%] whitespace-pre-wrap leading-relaxed shadow-xs ${
                       msg.role === 'user'
                         ? 'bg-orange-50 text-slate-900 border border-orange-200 font-medium'
-                        : 'bg-slate-50 text-slate-800 border border-slate-200'
+                        : msg.isError
+                          ? 'bg-red-50 text-red-900 border border-red-200'
+                          : msg.isSimulated
+                            ? 'bg-amber-50 text-slate-800 border border-amber-300'
+                            : 'bg-slate-50 text-slate-800 border border-slate-200'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-1.5 mb-2 text-[10px] text-slate-500">
@@ -243,6 +260,26 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
                       </span>
                       <span className="font-mono text-slate-400">{msg.timestamp}</span>
                     </div>
+
+                    {/* Une donnée d'exemple ne doit jamais être indiscernable d'une analyse réelle. */}
+                    {msg.isSimulated && (
+                      <div className="flex items-start gap-2 mb-3 p-2 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-semibold">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
+                        <span>
+                          Exemple de démonstration — ce texte n'est pas une analyse de vos données
+                          réelles. Configurez la clé du moteur d'analyse pour obtenir un diagnostic
+                          fondé sur votre flotte.
+                        </span>
+                      </div>
+                    )}
+
+                    {msg.isError && (
+                      <div className="flex items-start gap-2 mb-3 p-2 rounded-lg bg-red-100 border border-red-300 text-red-900 text-[11px] font-semibold">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
+                        <span>Analyse non produite</span>
+                      </div>
+                    )}
+
                     {msg.content}
                   </div>
                 </div>

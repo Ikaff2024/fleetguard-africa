@@ -212,9 +212,16 @@ class OfflineSyncService {
     }
 
     try {
+      // Tous les éléments d'un lot appartiennent au même tenant : celui qui les
+      // a mis en file. Le serveur rejette ceux qui ne correspondent pas.
+      const organizationId = pendingItems[0]?.tenantOrgId ?? '';
+
       const response = await fetch('/api/v1/sync/offline-batch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Organization-Id': organizationId,
+        },
         body: JSON.stringify({ items: pendingItems }),
       });
 

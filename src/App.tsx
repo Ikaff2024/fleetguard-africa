@@ -1,14 +1,38 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, NavigationTab } from './components/layout/Sidebar';
-import { Sprint0DocViewer } from './components/sprint0/Sprint0DocViewer';
-import { LiveFleetMap } from './components/map/LiveFleetMap';
-import { AlertsCenter } from './components/alerts/AlertsCenter';
-import { DriverScoreCalculator } from './components/scoring/DriverScoreCalculator';
-import { RewardsModule } from './components/rewards/RewardsModule';
-import { FleetManagementView } from './components/fleet/FleetManagementView';
-import { FleetIntelligenceHub } from './components/ai/FleetIntelligenceHub';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ModuleLoader } from './components/common/ModuleLoader';
 import { OfflineSyncDrawer } from './components/common/OfflineSyncDrawer';
+
+/**
+ * Chaque écran est chargé à la demande.
+ *
+ * L'application groupée en un seul fichier pesait 1,39 Mo (363 Ko compressés) :
+ * une dizaine de secondes d'écran blanc sur une 3G de corridor. Découpée, la
+ * carte live s'affiche sans attendre le code des tableaux de bord annexes.
+ */
+const LiveFleetMap = lazy(() =>
+  import('./components/map/LiveFleetMap').then(m => ({ default: m.LiveFleetMap })),
+);
+const AlertsCenter = lazy(() =>
+  import('./components/alerts/AlertsCenter').then(m => ({ default: m.AlertsCenter })),
+);
+const DriverScoreCalculator = lazy(() =>
+  import('./components/scoring/DriverScoreCalculator').then(m => ({ default: m.DriverScoreCalculator })),
+);
+const RewardsModule = lazy(() =>
+  import('./components/rewards/RewardsModule').then(m => ({ default: m.RewardsModule })),
+);
+const FleetManagementView = lazy(() =>
+  import('./components/fleet/FleetManagementView').then(m => ({ default: m.FleetManagementView })),
+);
+const FleetIntelligenceHub = lazy(() =>
+  import('./components/ai/FleetIntelligenceHub').then(m => ({ default: m.FleetIntelligenceHub })),
+);
+const Sprint0DocViewer = lazy(() =>
+  import('./components/sprint0/Sprint0DocViewer').then(m => ({ default: m.Sprint0DocViewer })),
+);
 import { OfflineSyncProvider, useOfflineSync } from './context/OfflineSyncContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MOCK_ORGANIZATIONS } from './data/mock-data';
@@ -18,11 +42,14 @@ import { Database, X, RefreshCw, Headphones } from 'lucide-react';
 function AppContent() {
   const [currentOrg, setCurrentOrg] = useState<Organization>(MOCK_ORGANIZATIONS[0]);
   const [currentRole, setCurrentRole] = useState<UserRole>('FLEET_MANAGER');
-  const [activeTab, setActiveTab] = useState<NavigationTab>('sprint0');
+  // La carte live est l'écran de travail quotidien du régulateur. Le dossier
+  // d'architecture reste accessible dans le menu, mais n'est plus la page
+  // d'accueil : une démonstration client doit ouvrir sur le produit.
+  const [activeTab, setActiveTab] = useState<NavigationTab>('live-map');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
   const { isOnline, setIsOnline, pendingCount, syncNotification, dismissNotification, triggerManualSync, isSyncing } = useOfflineSync();
-  const { theme, isNightDispatcher } = useTheme();
+  const { isNightDispatcher } = useTheme();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-orange-500 selection:text-white transition-colors duration-200">
@@ -93,19 +120,25 @@ function AppContent() {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto max-w-7xl mx-auto w-full space-y-6">
-          {activeTab === 'sprint0' && <Sprint0DocViewer />}
-          {activeTab === 'live-map' && <LiveFleetMap currentOrg={currentOrg} />}
-          {activeTab === 'alerts' && (
-            <AlertsCenter
-              currentOrg={currentOrg}
-              onNavigateToMap={() => setActiveTab('live-map')}
-            />
-          )}
-          {activeTab === 'scoring' && <DriverScoreCalculator currentOrg={currentOrg} />}
-          {activeTab === 'rewards' && <RewardsModule currentOrg={currentOrg} />}
-          {activeTab === 'fleet' && <FleetManagementView currentOrg={currentOrg} />}
-          {activeTab === 'maintenance-fuel' && <FleetManagementView currentOrg={currentOrg} />}
-          {activeTab === 'ai-hub' && <FleetIntelligenceHub currentOrg={currentOrg} />}
+          {/* La clé sur l'onglet réinitialise la frontière d'erreur à chaque
+              changement d'écran : un module en échec ne bloque pas la navigation. */}
+          <ErrorBoundary key={activeTab} moduleName={activeTab}>
+            <Suspense fallback={<ModuleLoader />}>
+              {activeTab === 'sprint0' && <Sprint0DocViewer />}
+              {activeTab === 'live-map' && <LiveFleetMap currentOrg={currentOrg} />}
+              {activeTab === 'alerts' && (
+                <AlertsCenter
+                  currentOrg={currentOrg}
+                  onNavigateToMap={() => setActiveTab('live-map')}
+                />
+              )}
+              {activeTab === 'scoring' && <DriverScoreCalculator currentOrg={currentOrg} />}
+              {activeTab === 'rewards' && <RewardsModule currentOrg={currentOrg} />}
+              {activeTab === 'fleet' && <FleetManagementView currentOrg={currentOrg} />}
+              {activeTab === 'maintenance-fuel' && <FleetManagementView currentOrg={currentOrg} />}
+              {activeTab === 'ai-hub' && <FleetIntelligenceHub currentOrg={currentOrg} />}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
 
