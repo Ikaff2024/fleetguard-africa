@@ -1,6 +1,12 @@
 export interface OfflineQueueItem {
   id: string;
-  type: 'FUEL_LOG' | 'MAINTENANCE_RECORD' | 'ODOMETER_UPDATE' | 'GPS_TELEMETRY' | 'ROUTE_DISPATCH' | 'GEOFENCE_RULE';
+  type:
+    | 'FUEL_LOG'
+    | 'MAINTENANCE_RECORD'
+    | 'ODOMETER_UPDATE'
+    | 'GPS_TELEMETRY'
+    | 'ROUTE_DISPATCH'
+    | 'GEOFENCE_RULE';
   payload: Record<string, any>;
   timestamp: string;
   status: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED';
@@ -63,7 +69,7 @@ class OfflineSyncService {
   async enqueueItem(
     type: OfflineQueueItem['type'],
     payload: Record<string, any>,
-    tenantOrgId: string
+    tenantOrgId: string,
   ): Promise<OfflineQueueItem> {
     const db = await this.getDB();
     const item: OfflineQueueItem = {
@@ -117,11 +123,7 @@ class OfflineSyncService {
   /**
    * Updates an item's status in IndexedDB
    */
-  async updateStatus(
-    id: string,
-    status: OfflineQueueItem['status'],
-    errorMessage?: string
-  ): Promise<void> {
+  async updateStatus(id: string, status: OfflineQueueItem['status'], errorMessage?: string): Promise<void> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -254,7 +256,11 @@ class OfflineSyncService {
     } catch (err: any) {
       // Rollback items to FAILED / PENDING on network error
       for (const item of pendingItems) {
-        await this.updateStatus(item.id, 'FAILED', err.message || 'Erreur réseau lors de la synchronisation.');
+        await this.updateStatus(
+          item.id,
+          'FAILED',
+          err.message || 'Erreur réseau lors de la synchronisation.',
+        );
       }
 
       return {

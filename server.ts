@@ -70,7 +70,7 @@ async function startServer() {
 
     server.close(err => {
       if (err) {
-        logger.error({ err }, "Erreur pendant la fermeture du serveur");
+        logger.error({ err }, 'Erreur pendant la fermeture du serveur');
         process.exit(1);
       }
       logger.info('Arrêt terminé proprement');

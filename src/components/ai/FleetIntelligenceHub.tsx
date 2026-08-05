@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
 import { ApiClientError, apiClient, type FleetAnalysisResponse } from '../../lib/api-client';
-import { Sparkles, Send, Bot, User, RefreshCw, AlertCircle, Zap, Fuel, MessageSquare, Wrench, Compass, FileSpreadsheet } from 'lucide-react';
+import {
+  Sparkles,
+  Send,
+  Bot,
+  User,
+  RefreshCw,
+  AlertCircle,
+  Zap,
+  Fuel,
+  MessageSquare,
+  Wrench,
+  Compass,
+  FileSpreadsheet,
+} from 'lucide-react';
 import { FuelAnalyticsDashboard } from './FuelAnalyticsDashboard';
 import { MaintenanceForecast } from './MaintenanceForecast';
 import { RouteOptimizationTool } from './RouteOptimizationTool';
@@ -22,7 +35,9 @@ interface ChatMessage {
 }
 
 export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ currentOrg }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'route-opt' | 'maintenance' | 'copilot' | 'reports' | 'anomaly'>('reports');
+  const [activeTab, setActiveTab] = useState<
+    'analytics' | 'route-opt' | 'maintenance' | 'copilot' | 'reports' | 'anomaly'
+  >('reports');
   const [promptInput, setPromptInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -34,9 +49,9 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
   ]);
 
   const presetQuestions = [
-    "Analyse les risques de vol de carburant ce mois-ci",
-    "Fais un bilan des chauffeurs à risque et préconise des actions",
-    "Quelles sont les pannes et maintenances imminentes à programmer ?",
+    'Analyse les risques de vol de carburant ce mois-ci',
+    'Fais un bilan des chauffeurs à risque et préconise des actions',
+    'Quelles sont les pannes et maintenances imminentes à programmer ?',
     "Optimise les coûts d'exploitation sur l'axe Cotonou-Parakou",
   ];
 
@@ -107,7 +122,8 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
               Intelligence de Flotte & Dashboard Analytics Carburant
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Analyse contextuelle des consommations de carburant, graphiques de tendances mensuelles Recharts, préventions de vol et assistant copilote IA.
+              Analyse contextuelle des consommations de carburant, graphiques de tendances mensuelles
+              Recharts, préventions de vol et assistant copilote IA.
             </p>
           </div>
 
@@ -266,9 +282,9 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
                       <div className="flex items-start gap-2 mb-3 p-2 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-semibold">
                         <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
                         <span>
-                          Exemple de démonstration — ce texte n'est pas une analyse de vos données
-                          réelles. Configurez la clé du moteur d'analyse pour obtenir un diagnostic
-                          fondé sur votre flotte.
+                          Exemple de démonstration — ce texte n'est pas une analyse de vos données réelles.
+                          Configurez la clé du moteur d'analyse pour obtenir un diagnostic fondé sur votre
+                          flotte.
                         </span>
                       </div>
                     )}
@@ -288,7 +304,9 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
               {isLoading && (
                 <div className="flex items-center gap-3 text-xs text-purple-700 bg-purple-50 p-4 rounded-xl border border-purple-200 w-fit">
                   <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
-                  <span className="font-medium">Analyse des capteurs GPS, consommations de carburant et scores en cours...</span>
+                  <span className="font-medium">
+                    Analyse des capteurs GPS, consommations de carburant et scores en cours...
+                  </span>
                 </div>
               )}
             </div>

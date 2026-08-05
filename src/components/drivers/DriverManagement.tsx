@@ -17,7 +17,7 @@ import {
   ChevronRight,
   MessageSquare,
   Zap,
-  Wrench
+  Wrench,
 } from 'lucide-react';
 
 interface DriverManagementProps {
@@ -70,7 +70,8 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
       textClass: 'text-amber-800',
       borderClass: 'border-amber-300',
       icon: <Award className="w-4 h-4 text-amber-900" />,
-      description: 'Statut conforme: Quelques écarts mineurs de freinage à corriger lors de la conduite nocturne.',
+      description:
+        'Statut conforme: Quelques écarts mineurs de freinage à corriger lors de la conduite nocturne.',
     };
   } else {
     return {
@@ -81,21 +82,19 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
       textClass: 'text-red-700',
       borderClass: 'border-red-300',
       icon: <ShieldAlert className="w-4 h-4 text-white" />,
-      description: 'Attention requise: Incidents répétés de survitesse ou freinages brusques sur les 30 derniers jours.',
+      description:
+        'Attention requise: Incidents répétés de survitesse ou freinages brusques sur les 30 derniers jours.',
     };
   }
 };
 
-export const DriverManagement: React.FC<DriverManagementProps> = ({
-  currentOrg,
-  onNavigateToMessaging,
-}) => {
+export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, onNavigateToMessaging }) => {
   const drivers = useMemo(() => {
-    return MOCK_DRIVERS.filter((d) => d.organizationId === currentOrg.id);
+    return MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
   }, [currentOrg.id]);
 
   const vehicles = useMemo(() => {
-    return MOCK_VEHICLES.filter((v) => v.organizationId === currentOrg.id);
+    return MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
   }, [currentOrg.id]);
 
   // Search & Filters
@@ -105,15 +104,15 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
   const [selectedDriverDetail, setSelectedDriverDetail] = useState<Driver | null>(null);
 
   // Sub-Module View Mode ('PROFILES' or 'FATIGUE_OPTIMIZER' or 'MAINTENANCE_HISTORY')
-  const [activeModuleView, setActiveModuleView] = useState<'PROFILES' | 'FATIGUE_OPTIMIZER' | 'MAINTENANCE_HISTORY'>(
-    'PROFILES'
-  );
+  const [activeModuleView, setActiveModuleView] = useState<
+    'PROFILES' | 'FATIGUE_OPTIMIZER' | 'MAINTENANCE_HISTORY'
+  >('PROFILES');
 
   // Compute Drivers with Vehicle Map & Badges
   const driversWithDetails = useMemo(() => {
-    return drivers.map((driver) => {
+    return drivers.map(driver => {
       const assignedVehicle = vehicles.find(
-        (v) => v.id === driver.assignedVehicleId || v.currentDriverId === driver.id
+        v => v.id === driver.assignedVehicleId || v.currentDriverId === driver.id,
       );
       const badge = get30DayPerformanceBadge(driver.currentSafetyScore);
       return {
@@ -126,21 +125,17 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
 
   // Filtered List
   const filteredDrivers = useMemo(() => {
-    return driversWithDetails.filter((d) => {
+    return driversWithDetails.filter(d => {
       const matchesSearch =
         !searchQuery ||
         d.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         d.licenseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (d.assignedVehicle &&
-          d.assignedVehicle.immatriculation
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()));
+          d.assignedVehicle.immatriculation.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesGrade =
-        selectedGradeFilter === 'ALL' || d.badge.grade === selectedGradeFilter;
+      const matchesGrade = selectedGradeFilter === 'ALL' || d.badge.grade === selectedGradeFilter;
 
-      const matchesStatus =
-        selectedStatusFilter === 'ALL' || d.status === selectedStatusFilter;
+      const matchesStatus = selectedStatusFilter === 'ALL' || d.status === selectedStatusFilter;
 
       return matchesSearch && matchesGrade && matchesStatus;
     });
@@ -158,7 +153,7 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
   }, [drivers]);
 
   const eliteCount = useMemo(() => {
-    return drivers.filter((d) => d.currentSafetyScore >= 90).length;
+    return drivers.filter(d => d.currentSafetyScore >= 90).length;
   }, [drivers]);
 
   return (
@@ -177,7 +172,8 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
             </span>
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Suivi des compétences, badges de conduite 30J, affectations de camions et prévention prédictive de la fatigue au volant.
+            Suivi des compétences, badges de conduite 30J, affectations de camions et prévention prédictive de
+            la fatigue au volant.
           </p>
         </div>
 
@@ -238,370 +234,372 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
         <>
           {/* KPI Cards Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span className="font-medium">Total Chauffeurs</span>
-            <Users className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-slate-900">{drivers.length}</div>
-          <div className="text-[10px] text-emerald-600 font-semibold mt-1">
-            100% Permis Vérifiés CEDEAO
-          </div>
-        </div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
+                <span className="font-medium">Total Chauffeurs</span>
+                <Users className="w-4 h-4 text-slate-400" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-900">{drivers.length}</div>
+              <div className="text-[10px] text-emerald-600 font-semibold mt-1">
+                100% Permis Vérifiés CEDEAO
+              </div>
+            </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span className="font-medium">Distance Totale Parcourue</span>
-            <Gauge className="w-4 h-4 text-orange-500" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-orange-600">
-            {totalKm.toLocaleString()} <span className="text-xs font-semibold">km</span>
-          </div>
-          <div className="text-[10px] text-slate-500 font-medium mt-1">
-            Cumul historique de la flotte
-          </div>
-        </div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
+                <span className="font-medium">Distance Totale Parcourue</span>
+                <Gauge className="w-4 h-4 text-orange-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-orange-600">
+                {totalKm.toLocaleString()} <span className="text-xs font-semibold">km</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium mt-1">Cumul historique de la flotte</div>
+            </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span className="font-medium">Badges Élite Or (30J)</span>
-            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-          </div>
-          <div className="text-2xl font-bold font-mono text-amber-600">{eliteCount}</div>
-          <div className="text-[10px] text-amber-700 font-semibold mt-1">
-            Top performers (Score ≥ 90)
-          </div>
-        </div>
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
+                <span className="font-medium">Badges Élite Or (30J)</span>
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-amber-600">{eliteCount}</div>
+              <div className="text-[10px] text-amber-700 font-semibold mt-1">Top performers (Score ≥ 90)</div>
+            </div>
 
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-            <span className="font-medium">Camions Connectés</span>
-            <Truck className="w-4 h-4 text-blue-500" />
+            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+              <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
+                <span className="font-medium">Camions Connectés</span>
+                <Truck className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-900">
+                {drivers.filter(d => d.assignedVehicleId).length} / {drivers.length}
+              </div>
+              <div className="text-[10px] text-blue-600 font-semibold mt-1">Télématique active en cabine</div>
+            </div>
           </div>
-          <div className="text-2xl font-bold font-mono text-slate-900">
-            {drivers.filter((d) => d.assignedVehicleId).length} / {drivers.length}
-          </div>
-          <div className="text-[10px] text-blue-600 font-semibold mt-1">
-            Télématique active en cabine
-          </div>
-        </div>
-      </div>
 
-      {/* Filter & Search Toolbar */}
-      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-4">
-        {/* Search Bar */}
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher par nom, immatriculation ou permis..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-          />
-        </div>
+          {/* Filter & Search Toolbar */}
+          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-4">
+            {/* Search Bar */}
+            <div className="relative flex-1 min-w-[240px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Rechercher par nom, immatriculation ou permis..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+              />
+            </div>
 
-        {/* Grade Filter */}
-        <div className="flex items-center gap-2 text-xs">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <span className="font-bold text-slate-700">Badge 30J:</span>
-          <select
-            value={selectedGradeFilter}
-            onChange={(e) => setSelectedGradeFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
-          >
-            <option value="ALL">Tous les badges (Tous)</option>
-            <option value="GOLD_ELITE">🏆 Élite Or (≥ 90)</option>
-            <option value="SILVER_SAFE">🥇 Conducteur Sûr (80-89)</option>
-            <option value="BRONZE_STANDARD">🥈 Standard Conforme (70-79)</option>
-            <option value="RISK_WARNING">⚠️ Suivi Requis (&lt; 70)</option>
-          </select>
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="font-bold text-slate-700">Statut:</span>
-          <select
-            value={selectedStatusFilter}
-            onChange={(e) => setSelectedStatusFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
-          >
-            <option value="ALL">Tous les statuts</option>
-            <option value="ON_TRIP">🚚 En Trajet (ON_TRIP)</option>
-            <option value="AVAILABLE">🟢 Disponible (AVAILABLE)</option>
-            <option value="OFF_DUTY">☕ En Repos (OFF_DUTY)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Driver Profiles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDrivers.length === 0 ? (
-          <div className="col-span-full bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-500 text-xs italic">
-            Aucun chauffeur ne correspond aux critères de recherche sélectionnés.
-          </div>
-        ) : (
-          filteredDrivers.map((driver) => {
-            const { badge, assignedVehicle } = driver;
-
-            return (
-              <div
-                key={driver.id}
-                className="bg-white border border-slate-200 hover:border-orange-300 rounded-xl shadow-xs hover:shadow-md transition duration-200 overflow-hidden flex flex-col justify-between"
+            {/* Grade Filter */}
+            <div className="flex items-center gap-2 text-xs">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <span className="font-bold text-slate-700">Badge 30J:</span>
+              <select
+                value={selectedGradeFilter}
+                onChange={e => setSelectedGradeFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
               >
-                {/* Driver Card Body */}
-                <div className="p-5 space-y-4">
-                  {/* Top Header: Avatar & Status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center font-extrabold text-base shadow-sm shrink-0">
-                        {driver.fullName
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')}
-                      </div>
+                <option value="ALL">Tous les badges (Tous)</option>
+                <option value="GOLD_ELITE">🏆 Élite Or (≥ 90)</option>
+                <option value="SILVER_SAFE">🥇 Conducteur Sûr (80-89)</option>
+                <option value="BRONZE_STANDARD">🥈 Standard Conforme (70-79)</option>
+                <option value="RISK_WARNING">⚠️ Suivi Requis (&lt; 70)</option>
+              </select>
+            </div>
 
-                      <div>
-                        <h3 className="font-bold text-slate-900 text-sm hover:text-orange-600 transition">
-                          {driver.fullName}
-                        </h3>
-                        <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 font-medium">
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span>{driver.phone || '+229 97 00 00 00'}</span>
-                        </div>
-                      </div>
-                    </div>
+            {/* Status Filter */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-slate-700">Statut:</span>
+              <select
+                value={selectedStatusFilter}
+                onChange={e => setSelectedStatusFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
+              >
+                <option value="ALL">Tous les statuts</option>
+                <option value="ON_TRIP">🚚 En Trajet (ON_TRIP)</option>
+                <option value="AVAILABLE">🟢 Disponible (AVAILABLE)</option>
+                <option value="OFF_DUTY">☕ En Repos (OFF_DUTY)</option>
+              </select>
+            </div>
+          </div>
 
-                    <span
-                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase border tracking-wider ${
-                        driver.status === 'ON_TRIP'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : driver.status === 'AVAILABLE'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      {driver.status === 'ON_TRIP'
-                        ? '🚚 EN TRAJET'
-                        : driver.status === 'AVAILABLE'
-                        ? '🟢 DISPONIBLE'
-                        : '☕ REPOS'}
-                    </span>
-                  </div>
+          {/* Driver Profiles Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredDrivers.length === 0 ? (
+              <div className="col-span-full bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-500 text-xs italic">
+                Aucun chauffeur ne correspond aux critères de recherche sélectionnés.
+              </div>
+            ) : (
+              filteredDrivers.map(driver => {
+                const { badge, assignedVehicle } = driver;
 
-                  {/* 30-Day Performance Badge Container */}
-                  <div className={`p-3 rounded-xl border ${badge.borderClass} ${badge.bgClass} shadow-2xs space-y-1.5`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-extrabold text-xs">
-                        {badge.icon}
-                        <span>{badge.badgeLabel}</span>
-                      </div>
+                return (
+                  <div
+                    key={driver.id}
+                    className="bg-white border border-slate-200 hover:border-orange-300 rounded-xl shadow-xs hover:shadow-md transition duration-200 overflow-hidden flex flex-col justify-between"
+                  >
+                    {/* Driver Card Body */}
+                    <div className="p-5 space-y-4">
+                      {/* Top Header: Avatar & Status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center font-extrabold text-base shadow-sm shrink-0">
+                            {driver.fullName
+                              .split(' ')
+                              .map(n => n[0])
+                              .join('')}
+                          </div>
 
-                      <div className="font-mono font-extrabold text-xs">
-                        Score: {driver.currentSafetyScore} / 100
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] leading-tight opacity-90 font-medium">
-                      {badge.description}
-                    </p>
-                  </div>
-
-                  {/* Distance Driven Metric */}
-                  <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between">
-                    <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Distance Totale Parcourue
-                      </div>
-                      <div className="text-lg font-bold font-mono text-orange-600 mt-0.5">
-                        {driver.totalKmDriven.toLocaleString()} <span className="text-xs font-semibold text-slate-600">km</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Moy. Mensuelle
-                      </div>
-                      <div className="text-xs font-mono font-bold text-slate-700 mt-0.5">
-                        ~{Math.round(driver.totalKmDriven / 12).toLocaleString()} km / mois
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assigned Vehicle Section */}
-                  <div className="border-t border-slate-100 pt-3 space-y-2">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                      <span>Camion Assigné Actuel</span>
-                      <span className="text-slate-500 font-mono">Télématique IoT</span>
-                    </div>
-
-                    {assignedVehicle ? (
-                      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-orange-500 shrink-0" />
                           <div>
-                            <div className="font-mono font-bold text-slate-900 text-xs">
-                              {assignedVehicle.immatriculation}
-                            </div>
-                            <div className="text-[11px] text-slate-500 font-medium">
-                              {assignedVehicle.make} {assignedVehicle.model}
+                            <h3 className="font-bold text-slate-900 text-sm hover:text-orange-600 transition">
+                              {driver.fullName}
+                            </h3>
+                            <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 font-medium">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{driver.phone || '+229 97 00 00 00'}</span>
                             </div>
                           </div>
                         </div>
 
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                          {assignedVehicle.type}
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase border tracking-wider ${
+                            driver.status === 'ON_TRIP'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : driver.status === 'AVAILABLE'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {driver.status === 'ON_TRIP'
+                            ? '🚚 EN TRAJET'
+                            : driver.status === 'AVAILABLE'
+                              ? '🟢 DISPONIBLE'
+                              : '☕ REPOS'}
                         </span>
                       </div>
-                    ) : (
-                      <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-lg text-xs text-amber-800 font-medium flex items-center justify-between">
-                        <span>Aucun véhicule fixe assigné</span>
-                        <span className="text-[10px] font-bold underline cursor-pointer">Affecter</span>
+
+                      {/* 30-Day Performance Badge Container */}
+                      <div
+                        className={`p-3 rounded-xl border ${badge.borderClass} ${badge.bgClass} shadow-2xs space-y-1.5`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 font-extrabold text-xs">
+                            {badge.icon}
+                            <span>{badge.badgeLabel}</span>
+                          </div>
+
+                          <div className="font-mono font-extrabold text-xs">
+                            Score: {driver.currentSafetyScore} / 100
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] leading-tight opacity-90 font-medium">
+                          {badge.description}
+                        </p>
                       </div>
-                    )}
-                  </div>
 
-                  {/* License & Credentials Info */}
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">Permis CEDEAO</span>
-                      <strong className="text-slate-800 font-mono">{driver.licenseNumber}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px]">Catégorie</span>
-                      <strong className="text-slate-800 font-bold">{driver.licenseCategory || 'Catégorie CE'}</strong>
-                    </div>
-                  </div>
-                </div>
+                      {/* Distance Driven Metric */}
+                      <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Distance Totale Parcourue
+                          </div>
+                          <div className="text-lg font-bold font-mono text-orange-600 mt-0.5">
+                            {driver.totalKmDriven.toLocaleString()}{' '}
+                            <span className="text-xs font-semibold text-slate-600">km</span>
+                          </div>
+                        </div>
 
-                {/* Card Action Footer */}
-                <div className="bg-slate-50 border-t border-slate-200 p-3 flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => setSelectedDriverDetail(driver)}
-                    className="text-xs font-bold text-slate-700 hover:text-orange-600 transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Fiche Détaillée 30J</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-
-                  {onNavigateToMessaging && (
-                    <button
-                      onClick={() => onNavigateToMessaging(driver.id)}
-                      className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Envoyer Consigne</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Driver Detail Drawer / Modal */}
-      {selectedDriverDetail && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-6">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-200 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-orange-500 text-white font-extrabold text-lg flex items-center justify-center">
-                  {selectedDriverDetail.fullName
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    {selectedDriverDetail.fullName}
-                  </h3>
-                  <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                    <span>N° Permis: <strong className="font-mono text-slate-800">{selectedDriverDetail.licenseNumber}</strong></span>
-                    <span>•</span>
-                    <span>Catégorie: <strong>{selectedDriverDetail.licenseCategory}</strong></span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setSelectedDriverDetail(null)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Performance Badge & 30-Day Breakdown */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Award className="w-4 h-4 text-orange-500" />
-                <span>Bilan de Conduite & Performance sur 30 Jours Glissants</span>
-              </h4>
-
-              {(() => {
-                const b = get30DayPerformanceBadge(selectedDriverDetail.currentSafetyScore);
-                return (
-                  <div className={`p-4 rounded-xl border ${b.borderClass} ${b.bgClass} space-y-2`}>
-                    <div className="flex items-center justify-between font-extrabold text-sm">
-                      <div className="flex items-center gap-2">
-                        {b.icon}
-                        <span>{b.badgeLabel}</span>
+                        <div className="text-right">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Moy. Mensuelle
+                          </div>
+                          <div className="text-xs font-mono font-bold text-slate-700 mt-0.5">
+                            ~{Math.round(driver.totalKmDriven / 12).toLocaleString()} km / mois
+                          </div>
+                        </div>
                       </div>
-                      <span className="font-mono text-base">{selectedDriverDetail.currentSafetyScore} / 100</span>
+
+                      {/* Assigned Vehicle Section */}
+                      <div className="border-t border-slate-100 pt-3 space-y-2">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                          <span>Camion Assigné Actuel</span>
+                          <span className="text-slate-500 font-mono">Télématique IoT</span>
+                        </div>
+
+                        {assignedVehicle ? (
+                          <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-orange-500 shrink-0" />
+                              <div>
+                                <div className="font-mono font-bold text-slate-900 text-xs">
+                                  {assignedVehicle.immatriculation}
+                                </div>
+                                <div className="text-[11px] text-slate-500 font-medium">
+                                  {assignedVehicle.make} {assignedVehicle.model}
+                                </div>
+                              </div>
+                            </div>
+
+                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded">
+                              {assignedVehicle.type}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-lg text-xs text-amber-800 font-medium flex items-center justify-between">
+                            <span>Aucun véhicule fixe assigné</span>
+                            <span className="text-[10px] font-bold underline cursor-pointer">Affecter</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* License & Credentials Info */}
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Permis CEDEAO</span>
+                          <strong className="text-slate-800 font-mono">{driver.licenseNumber}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Catégorie</span>
+                          <strong className="text-slate-800 font-bold">
+                            {driver.licenseCategory || 'Catégorie CE'}
+                          </strong>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs opacity-90 leading-relaxed font-medium">
-                      {b.description}
-                    </p>
+
+                    {/* Card Action Footer */}
+                    <div className="bg-slate-50 border-t border-slate-200 p-3 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => setSelectedDriverDetail(driver)}
+                        className="text-xs font-bold text-slate-700 hover:text-orange-600 transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Fiche Détaillée 30J</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+
+                      {onNavigateToMessaging && (
+                        <button
+                          onClick={() => onNavigateToMessaging(driver.id)}
+                          className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Envoyer Consigne</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
-              })()}
+              })
+            )}
+          </div>
 
-              {/* 30-Day Criteria Metrics Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="text-slate-500 font-medium">Distance Parcourue (30J)</div>
-                  <div className="text-base font-bold font-mono text-orange-600 mt-1">
-                    {Math.round(selectedDriverDetail.totalKmDriven / 10).toLocaleString()} km
+          {/* Driver Detail Drawer / Modal */}
+          {selectedDriverDetail && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-6">
+                {/* Modal Header */}
+                <div className="flex items-start justify-between border-b border-slate-200 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-orange-500 text-white font-extrabold text-lg flex items-center justify-center">
+                      {selectedDriverDetail.fullName
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">{selectedDriverDetail.fullName}</h3>
+                      <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                        <span>
+                          N° Permis:{' '}
+                          <strong className="font-mono text-slate-800">
+                            {selectedDriverDetail.licenseNumber}
+                          </strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Catégorie: <strong>{selectedDriverDetail.licenseCategory}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedDriverDetail(null)}
+                    className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Performance Badge & 30-Day Breakdown */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Award className="w-4 h-4 text-orange-500" />
+                    <span>Bilan de Conduite & Performance sur 30 Jours Glissants</span>
+                  </h4>
+
+                  {(() => {
+                    const b = get30DayPerformanceBadge(selectedDriverDetail.currentSafetyScore);
+                    return (
+                      <div className={`p-4 rounded-xl border ${b.borderClass} ${b.bgClass} space-y-2`}>
+                        <div className="flex items-center justify-between font-extrabold text-sm">
+                          <div className="flex items-center gap-2">
+                            {b.icon}
+                            <span>{b.badgeLabel}</span>
+                          </div>
+                          <span className="font-mono text-base">
+                            {selectedDriverDetail.currentSafetyScore} / 100
+                          </span>
+                        </div>
+                        <p className="text-xs opacity-90 leading-relaxed font-medium">{b.description}</p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 30-Day Criteria Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div className="text-slate-500 font-medium">Distance Parcourue (30J)</div>
+                      <div className="text-base font-bold font-mono text-orange-600 mt-1">
+                        {Math.round(selectedDriverDetail.totalKmDriven / 10).toLocaleString()} km
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div className="text-slate-500 font-medium">Respect Limitateur Vitesse</div>
+                      <div className="text-base font-bold font-mono text-emerald-600 mt-1">
+                        98.2% Conforme
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div className="text-slate-500 font-medium">Éco-Conduite Carburant</div>
+                      <div className="text-base font-bold font-mono text-slate-800 mt-1">
+                        -4.2 L / 100km d'économie
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div className="text-slate-500 font-medium">Incidents Freinage Brutal</div>
+                      <div className="text-base font-bold font-mono text-emerald-600 mt-1">0 Incident</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="text-slate-500 font-medium">Respect Limitateur Vitesse</div>
-                  <div className="text-base font-bold font-mono text-emerald-600 mt-1">
-                    98.2% Conforme
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="text-slate-500 font-medium">Éco-Conduite Carburant</div>
-                  <div className="text-base font-bold font-mono text-slate-800 mt-1">
-                    -4.2 L / 100km d'économie
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="text-slate-500 font-medium">Incidents Freinage Brutal</div>
-                  <div className="text-base font-bold font-mono text-emerald-600 mt-1">
-                    0 Incident
-                  </div>
+                {/* Modal Actions */}
+                <div className="border-t border-slate-200 pt-4 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setSelectedDriverDetail(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Fermer
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* Modal Actions */}
-            <div className="border-t border-slate-200 pt-4 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setSelectedDriverDetail(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
         </>
       )}
     </div>

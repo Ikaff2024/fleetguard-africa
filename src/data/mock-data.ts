@@ -1,4 +1,22 @@
-import { Organization, Vehicle, Driver, Geofence, SafetyEvent, DriverScoreConfig, MaintenanceLog, FuelLog, ComplianceDoc, GpsPoint, FuelStation, DriverFatigueMetrics, ShiftScheduleSlot, LegalDrivingFrameworkConfig, DigitalBadge, DriverRewardProfile, FuelBonusRuleConfig } from '../types';
+import {
+  Organization,
+  Vehicle,
+  Driver,
+  Geofence,
+  SafetyEvent,
+  DriverScoreConfig,
+  MaintenanceLog,
+  FuelLog,
+  ComplianceDoc,
+  GpsPoint,
+  FuelStation,
+  DriverFatigueMetrics,
+  ShiftScheduleSlot,
+  LegalDrivingFrameworkConfig,
+  DigitalBadge,
+  DriverRewardProfile,
+  FuelBonusRuleConfig,
+} from '../types';
 
 export const MOCK_ORGANIZATIONS: Organization[] = [
   {
@@ -309,13 +327,13 @@ export const MOCK_GEOFENCES: Geofence[] = [
     type: 'CUSTOM_CORRIDOR',
     geometryType: 'POLYGON',
     coordinates: [
-      [7.15, 2.00],
+      [7.15, 2.0],
       [7.25, 2.15],
-      [8.50, 2.35],
-      [9.40, 2.70],
-      [9.30, 2.80],
-      [8.40, 2.45],
-      [7.10, 2.10],
+      [8.5, 2.35],
+      [9.4, 2.7],
+      [9.3, 2.8],
+      [8.4, 2.45],
+      [7.1, 2.1],
     ],
     speedLimitKmH: 80,
     isActive: true,
@@ -367,8 +385,8 @@ export const MOCK_SAFETY_EVENTS: SafetyEvent[] = [
     eventType: 'FATIGUE_NIGHT_DRIVING',
     severity: 'HIGH',
     recordedAt: '2026-07-29T02:15:00.000Z',
-    latitude: 6.8910,
-    longitude: 2.3100,
+    latitude: 6.891,
+    longitude: 2.31,
     speedKmH: 72.0,
     description: 'Conduite de nuit non autorisée entre 02:00 et 04:00',
     penaltyPointsDeducted: 12.0,
@@ -396,7 +414,8 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     organizationId: 'org_transafrik_cotonou',
     vehicleId: 'veh_actros_01',
     type: 'PREVENTATIVE',
-    description: 'Vidange moteur complète, changement filtres à huile et filtre à gazole Haute Pression (anti-poussière saharienne)',
+    description:
+      'Vidange moteur complète, changement filtres à huile et filtre à gazole Haute Pression (anti-poussière saharienne)',
     odometerKmAtService: 140000,
     cost: 320000,
     currency: 'XOF',
@@ -405,11 +424,27 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     nextServiceKmDue: 155000,
     status: 'COMPLETED',
     technicianName: 'Ousmane Traoré (Master Certifié Mercedes-Benz)',
-    technicianNotes: 'Contrôle télémetrique effectué. Injecteurs nettoyés sous pression 1800 bar. État général du bloc moteur excellent. Pression d\'huile stabilisée à 4.2 bar au ralenti.',
+    technicianNotes:
+      "Contrôle télémetrique effectué. Injecteurs nettoyés sous pression 1800 bar. État général du bloc moteur excellent. Pression d'huile stabilisée à 4.2 bar au ralenti.",
     partsReplaced: [
-      { partNumber: 'MB-A4700900051', partName: 'Filtre à Gazole SepaFilter HP', quantity: 2, unitCost: 45000 },
-      { partNumber: 'MB-A0001803009', partName: 'Filtre à Huile Moteur Actros Euro 3', quantity: 1, unitCost: 38000 },
-      { partNumber: 'TOT-RUBIA-7400', partName: 'Huile Synthétique Total Rubia TIR 7400 15W40 (Fut 20L)', quantity: 2, unitCost: 96000 },
+      {
+        partNumber: 'MB-A4700900051',
+        partName: 'Filtre à Gazole SepaFilter HP',
+        quantity: 2,
+        unitCost: 45000,
+      },
+      {
+        partNumber: 'MB-A0001803009',
+        partName: 'Filtre à Huile Moteur Actros Euro 3',
+        quantity: 1,
+        unitCost: 38000,
+      },
+      {
+        partNumber: 'TOT-RUBIA-7400',
+        partName: 'Huile Synthétique Total Rubia TIR 7400 15W40 (Fut 20L)',
+        quantity: 2,
+        unitCost: 96000,
+      },
     ],
   },
   {
@@ -425,11 +460,22 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     performedAt: '2026-07-28',
     nextServiceKmDue: 50000,
     status: 'IN_PROGRESS',
-    technicianName: 'Sègbégnon Dossou (Chef d\'Atelier Principal)',
-    technicianNotes: 'Remplacement des plaquettes suite à usure prématurée causée par les pistes latéritiques en saison des pluies. Alignement des trains roulants en cours.',
+    technicianName: "Sègbégnon Dossou (Chef d'Atelier Principal)",
+    technicianNotes:
+      'Remplacement des plaquettes suite à usure prématurée causée par les pistes latéritiques en saison des pluies. Alignement des trains roulants en cours.',
     partsReplaced: [
-      { partNumber: 'TOY-04465-0K240', partName: 'Jeu de Plaquettes de Frein Avant Céramique Hilux', quantity: 1, unitCost: 65000 },
-      { partNumber: 'KYB-344400', partName: 'Amortisseur Gaz Renforcé Ultra-SR Avant', quantity: 2, unitCost: 60000 },
+      {
+        partNumber: 'TOY-04465-0K240',
+        partName: 'Jeu de Plaquettes de Frein Avant Céramique Hilux',
+        quantity: 1,
+        unitCost: 65000,
+      },
+      {
+        partNumber: 'KYB-344400',
+        partName: 'Amortisseur Gaz Renforcé Ultra-SR Avant',
+        quantity: 2,
+        unitCost: 60000,
+      },
     ],
   },
   {
@@ -437,7 +483,8 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     organizationId: 'org_transafrik_cotonou',
     vehicleId: 'veh_actros_01',
     type: 'TIRE_REPLACEMENT',
-    description: 'Remplacement des 4 pneumatiques essieu moteur arrière par gommes renforcées Michelin X Multi 315/80 R22.5',
+    description:
+      'Remplacement des 4 pneumatiques essieu moteur arrière par gommes renforcées Michelin X Multi 315/80 R22.5',
     odometerKmAtService: 148200,
     cost: 1120000,
     currency: 'XOF',
@@ -446,9 +493,15 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     nextServiceKmDue: 180000,
     status: 'COMPLETED',
     technicianName: 'Franck Kouassi (Spécialiste Poids Lourds)',
-    technicianNotes: 'Permutation des roues avant. Calibrage des capteurs TPMS sans fil intégrés au boîtier GPS FleetGuard. Pression réglée à 8.5 bar.',
+    technicianNotes:
+      'Permutation des roues avant. Calibrage des capteurs TPMS sans fil intégrés au boîtier GPS FleetGuard. Pression réglée à 8.5 bar.',
     partsReplaced: [
-      { partNumber: 'MICH-31580R225-XM', partName: 'Pneu Michelin X Multi Z 315/80 R22.5 156/150K', quantity: 4, unitCost: 280000 },
+      {
+        partNumber: 'MICH-31580R225-XM',
+        partName: 'Pneu Michelin X Multi Z 315/80 R22.5 156/150K',
+        quantity: 4,
+        unitCost: 280000,
+      },
     ],
   },
   {
@@ -456,7 +509,8 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     organizationId: 'org_transafrik_cotonou',
     vehicleId: 'veh_shacman_02',
     type: 'PREVENTATIVE',
-    description: 'Révision des 100 000 km: Graissage général du châssis, contrôle boîte Weichai et ponts moteur',
+    description:
+      'Révision des 100 000 km: Graissage général du châssis, contrôle boîte Weichai et ponts moteur',
     odometerKmAtService: 98500,
     cost: 410000,
     currency: 'XOF',
@@ -465,11 +519,27 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     nextServiceKmDue: 110000,
     status: 'SCHEDULED',
     technicianName: 'Koffi Mensah (Technicien Senior Poids Lourds)',
-    technicianNotes: 'Maintenance programmée à l\'arrivée du convoi Niamey. Inclus vidange pont arrière et purge complète du circuit pneumatique de freinage.',
+    technicianNotes:
+      "Maintenance programmée à l'arrivée du convoi Niamey. Inclus vidange pont arrière et purge complète du circuit pneumatique de freinage.",
     partsReplaced: [
-      { partNumber: 'SHC-100041285', partName: 'Filtre à Air Primaire et Secondaire Shacman F3000', quantity: 1, unitCost: 75000 },
-      { partNumber: 'WEI-612630080088', partName: 'Filtre à Huile Weichai WP12', quantity: 2, unitCost: 28000 },
-      { partNumber: 'SHELL-SPIRAX-S2', partName: 'Huile de Pont Shell Spirax S2 A 80W-90 (Fut 20L)', quantity: 1, unitCost: 85000 },
+      {
+        partNumber: 'SHC-100041285',
+        partName: 'Filtre à Air Primaire et Secondaire Shacman F3000',
+        quantity: 1,
+        unitCost: 75000,
+      },
+      {
+        partNumber: 'WEI-612630080088',
+        partName: 'Filtre à Huile Weichai WP12',
+        quantity: 2,
+        unitCost: 28000,
+      },
+      {
+        partNumber: 'SHELL-SPIRAX-S2',
+        partName: 'Huile de Pont Shell Spirax S2 A 80W-90 (Fut 20L)',
+        quantity: 1,
+        unitCost: 85000,
+      },
     ],
   },
   {
@@ -477,7 +547,8 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     organizationId: 'org_transafrik_cotonou',
     vehicleId: 'veh_howo_04',
     type: 'BRAKE_SERVICE',
-    description: 'Contrôle garnitures de frein tambours arrière et remplacement robinet de commande de frein de remorque',
+    description:
+      'Contrôle garnitures de frein tambours arrière et remplacement robinet de commande de frein de remorque',
     odometerKmAtService: 112000,
     cost: 240000,
     currency: 'XOF',
@@ -486,10 +557,21 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     nextServiceKmDue: 125000,
     status: 'OVERDUE',
     technicianName: 'Calixte Dossa (Mécanicien Réseau Routier)',
-    technicianNotes: 'AVERTISSEMENT: Garnitures usées à 85%. Nécessite une immobilisation de 4 heures dès le retour à la base de Bohicon.',
+    technicianNotes:
+      'AVERTISSEMENT: Garnitures usées à 85%. Nécessite une immobilisation de 4 heures dès le retour à la base de Bohicon.',
     partsReplaced: [
-      { partNumber: 'HOWO-WG9100440001', partName: 'Garniture Tambour de Frein Sinotruk Howo 371', quantity: 4, unitCost: 35000 },
-      { partNumber: 'KNORR-K012345', partName: 'Valve de Freinage Remorque Knorr-Bremse', quantity: 1, unitCost: 100000 },
+      {
+        partNumber: 'HOWO-WG9100440001',
+        partName: 'Garniture Tambour de Frein Sinotruk Howo 371',
+        quantity: 4,
+        unitCost: 35000,
+      },
+      {
+        partNumber: 'KNORR-K012345',
+        partName: 'Valve de Freinage Remorque Knorr-Bremse',
+        quantity: 1,
+        unitCost: 100000,
+      },
     ],
   },
   {
@@ -497,7 +579,7 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     organizationId: 'org_transafrik_cotonou',
     vehicleId: 'veh_fh16_05',
     type: 'PREVENTATIVE',
-    description: 'Entretien Périodique Volvo FH16 750hp: Remplacement courroies d\'accessoires et gel AdBlue',
+    description: "Entretien Périodique Volvo FH16 750hp: Remplacement courroies d'accessoires et gel AdBlue",
     odometerKmAtService: 78000,
     cost: 580000,
     currency: 'XOF',
@@ -506,10 +588,21 @@ export const MOCK_MAINTENANCE_LOGS: MaintenanceLog[] = [
     nextServiceKmDue: 90000,
     status: 'SCHEDULED',
     technicianName: 'Jean-Baptiste Houngbo (Ingénieur Diagnostic Volvo Tech)',
-    technicianNotes: 'Inspection préventive planifiée avant voyage exceptionnel convoi lourd Cotonou-Ouagadougou.',
+    technicianNotes:
+      'Inspection préventive planifiée avant voyage exceptionnel convoi lourd Cotonou-Ouagadougou.',
     partsReplaced: [
-      { partNumber: 'VOL-21408821', partName: 'Courroie d\'Alternateur & Ventilateur Volvo D16', quantity: 2, unitCost: 65000 },
-      { partNumber: 'VOL-21397785', partName: 'Filtre de Réducteur SCR AdBlue Volvo Euro 5', quantity: 1, unitCost: 110000 },
+      {
+        partNumber: 'VOL-21408821',
+        partName: "Courroie d'Alternateur & Ventilateur Volvo D16",
+        quantity: 2,
+        unitCost: 65000,
+      },
+      {
+        partNumber: 'VOL-21397785',
+        partName: 'Filtre de Réducteur SCR AdBlue Volvo Euro 5',
+        quantity: 1,
+        unitCost: 110000,
+      },
     ],
   },
 ];
@@ -576,13 +669,85 @@ export const MOCK_COMPLIANCE_DOCS: ComplianceDoc[] = [
 
 // Sample Route Points for Live Map Simulation (Axe Cotonou -> Bohicon -> Parakou)
 export const MOCK_ROUTE_POINTS: GpsPoint[] = [
-  { latitude: 6.3654, longitude: 2.4183, speedKmH: 45, headingDegree: 350, timestamp: '2026-07-31T08:00:00Z', accuracyMeters: 4, ignitionOn: true, batteryLevelPct: 95, networkType: '4G' }, // Cotonou
-  { latitude: 6.4210, longitude: 2.3890, speedKmH: 72, headingDegree: 345, timestamp: '2026-07-31T08:15:00Z', accuracyMeters: 5, ignitionOn: true, batteryLevelPct: 94, networkType: '4G' }, // Allada road
-  { latitude: 6.6492, longitude: 2.2190, speedKmH: 88, headingDegree: 350, timestamp: '2026-07-31T08:45:00Z', accuracyMeters: 4, ignitionOn: true, batteryLevelPct: 92, networkType: '3G' }, // Allada
-  { latitude: 7.1783, longitude: 2.0667, speedKmH: 94, headingDegree: 10, timestamp: '2026-07-31T09:30:00Z', accuracyMeters: 6, ignitionOn: true, batteryLevelPct: 90, networkType: '2G', eventFlags: ['OVER_SPEED'] }, // Bohicon
-  { latitude: 7.9124, longitude: 2.1092, speedKmH: 65, headingDegree: 15, timestamp: '2026-07-31T10:45:00Z', accuracyMeters: 8, ignitionOn: true, batteryLevelPct: 85, networkType: 'NONE' }, // Dassa (Zone Blanche)
-  { latitude: 8.4102, longitude: 2.2901, speedKmH: 82, headingDegree: 25, timestamp: '2026-07-31T11:40:00Z', accuracyMeters: 5, ignitionOn: true, batteryLevelPct: 81, networkType: '3G', eventFlags: ['HARSH_BRAKE'] }, // Savè
-  { latitude: 9.3371, longitude: 2.6303, speedKmH: 0, headingDegree: 0, timestamp: '2026-07-31T13:30:00Z', accuracyMeters: 3, ignitionOn: false, batteryLevelPct: 78, networkType: '4G' }, // Parakou Dépôt
+  {
+    latitude: 6.3654,
+    longitude: 2.4183,
+    speedKmH: 45,
+    headingDegree: 350,
+    timestamp: '2026-07-31T08:00:00Z',
+    accuracyMeters: 4,
+    ignitionOn: true,
+    batteryLevelPct: 95,
+    networkType: '4G',
+  }, // Cotonou
+  {
+    latitude: 6.421,
+    longitude: 2.389,
+    speedKmH: 72,
+    headingDegree: 345,
+    timestamp: '2026-07-31T08:15:00Z',
+    accuracyMeters: 5,
+    ignitionOn: true,
+    batteryLevelPct: 94,
+    networkType: '4G',
+  }, // Allada road
+  {
+    latitude: 6.6492,
+    longitude: 2.219,
+    speedKmH: 88,
+    headingDegree: 350,
+    timestamp: '2026-07-31T08:45:00Z',
+    accuracyMeters: 4,
+    ignitionOn: true,
+    batteryLevelPct: 92,
+    networkType: '3G',
+  }, // Allada
+  {
+    latitude: 7.1783,
+    longitude: 2.0667,
+    speedKmH: 94,
+    headingDegree: 10,
+    timestamp: '2026-07-31T09:30:00Z',
+    accuracyMeters: 6,
+    ignitionOn: true,
+    batteryLevelPct: 90,
+    networkType: '2G',
+    eventFlags: ['OVER_SPEED'],
+  }, // Bohicon
+  {
+    latitude: 7.9124,
+    longitude: 2.1092,
+    speedKmH: 65,
+    headingDegree: 15,
+    timestamp: '2026-07-31T10:45:00Z',
+    accuracyMeters: 8,
+    ignitionOn: true,
+    batteryLevelPct: 85,
+    networkType: 'NONE',
+  }, // Dassa (Zone Blanche)
+  {
+    latitude: 8.4102,
+    longitude: 2.2901,
+    speedKmH: 82,
+    headingDegree: 25,
+    timestamp: '2026-07-31T11:40:00Z',
+    accuracyMeters: 5,
+    ignitionOn: true,
+    batteryLevelPct: 81,
+    networkType: '3G',
+    eventFlags: ['HARSH_BRAKE'],
+  }, // Savè
+  {
+    latitude: 9.3371,
+    longitude: 2.6303,
+    speedKmH: 0,
+    headingDegree: 0,
+    timestamp: '2026-07-31T13:30:00Z',
+    accuracyMeters: 3,
+    ignitionOn: false,
+    batteryLevelPct: 78,
+    networkType: '4G',
+  }, // Parakou Dépôt
 ];
 
 export const MOCK_FUEL_STATIONS: FuelStation[] = [
@@ -590,8 +755,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_total_bohicon',
     name: 'TotalEnergies Bohicon Carrefour RNIE2',
     brand: 'TOTAL_ENERGIES',
-    latitude: 7.1820,
-    longitude: 2.0680,
+    latitude: 7.182,
+    longitude: 2.068,
     address: 'Carrefour RNIE 2 - Route de Parakou',
     city: 'Bohicon',
     country: 'Bénin',
@@ -612,8 +777,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_oryx_dassa',
     name: 'Oryx Energies Dassa Relais Nord (Zone Isolée)',
     brand: 'ORYX',
-    latitude: 7.8200,
-    longitude: 2.1200,
+    latitude: 7.82,
+    longitude: 2.12,
     address: 'Axe Bohicon - Parakou KM 140',
     city: 'Dassa-Zoumè',
     country: 'Bénin',
@@ -633,8 +798,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_corlay_save',
     name: 'Corlay / Oando Savè Poids Lourds',
     brand: 'CORLAY',
-    latitude: 8.4250,
-    longitude: 2.2950,
+    latitude: 8.425,
+    longitude: 2.295,
     address: 'Route Nationale 2 - Sortie Nord',
     city: 'Savè',
     country: 'Bénin',
@@ -655,8 +820,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_total_parakou',
     name: 'TotalEnergies Parakou Hub Transit Corridor',
     brand: 'TOTAL_ENERGIES',
-    latitude: 9.3400,
-    longitude: 2.6280,
+    latitude: 9.34,
+    longitude: 2.628,
     address: 'Avenue de la Gare Transit Niger',
     city: 'Parakou',
     country: 'Bénin',
@@ -677,8 +842,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_star_malanville',
     name: 'Star Oil Malanville Frontière Niger',
     brand: 'STAR_OIL',
-    latitude: 11.8600,
-    longitude: 3.3800,
+    latitude: 11.86,
+    longitude: 3.38,
     address: 'Poste Juxtaposé de Malanville (Pont Niger)',
     city: 'Malanville',
     country: 'Bénin',
@@ -699,8 +864,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_total_thies',
     name: 'TotalEnergies Thiès Autoroute A1',
     brand: 'TOTAL_ENERGIES',
-    latitude: 14.7900,
-    longitude: -16.9200,
+    latitude: 14.79,
+    longitude: -16.92,
     address: 'Aire de Service A1 Thiès-Pout',
     city: 'Thiès',
     country: 'Sénégal',
@@ -721,8 +886,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_shell_tamba',
     name: 'Shell Tambacounda Relais Sahel (Corridor Mali)',
     brand: 'SHELL',
-    latitude: 13.7700,
-    longitude: -13.6700,
+    latitude: 13.77,
+    longitude: -13.67,
     address: 'Route de Bamako N1',
     city: 'Tambacounda',
     country: 'Sénégal',
@@ -743,8 +908,8 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
     id: 'stn_shell_nakuru',
     name: 'Shell Nakuru Trans-African Highway Stop',
     brand: 'SHELL',
-    latitude: -0.2830,
-    longitude: 36.0660,
+    latitude: -0.283,
+    longitude: 36.066,
     address: 'Nakuru - Eldoret Highway A104',
     city: 'Nakuru',
     country: 'Kenya',
@@ -769,7 +934,7 @@ export const MOCK_FUEL_STATIONS: FuelStation[] = [
 export const MOCK_LEGAL_FRAMEWORKS: LegalDrivingFrameworkConfig[] = [
   {
     region: 'UEMOA_CEDEAO',
-    name: 'Directive UEMOA N°08/2009/CM (Afrique de l\'Ouest)',
+    name: "Directive UEMOA N°08/2009/CM (Afrique de l'Ouest)",
     maxDailyDrivingHours: 9.0,
     maxWeeklyDrivingHours: 56.0,
     maxBiWeeklyDrivingHours: 90.0,
@@ -778,7 +943,8 @@ export const MOCK_LEGAL_FRAMEWORKS: LegalDrivingFrameworkConfig[] = [
     minDailyRestHours: 11.0,
     minWeeklyRestHours: 45.0,
     maxNightHoursPerShift: 4.0,
-    description: 'Réglementation sur les temps de conduite et de repos des véhicules de transport routier de marchandises en zone UEMOA / CEDEAO.',
+    description:
+      'Réglementation sur les temps de conduite et de repos des véhicules de transport routier de marchandises en zone UEMOA / CEDEAO.',
   },
   {
     region: 'EAC_EAST_AFRICA',
@@ -791,7 +957,8 @@ export const MOCK_LEGAL_FRAMEWORKS: LegalDrivingFrameworkConfig[] = [
     minDailyRestHours: 12.0,
     minWeeklyRestHours: 48.0,
     maxNightHoursPerShift: 3.5,
-    description: 'Normes de sécurité routière et de prévention de la fatigue pour les transports de marchandises de la Communauté d\'Afrique de l\'Est.',
+    description:
+      "Normes de sécurité routière et de prévention de la fatigue pour les transports de marchandises de la Communauté d'Afrique de l'Est.",
   },
 ];
 
@@ -817,11 +984,24 @@ export const MOCK_DRIVER_FATIGUE_METRICS: DriverFatigueMetrics[] = [
     remainingDailyHours: 4.8,
     remainingWeeklyHours: 27.5,
     isMandatoryRestEnforced: false,
-    primaryRecommendation: 'Disponible pour rotations long-courrier (Corridor Cotonou-Niamey). Niveau de réserve physique optimal.',
+    primaryRecommendation:
+      'Disponible pour rotations long-courrier (Corridor Cotonou-Niamey). Niveau de réserve physique optimal.',
     fatigueFactors: [
-      { factorName: 'Sommeil Récent', impactScore: 12, description: 'Excellente récupération de 14h30 avant la prise de service.' },
-      { factorName: 'Charge Nocturne', impactScore: 15, description: 'Faible trajet de nuit (seulement 2h sur les 7 derniers jours).' },
-      { factorName: 'Régularité des Pauses', impactScore: 5, description: 'Respect systématique des pauses de 45 min toutes les 4h font.' },
+      {
+        factorName: 'Sommeil Récent',
+        impactScore: 12,
+        description: 'Excellente récupération de 14h30 avant la prise de service.',
+      },
+      {
+        factorName: 'Charge Nocturne',
+        impactScore: 15,
+        description: 'Faible trajet de nuit (seulement 2h sur les 7 derniers jours).',
+      },
+      {
+        factorName: 'Régularité des Pauses',
+        impactScore: 5,
+        description: 'Respect systématique des pauses de 45 min toutes les 4h font.',
+      },
     ],
   },
   {
@@ -843,11 +1023,24 @@ export const MOCK_DRIVER_FATIGUE_METRICS: DriverFatigueMetrics[] = [
     remainingWeeklyHours: 9.8,
     isMandatoryRestEnforced: false,
     recommendedNextShiftStart: 'Demain à 08:00 (Repos de 12h requis)',
-    primaryRecommendation: 'Approche de la limite quotidienne. Permuter vers un conducteur relais dans 1h20 maximum.',
+    primaryRecommendation:
+      'Approche de la limite quotidienne. Permuter vers un conducteur relais dans 1h20 maximum.',
     fatigueFactors: [
-      { factorName: 'Cumul Quotidien', impactScore: 78, description: '7h48 de conduite aujourd\'hui. Proche du plafond UEMOA 9h.' },
-      { factorName: 'Pause Incomplet', impactScore: 60, description: 'Dernière pause écourtée à 25 minutes au lieu des 45 min réglementaires.' },
-      { factorName: 'Conduite Nocturne', impactScore: 55, description: '8.5h de trajet entre 22h et 06h cette semaine.' },
+      {
+        factorName: 'Cumul Quotidien',
+        impactScore: 78,
+        description: "7h48 de conduite aujourd'hui. Proche du plafond UEMOA 9h.",
+      },
+      {
+        factorName: 'Pause Incomplet',
+        impactScore: 60,
+        description: 'Dernière pause écourtée à 25 minutes au lieu des 45 min réglementaires.',
+      },
+      {
+        factorName: 'Conduite Nocturne',
+        impactScore: 55,
+        description: '8.5h de trajet entre 22h et 06h cette semaine.',
+      },
     ],
   },
   {
@@ -868,10 +1061,19 @@ export const MOCK_DRIVER_FATIGUE_METRICS: DriverFatigueMetrics[] = [
     remainingDailyHours: 7.0,
     remainingWeeklyHours: 34.0,
     isMandatoryRestEnforced: false,
-    primaryRecommendation: 'Conducteur totalement disposé. Recommandé en priorité 1 pour prise en charge du prochain convoi.',
+    primaryRecommendation:
+      'Conducteur totalement disposé. Recommandé en priorité 1 pour prise en charge du prochain convoi.',
     fatigueFactors: [
-      { factorName: 'Temps de Repos', impactScore: 10, description: 'Repos prolongé de 16h accompli avec succès.' },
-      { factorName: 'Marge Légale', impactScore: 8, description: '7 heures de conduite encore disponibles pour la journée.' },
+      {
+        factorName: 'Temps de Repos',
+        impactScore: 10,
+        description: 'Repos prolongé de 16h accompli avec succès.',
+      },
+      {
+        factorName: 'Marge Légale',
+        impactScore: 8,
+        description: '7 heures de conduite encore disponibles pour la journée.',
+      },
     ],
   },
   {
@@ -892,9 +1094,14 @@ export const MOCK_DRIVER_FATIGUE_METRICS: DriverFatigueMetrics[] = [
     remainingDailyHours: 4.0,
     remainingWeeklyHours: 22.0,
     isMandatoryRestEnforced: false,
-    primaryRecommendation: 'Capacité de service normale. Adapté pour dessertes régionales et navettes conteneurs.',
+    primaryRecommendation:
+      'Capacité de service normale. Adapté pour dessertes régionales et navettes conteneurs.',
     fatigueFactors: [
-      { factorName: 'Charge Hebdomadaire', impactScore: 42, description: 'Niveau d\'engagement modéré sur 4 jours consécutifs.' },
+      {
+        factorName: 'Charge Hebdomadaire',
+        impactScore: 42,
+        description: "Niveau d'engagement modéré sur 4 jours consécutifs.",
+      },
     ],
   },
   {
@@ -916,11 +1123,24 @@ export const MOCK_DRIVER_FATIGUE_METRICS: DriverFatigueMetrics[] = [
     remainingWeeklyHours: 4.5,
     isMandatoryRestEnforced: false,
     recommendedNextShiftStart: 'Demain à 14:00 (Repos de 24h recommandé)',
-    primaryRecommendation: 'Risque d\'épuisement élevé. Restreindre strictement aux trajets courts ou engager un repos préventif.',
+    primaryRecommendation:
+      "Risque d'épuisement élevé. Restreindre strictement aux trajets courts ou engager un repos préventif.",
     fatigueFactors: [
-      { factorName: 'Dette de Sommeil Nocturne', impactScore: 85, description: '14 heures cumulées en conduite de nuit intense.' },
-      { factorName: 'Jours Consécutifs', impactScore: 80, description: '6 jours de travail d\'affilée sans repos de 24 heures.' },
-      { factorName: 'Restitution Insuffisante', impactScore: 75, description: 'Dernière coupure de repos de seulement 8h30 (seuil minimal 11h).' },
+      {
+        factorName: 'Dette de Sommeil Nocturne',
+        impactScore: 85,
+        description: '14 heures cumulées en conduite de nuit intense.',
+      },
+      {
+        factorName: 'Jours Consécutifs',
+        impactScore: 80,
+        description: "6 jours de travail d'affilée sans repos de 24 heures.",
+      },
+      {
+        factorName: 'Restitution Insuffisante',
+        impactScore: 75,
+        description: 'Dernière coupure de repos de seulement 8h30 (seuil minimal 11h).',
+      },
     ],
   },
   {
@@ -942,12 +1162,29 @@ export const MOCK_DRIVER_FATIGUE_METRICS: DriverFatigueMetrics[] = [
     remainingWeeklyHours: 0.0,
     isMandatoryRestEnforced: true,
     recommendedNextShiftStart: 'Dans 36 heures (Après repos réglementaire de 36h-45h)',
-    primaryRecommendation: '🚨 DÉPASSEMENT DES LIMITES LÉGALES ET RISQUE BURNOUT CRITIQUE ! Repos obligatoire de 36h à 45h imposé immédiatement par le système.',
+    primaryRecommendation:
+      '🚨 DÉPASSEMENT DES LIMITES LÉGALES ET RISQUE BURNOUT CRITIQUE ! Repos obligatoire de 36h à 45h imposé immédiatement par le système.',
     fatigueFactors: [
-      { factorName: 'Dépassement Plafond Quotidien', impactScore: 98, description: '9.8h de conduite enregistrées (Dépassement de 48 min du plafond 9h).' },
-      { factorName: 'Dépassement Semaine UEMOA', impactScore: 95, description: '57.2h accumulées (Plafond 56h dépassé).' },
-      { factorName: 'Privation de Repos', impactScore: 92, description: '7 jours d\'affilée et 6h seulement de sommeil avant la reprise.' },
-      { factorName: 'Incurie de Pause', impactScore: 90, description: '5h06 sans pause sécurité sur le dernier tronçon.' },
+      {
+        factorName: 'Dépassement Plafond Quotidien',
+        impactScore: 98,
+        description: '9.8h de conduite enregistrées (Dépassement de 48 min du plafond 9h).',
+      },
+      {
+        factorName: 'Dépassement Semaine UEMOA',
+        impactScore: 95,
+        description: '57.2h accumulées (Plafond 56h dépassé).',
+      },
+      {
+        factorName: 'Privation de Repos',
+        impactScore: 92,
+        description: "7 jours d'affilée et 6h seulement de sommeil avant la reprise.",
+      },
+      {
+        factorName: 'Incurie de Pause',
+        impactScore: 90,
+        description: '5h06 sans pause sécurité sur le dernier tronçon.',
+      },
     ],
   },
   {
@@ -1110,7 +1347,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     iconName: 'Moon',
     expBonusPoints: 350,
     criterion: '≥ 20h de conduite de nuit sans événement de freinage brusque.',
-    fuelBonusMultiplier: 1.10,
+    fuelBonusMultiplier: 1.1,
   },
   {
     id: 'badge_corridor_legend',
@@ -1122,13 +1359,13 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     iconName: 'Trophy',
     expBonusPoints: 1200,
     criterion: 'Cumul ≥ 10 000 km sur corridors Cotonou-Niamey ou Dakar-Bamako sans alerte majeure.',
-    fuelBonusMultiplier: 1.30,
+    fuelBonusMultiplier: 1.3,
   },
   {
     id: 'badge_smooth_braker',
     code: 'SMOOTH_BRAKER_PRO',
     title: 'Maître du Freinage Doux',
-    description: 'Anticipation remarquable du trafic et réduction de l\'usure des freins.',
+    description: "Anticipation remarquable du trafic et réduction de l'usure des freins.",
     category: 'SAFETY',
     rarity: 'BRONZE',
     iconName: 'Award',
@@ -1140,13 +1377,13 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     id: 'badge_perfect_score_month',
     code: 'PERFECT_SCORE_95',
     title: 'Score Sécurité Élite ≥ 95',
-    description: 'Maintien d\'un score global de sécurité supérieur à 95/100 sur le mois complet.',
+    description: "Maintien d'un score global de sécurité supérieur à 95/100 sur le mois complet.",
     category: 'MILESTONE',
     rarity: 'PLATINUM',
     iconName: 'Flame',
     expBonusPoints: 850,
     criterion: 'Safety Score moyen mensuel ≥ 95/100.',
-    fuelBonusMultiplier: 1.20,
+    fuelBonusMultiplier: 1.2,
   },
 ];
 
@@ -1178,19 +1415,57 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     totalPoints: 2450,
     rankInCompany: 1,
     unlockedBadges: [
-      { badgeId: 'badge_zero_overspeed', unlockedAt: '2026-07-28', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
-      { badgeId: 'badge_eco_champion', unlockedAt: '2026-07-31', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
-      { badgeId: 'badge_corridor_legend', unlockedAt: '2026-06-15', periodLabel: 'Juin 2026', grantedBy: 'Régulateur Cotonou' },
-      { badgeId: 'badge_perfect_score_month', unlockedAt: '2026-07-31', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
+      {
+        badgeId: 'badge_zero_overspeed',
+        unlockedAt: '2026-07-28',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
+      {
+        badgeId: 'badge_eco_champion',
+        unlockedAt: '2026-07-31',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
+      {
+        badgeId: 'badge_corridor_legend',
+        unlockedAt: '2026-06-15',
+        periodLabel: 'Juin 2026',
+        grantedBy: 'Régulateur Cotonou',
+      },
+      {
+        badgeId: 'badge_perfect_score_month',
+        unlockedAt: '2026-07-31',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
     ],
     badgeProgress: [
-      { badgeId: 'badge_night_guardian', currentValue: 18, targetValue: 20, percentage: 90, unit: 'heures nuit' },
+      {
+        badgeId: 'badge_night_guardian',
+        currentValue: 18,
+        targetValue: 20,
+        percentage: 90,
+        unit: 'heures nuit',
+      },
       { badgeId: 'badge_smooth_braker', currentValue: 95, targetValue: 100, percentage: 95, unit: 'km doux' },
     ],
     trendHighlights: [
-      { metric: 'Sécurité Volant', trendType: 'POSITIVE', description: 'Score en hausse de +8.5% sur 30 jours (96.5/100).' },
-      { metric: 'Économie Carburant', trendType: 'POSITIVE', description: 'Consommation de 29.2 L/100km vs norme 34.0 L/100km (-14.1%).' },
-      { metric: 'Zéro Excès Vitesse', trendType: 'POSITIVE', description: 'Aucune alerte d\'excès de vitesse enregistrée en juillet.' },
+      {
+        metric: 'Sécurité Volant',
+        trendType: 'POSITIVE',
+        description: 'Score en hausse de +8.5% sur 30 jours (96.5/100).',
+      },
+      {
+        metric: 'Économie Carburant',
+        trendType: 'POSITIVE',
+        description: 'Consommation de 29.2 L/100km vs norme 34.0 L/100km (-14.1%).',
+      },
+      {
+        metric: 'Zéro Excès Vitesse',
+        trendType: 'POSITIVE',
+        description: "Aucune alerte d'excès de vitesse enregistrée en juillet.",
+      },
     ],
   },
   {
@@ -1209,17 +1484,51 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     totalPoints: 1420,
     rankInCompany: 3,
     unlockedBadges: [
-      { badgeId: 'badge_smooth_braker', unlockedAt: '2026-07-20', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
-      { badgeId: 'badge_night_guardian', unlockedAt: '2026-07-25', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
+      {
+        badgeId: 'badge_smooth_braker',
+        unlockedAt: '2026-07-20',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
+      {
+        badgeId: 'badge_night_guardian',
+        unlockedAt: '2026-07-25',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
     ],
     badgeProgress: [
-      { badgeId: 'badge_zero_overspeed', currentValue: 22, targetValue: 30, percentage: 73, unit: 'jours zéro survitesse' },
-      { badgeId: 'badge_eco_champion', currentValue: 2.2, targetValue: 3.5, percentage: 62, unit: 'L/100km économisés' },
+      {
+        badgeId: 'badge_zero_overspeed',
+        currentValue: 22,
+        targetValue: 30,
+        percentage: 73,
+        unit: 'jours zéro survitesse',
+      },
+      {
+        badgeId: 'badge_eco_champion',
+        currentValue: 2.2,
+        targetValue: 3.5,
+        percentage: 62,
+        unit: 'L/100km économisés',
+      },
     ],
     trendHighlights: [
-      { metric: 'Sécurité Volant', trendType: 'POSITIVE', description: 'Amélioration de +4.2% grâce au respect des distances de sécurité.' },
-      { metric: 'Prime Éligible', trendType: 'POSITIVE', description: '41 250 XOF de prime carburant calculée pour le mois.' },
-      { metric: 'Freinage Brusque', trendType: 'NEUTRAL', description: '2 freinages légers enregistrés près de Malanville.' },
+      {
+        metric: 'Sécurité Volant',
+        trendType: 'POSITIVE',
+        description: 'Amélioration de +4.2% grâce au respect des distances de sécurité.',
+      },
+      {
+        metric: 'Prime Éligible',
+        trendType: 'POSITIVE',
+        description: '41 250 XOF de prime carburant calculée pour le mois.',
+      },
+      {
+        metric: 'Freinage Brusque',
+        trendType: 'NEUTRAL',
+        description: '2 freinages légers enregistrés près de Malanville.',
+      },
     ],
   },
   {
@@ -1238,16 +1547,46 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     totalPoints: 1890,
     rankInCompany: 2,
     unlockedBadges: [
-      { badgeId: 'badge_zero_overspeed', unlockedAt: '2026-07-15', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
-      { badgeId: 'badge_smooth_braker', unlockedAt: '2026-07-10', periodLabel: 'Juillet 2026', grantedBy: 'Système Automatique IA' },
+      {
+        badgeId: 'badge_zero_overspeed',
+        unlockedAt: '2026-07-15',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
+      {
+        badgeId: 'badge_smooth_braker',
+        unlockedAt: '2026-07-10',
+        periodLabel: 'Juillet 2026',
+        grantedBy: 'Système Automatique IA',
+      },
     ],
     badgeProgress: [
-      { badgeId: 'badge_eco_champion', currentValue: 3.5, targetValue: 3.5, percentage: 100, unit: 'L/100km économisés' },
-      { badgeId: 'badge_perfect_score_month', currentValue: 92, targetValue: 95, percentage: 96, unit: 'score moyen' },
+      {
+        badgeId: 'badge_eco_champion',
+        currentValue: 3.5,
+        targetValue: 3.5,
+        percentage: 100,
+        unit: 'L/100km économisés',
+      },
+      {
+        badgeId: 'badge_perfect_score_month',
+        currentValue: 92,
+        targetValue: 95,
+        percentage: 96,
+        unit: 'score moyen',
+      },
     ],
     trendHighlights: [
-      { metric: 'Éco-Conduite', trendType: 'POSITIVE', description: 'Régularité optimale sur les accélérations et montées en régime.' },
-      { metric: 'Corridor Niamey', trendType: 'POSITIVE', description: 'Temps de parcours régulier et zéro infraction géofence.' },
+      {
+        metric: 'Éco-Conduite',
+        trendType: 'POSITIVE',
+        description: 'Régularité optimale sur les accélérations et montées en régime.',
+      },
+      {
+        metric: 'Corridor Niamey',
+        trendType: 'POSITIVE',
+        description: 'Temps de parcours régulier et zéro infraction géofence.',
+      },
     ],
   },
   {
@@ -1266,13 +1605,22 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     totalPoints: 980,
     rankInCompany: 4,
     unlockedBadges: [
-      { badgeId: 'badge_smooth_braker', unlockedAt: '2026-06-20', periodLabel: 'Juin 2026', grantedBy: 'Système Automatique IA' },
+      {
+        badgeId: 'badge_smooth_braker',
+        unlockedAt: '2026-06-20',
+        periodLabel: 'Juin 2026',
+        grantedBy: 'Système Automatique IA',
+      },
     ],
     badgeProgress: [
       { badgeId: 'badge_zero_overspeed', currentValue: 18, targetValue: 30, percentage: 60, unit: 'jours' },
     ],
     trendHighlights: [
-      { metric: 'Stabilité', trendType: 'NEUTRAL', description: 'Progression constante mais sous le seuil des badges d\'élite.' },
+      {
+        metric: 'Stabilité',
+        trendType: 'NEUTRAL',
+        description: "Progression constante mais sous le seuil des badges d'élite.",
+      },
     ],
   },
   {
@@ -1295,11 +1643,16 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
       { badgeId: 'badge_smooth_braker', currentValue: 30, targetValue: 100, percentage: 30, unit: 'km doux' },
     ],
     trendHighlights: [
-      { metric: 'Alerte Surconsommation', trendType: 'WARNING', description: 'Surconsommation de +1.8 L/100km par rapport au profil véhicule.' },
-      { metric: 'Non Éligible Prime', trendType: 'WARNING', description: 'Score de sécurité (68/100) inférieur au seuil requis de 85/100.' },
+      {
+        metric: 'Alerte Surconsommation',
+        trendType: 'WARNING',
+        description: 'Surconsommation de +1.8 L/100km par rapport au profil véhicule.',
+      },
+      {
+        metric: 'Non Éligible Prime',
+        trendType: 'WARNING',
+        description: 'Score de sécurité (68/100) inférieur au seuil requis de 85/100.',
+      },
     ],
   },
 ];
-
-
-

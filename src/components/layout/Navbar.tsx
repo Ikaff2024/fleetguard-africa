@@ -56,9 +56,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
           title="Ouvrir le gestionnaire de synchronisation IndexedDB"
         >
-          <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+          <span
+            className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}
+          ></span>
           <span>{isOnline ? 'En Ligne (4G)' : 'Hors-Ligne (Room DB)'}</span>
-          
+
           {pendingCount > 0 && (
             <span className="ml-1 px-1.5 py-0.2 bg-orange-500 text-white text-[10px] font-mono font-extrabold rounded-full flex items-center gap-0.5">
               <Database className="w-2.5 h-2.5" />
@@ -88,12 +90,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 key={org.id}
                 onClick={() => onSelectOrg(org)}
                 className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition ${
-                  org.id === currentOrg.id ? 'text-orange-600 dark:text-orange-400 font-bold bg-orange-50/60 dark:bg-orange-500/10' : 'text-slate-700 dark:text-slate-300'
+                  org.id === currentOrg.id
+                    ? 'text-orange-600 dark:text-orange-400 font-bold bg-orange-50/60 dark:bg-orange-500/10'
+                    : 'text-slate-700 dark:text-slate-300'
                 }`}
               >
                 <div>
                   <div className="font-semibold">{org.name}</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">{org.country} • {org.currency}</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                    {org.country} • {org.currency}
+                  </div>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
                   {org.code}
@@ -106,7 +112,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Currency & Timezone Badge */}
         <div className="hidden md:flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300">
           <Globe className="w-3.5 h-3.5 text-orange-500" />
-          <span>Devise: <strong className="text-slate-800 dark:text-slate-100">{currentOrg.currency}</strong></span>
+          <span>
+            Devise: <strong className="text-slate-800 dark:text-slate-100">{currentOrg.currency}</strong>
+          </span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
           <Clock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
           <span>{currentOrg.timezone.split('/')[1] || currentOrg.timezone}</span>
@@ -120,12 +128,39 @@ export const Navbar: React.FC<NavbarProps> = ({
             onChange={e => onSelectRole(e.target.value as UserRole)}
             className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
           >
-            <option value="SUPER_ADMIN" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">SuperAdmin System</option>
-            <option value="ORGANIZATION_ADMIN" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Admin Organisation</option>
-            <option value="FLEET_MANAGER" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Fleet Manager</option>
-            <option value="SAFETY_OFFICER" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Safety Officer</option>
-            <option value="MAINTENANCE_TECH" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Technicien Garage</option>
-            <option value="DRIVER" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Chauffeur Mobile</option>
+            <option
+              value="SUPER_ADMIN"
+              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            >
+              SuperAdmin System
+            </option>
+            <option
+              value="ORGANIZATION_ADMIN"
+              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            >
+              Admin Organisation
+            </option>
+            <option
+              value="FLEET_MANAGER"
+              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            >
+              Fleet Manager
+            </option>
+            <option
+              value="SAFETY_OFFICER"
+              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            >
+              Safety Officer
+            </option>
+            <option
+              value="MAINTENANCE_TECH"
+              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            >
+              Technicien Garage
+            </option>
+            <option value="DRIVER" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+              Chauffeur Mobile
+            </option>
           </select>
         </div>
       </div>

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -32,7 +32,9 @@
   body {
     background-color: var(--bg-app);
     color: var(--text-primary);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
   }
 }
 
@@ -69,7 +71,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     display: none !important;
   }
 
-  body, html {
+  body,
+  html {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -96,7 +99,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     font-size: 9pt !important;
   }
 
-  th, td {
+  th,
+  td {
     border: 1px solid #94a3b8 !important;
     padding: 6px 8px !important;
     color: #0f172a !important;
@@ -114,4 +118,3 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     page-break-inside: avoid;
   }
 }
-

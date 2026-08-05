@@ -28,7 +28,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
   const [includeSignatureLine, setIncludeSignatureLine] = useState<boolean>(true);
   const [includeNotes, setIncludeNotes] = useState<boolean>(true);
   const [customNotes, setCustomNotes] = useState<string>(
-    'Document certifié conforme pour l\'exploitation de la flotte et les contrôles réglementaires (Ministère des Transports / Douanes).'
+    "Document certifié conforme pour l'exploitation de la flotte et les contrôles réglementaires (Ministère des Transports / Douanes).",
   );
 
   if (!isOpen) return null;
@@ -45,7 +45,8 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
     minute: '2-digit',
   });
 
-  const refCode = documentReference || `REF-${currentOrg.code}-${reportCategory}-${Date.now().toString().slice(-6)}`;
+  const refCode =
+    documentReference || `REF-${currentOrg.code}-${reportCategory}-${Date.now().toString().slice(-6)}`;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto no-print">
@@ -109,7 +110,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
               <input
                 type="checkbox"
                 checked={includeSignatureLine}
-                onChange={(e) => setIncludeSignatureLine(e.target.checked)}
+                onChange={e => setIncludeSignatureLine(e.target.checked)}
                 className="rounded text-orange-500 focus:ring-orange-500"
               />
               <span>Zone d'émargement & signature</span>
@@ -119,16 +120,14 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
               <input
                 type="checkbox"
                 checked={includeNotes}
-                onChange={(e) => setIncludeNotes(e.target.checked)}
+                onChange={e => setIncludeNotes(e.target.checked)}
                 className="rounded text-orange-500 focus:ring-orange-500"
               />
               <span>Mention légale de certification</span>
             </label>
           </div>
 
-          <span className="text-[10px] text-slate-400 font-mono">
-            Réf: {refCode}
-          </span>
+          <span className="text-[10px] text-slate-400 font-mono">Réf: {refCode}</span>
         </div>
 
         {/* Printable Paper Canvas View */}
@@ -144,7 +143,8 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                   </span>
                 </div>
                 <div className="text-[10px] text-slate-600 mt-1 font-mono">
-                  Code Flotte: <strong>{currentOrg.code}</strong> • Pays: {currentOrg.country} • Devise: {currentOrg.currency}
+                  Code Flotte: <strong>{currentOrg.code}</strong> • Pays: {currentOrg.country} • Devise:{' '}
+                  {currentOrg.currency}
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono">
                   Système Télémetrique & Gestion Transfrontalière IA
@@ -158,23 +158,15 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                 <div className="text-[10px] text-slate-600 mt-1">
                   Émis le : <strong>{currentDateStr}</strong>
                 </div>
-                <div className="text-[10px] text-slate-500">
-                  Réf: {refCode}
-                </div>
+                <div className="text-[10px] text-slate-500">Réf: {refCode}</div>
               </div>
             </div>
 
             {/* Document Title & Subtitle Banner */}
             <div className="bg-slate-50 border border-slate-300 p-4 rounded-lg flex items-center justify-between">
               <div>
-                <h1 className="text-base font-bold text-slate-900 uppercase tracking-tight">
-                  {title}
-                </h1>
-                {subtitle && (
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    {subtitle}
-                  </p>
-                )}
+                <h1 className="text-base font-bold text-slate-900 uppercase tracking-tight">{title}</h1>
+                {subtitle && <p className="text-[11px] text-slate-600 mt-0.5">{subtitle}</p>}
               </div>
 
               <div className="text-right">
@@ -185,9 +177,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
             </div>
 
             {/* Report Main Content Area */}
-            <div className="space-y-6">
-              {children}
-            </div>
+            <div className="space-y-6">{children}</div>
 
             {/* Optional Legal Certification Note */}
             {includeNotes && (
@@ -205,9 +195,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                     <span className="font-bold text-slate-800 block">
                       Le Régulateur de Flotte / Chef de Parc :
                     </span>
-                    <span className="text-[10px] text-slate-500 block">
-                      Nom, Signature & Cachet Officiel
-                    </span>
+                    <span className="text-[10px] text-slate-500 block">Nom, Signature & Cachet Officiel</span>
                   </div>
                   <div className="h-16 border-b border-dashed border-slate-400"></div>
                 </div>

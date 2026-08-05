@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Organization } from '../../types';
-import {
-  MOCK_VEHICLES,
-  MOCK_DRIVERS,
-} from '../../data/mock-data';
+import { MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import {
   Printer,
   Filter,
@@ -14,7 +11,7 @@ import {
   Sparkles,
   Award,
   TrendingDown,
-  FileSpreadsheet
+  FileSpreadsheet,
 } from 'lucide-react';
 import { PrintableReportModal } from '../common/PrintableReportModal';
 
@@ -30,12 +27,12 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
 
   // Filter vehicles and drivers for current organization
   const orgVehicles = useMemo(
-    () => MOCK_VEHICLES.filter((v) => v.organizationId === currentOrg.id),
-    [currentOrg.id]
+    () => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id),
+    [currentOrg.id],
   );
   const orgDrivers = useMemo(
-    () => MOCK_DRIVERS.filter((d) => d.organizationId === currentOrg.id),
-    [currentOrg.id]
+    () => MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id),
+    [currentOrg.id],
   );
 
   // Month labels helper
@@ -52,9 +49,9 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
     const isJuly = selectedMonth === '2026-07';
 
     const vehicleRows = orgVehicles
-      .filter((v) => selectedScope === 'ALL' || v.id === selectedScope)
-      .map((v) => {
-        const driver = orgDrivers.find((d) => d.assignedVehicleId === v.id || d.id === v.currentDriverId);
+      .filter(v => selectedScope === 'ALL' || v.id === selectedScope)
+      .map(v => {
+        const driver = orgDrivers.find(d => d.assignedVehicleId === v.id || d.id === v.currentDriverId);
 
         // Calculate dynamic mock distance & fuel metrics per vehicle
         let distanceKm = v.type === 'HEAVY_TRUCK' ? 4850 : v.type === 'CONTAINER_CARRIER' ? 5200 : 3100;
@@ -71,7 +68,8 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
 
         // Maintenance & Safety metrics
         const maintenanceCount = v.status === 'MAINTENANCE' ? 2 : 1;
-        const maintenanceCostXOF = v.type === 'HEAVY_TRUCK' ? 280000 : v.type === 'CONTAINER_CARRIER' ? 350000 : 120000;
+        const maintenanceCostXOF =
+          v.type === 'HEAVY_TRUCK' ? 280000 : v.type === 'CONTAINER_CARRIER' ? 350000 : 120000;
         const safetyScore = driver ? driver.currentSafetyScore : 90.0;
         const alertCount = v.id === 'veh_actros_01' ? 4 : 1;
 
@@ -99,9 +97,14 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
     const totalFuelCostXOF = vehicleRows.reduce((sum, r) => sum + r.fuelCostXOF, 0);
     const totalMaintCostXOF = vehicleRows.reduce((sum, r) => sum + r.maintenanceCostXOF, 0);
     const totalMaintAlerts = vehicleRows.reduce((sum, r) => sum + r.alertCount, 0);
-    const avgFleetConsumption = totalDistanceKm > 0 ? parseFloat(((totalFuelLiters / totalDistanceKm) * 100).toFixed(1)) : 0;
-    const avgCostPerKm = totalDistanceKm > 0 ? parseFloat((totalFuelCostXOF / totalDistanceKm).toFixed(1)) : 0;
-    const avgSafetyScore = vehicleRows.length > 0 ? parseFloat((vehicleRows.reduce((sum, r) => sum + r.safetyScore, 0) / vehicleRows.length).toFixed(1)) : 0;
+    const avgFleetConsumption =
+      totalDistanceKm > 0 ? parseFloat(((totalFuelLiters / totalDistanceKm) * 100).toFixed(1)) : 0;
+    const avgCostPerKm =
+      totalDistanceKm > 0 ? parseFloat((totalFuelCostXOF / totalDistanceKm).toFixed(1)) : 0;
+    const avgSafetyScore =
+      vehicleRows.length > 0
+        ? parseFloat((vehicleRows.reduce((sum, r) => sum + r.safetyScore, 0) / vehicleRows.length).toFixed(1))
+        : 0;
 
     return {
       periodLabel: monthLabels[selectedMonth] || selectedMonth,
@@ -136,7 +139,7 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
       'Score Sécurité (/100)',
     ];
 
-    const rows = reportData.vehicleRows.map((r) => [
+    const rows = reportData.vehicleRows.map(r => [
       `"${reportData.periodLabel}"`,
       `"${r.immatriculation}"`,
       `"${r.makeModel}"`,
@@ -170,16 +173,12 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
     ]);
 
     const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `Rapport_Flotte_${currentOrg.code}_${selectedMonth}.csv`
-    );
+    link.setAttribute('download', `Rapport_Flotte_${currentOrg.code}_${selectedMonth}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -211,7 +210,8 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
               Générateur de Rapports Mensuels de Performance
             </h2>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Exportation automatique des bilans consolidés (Kilométrage total, coût gazole, efficacité énergétique, alertes de maintenance et scores de conduite) aux formats CSV et PDF.
+              Exportation automatique des bilans consolidés (Kilométrage total, coût gazole, efficacité
+              énergétique, alertes de maintenance et scores de conduite) aux formats CSV et PDF.
             </p>
           </div>
 
@@ -244,12 +244,10 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Période Mensuelle
-            </label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Période Mensuelle</label>
             <select
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+              onChange={e => setSelectedMonth(e.target.value)}
               className="w-full bg-slate-50 text-xs font-semibold text-slate-800 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 cursor-pointer"
             >
               <option value="2026-08">Août 2026 (Mois en cours)</option>
@@ -260,16 +258,14 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Périmètre de Flotte
-            </label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Périmètre de Flotte</label>
             <select
               value={selectedScope}
-              onChange={(e) => setSelectedScope(e.target.value)}
+              onChange={e => setSelectedScope(e.target.value)}
               className="w-full bg-slate-50 text-xs font-semibold text-slate-800 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 cursor-pointer"
             >
               <option value="ALL">Flotte Globale ({orgVehicles.length} Véhicules)</option>
-              {orgVehicles.map((v) => (
+              {orgVehicles.map(v => (
                 <option key={v.id} value={v.id}>
                   {v.immatriculation} - {v.make} {v.model}
                 </option>
@@ -297,7 +293,8 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
             <Truck className="w-4 h-4 text-slate-400" />
           </div>
           <div className="text-2xl font-extrabold text-slate-900 font-mono">
-            {reportData.totalDistanceKm.toLocaleString()} <span className="text-xs text-slate-400 font-normal">km</span>
+            {reportData.totalDistanceKm.toLocaleString()}{' '}
+            <span className="text-xs text-slate-400 font-normal">km</span>
           </div>
           <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
             <TrendingDown className="w-3 h-3 rotate-180" />
@@ -312,11 +309,16 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
             <Fuel className="w-4 h-4 text-orange-500" />
           </div>
           <div className="text-2xl font-extrabold text-orange-600 font-mono">
-            {reportData.totalFuelCostXOF.toLocaleString()} <span className="text-xs text-slate-400 font-normal">XOF</span>
+            {reportData.totalFuelCostXOF.toLocaleString()}{' '}
+            <span className="text-xs text-slate-400 font-normal">XOF</span>
           </div>
           <div className="flex items-center justify-between text-[10px] text-slate-500">
-            <span>Volume: <strong>{reportData.totalFuelLiters.toLocaleString()} L</strong></span>
-            <span>Moy: <strong>{reportData.avgFleetConsumption} L/100km</strong></span>
+            <span>
+              Volume: <strong>{reportData.totalFuelLiters.toLocaleString()} L</strong>
+            </span>
+            <span>
+              Moy: <strong>{reportData.avgFleetConsumption} L/100km</strong>
+            </span>
           </div>
         </div>
 
@@ -327,10 +329,13 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
             <Wrench className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-extrabold text-amber-600 font-mono">
-            {reportData.totalMaintCostXOF.toLocaleString()} <span className="text-xs text-slate-400 font-normal">XOF</span>
+            {reportData.totalMaintCostXOF.toLocaleString()}{' '}
+            <span className="text-xs text-slate-400 font-normal">XOF</span>
           </div>
           <div className="flex items-center justify-between text-[10px] text-slate-500">
-            <span>Alertes: <strong>{reportData.totalMaintAlerts} événements</strong></span>
+            <span>
+              Alertes: <strong>{reportData.totalMaintAlerts} événements</strong>
+            </span>
             <span className="text-amber-700 font-bold">1 immobilisation</span>
           </div>
         </div>
@@ -363,7 +368,10 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
           </div>
 
           <div className="text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-            Coût Total d'Exploitation : <strong className="text-slate-900 font-mono">{reportData.totalCostXOF.toLocaleString()} XOF</strong>
+            Coût Total d'Exploitation :{' '}
+            <strong className="text-slate-900 font-mono">
+              {reportData.totalCostXOF.toLocaleString()} XOF
+            </strong>
           </div>
         </div>
 
@@ -383,7 +391,7 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {reportData.vehicleRows.map((row) => (
+              {reportData.vehicleRows.map(row => (
                 <tr key={row.vehicleId} className="hover:bg-slate-50/80 transition">
                   <td className="p-3.5">
                     <div className="font-bold text-slate-900">{row.immatriculation}</div>
@@ -414,9 +422,7 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
                     </span>
                   </td>
 
-                  <td className="p-3.5 text-right font-mono text-slate-700">
-                    {row.costPerKmXOF} XOF
-                  </td>
+                  <td className="p-3.5 text-right font-mono text-slate-700">{row.costPerKmXOF} XOF</td>
 
                   <td className="p-3.5 text-right font-mono font-bold text-orange-600">
                     {row.fuelCostXOF.toLocaleString()} XOF
@@ -448,9 +454,7 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
                 <td className="p-3.5 text-right font-mono text-emerald-400">
                   {reportData.avgFleetConsumption} L/100km
                 </td>
-                <td className="p-3.5 text-right font-mono">
-                  {reportData.avgCostPerKm} XOF
-                </td>
+                <td className="p-3.5 text-right font-mono">{reportData.avgCostPerKm} XOF</td>
                 <td className="p-3.5 text-right font-mono text-orange-400">
                   {reportData.totalFuelCostXOF.toLocaleString()} XOF
                 </td>
@@ -480,15 +484,21 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
         <div className="grid grid-cols-4 gap-3 text-center border-y border-slate-300 py-3 bg-slate-50 font-mono">
           <div>
             <div className="text-[10px] text-slate-500 uppercase">Distance Totale</div>
-            <div className="font-extrabold text-slate-900 text-sm">{reportData.totalDistanceKm.toLocaleString()} km</div>
+            <div className="font-extrabold text-slate-900 text-sm">
+              {reportData.totalDistanceKm.toLocaleString()} km
+            </div>
           </div>
           <div>
             <div className="text-[10px] text-slate-500 uppercase">Volume Gazole</div>
-            <div className="font-extrabold text-orange-600 text-sm">{reportData.totalFuelLiters.toLocaleString()} L</div>
+            <div className="font-extrabold text-orange-600 text-sm">
+              {reportData.totalFuelLiters.toLocaleString()} L
+            </div>
           </div>
           <div>
             <div className="text-[10px] text-slate-500 uppercase">Coût Carburant</div>
-            <div className="font-extrabold text-slate-900 text-sm">{reportData.totalFuelCostXOF.toLocaleString()} XOF</div>
+            <div className="font-extrabold text-slate-900 text-sm">
+              {reportData.totalFuelCostXOF.toLocaleString()} XOF
+            </div>
           </div>
           <div>
             <div className="text-[10px] text-slate-500 uppercase">Score Sécurité Moy</div>
@@ -498,7 +508,9 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
 
         {/* Detail Table for Print */}
         <div>
-          <h3 className="font-bold text-xs uppercase text-slate-800 mb-2">Détail des Performances par Véhicule</h3>
+          <h3 className="font-bold text-xs uppercase text-slate-800 mb-2">
+            Détail des Performances par Véhicule
+          </h3>
           <table className="w-full text-left text-[11px] border border-slate-300">
             <thead className="bg-slate-100 font-bold border-b border-slate-300">
               <tr>
@@ -512,25 +524,45 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {reportData.vehicleRows.map((r) => (
+              {reportData.vehicleRows.map(r => (
                 <tr key={r.vehicleId}>
-                  <td className="p-2 border-r border-slate-300 font-bold">{r.immatriculation} ({r.makeModel})</td>
+                  <td className="p-2 border-r border-slate-300 font-bold">
+                    {r.immatriculation} ({r.makeModel})
+                  </td>
                   <td className="p-2 border-r border-slate-300">{r.driverName}</td>
-                  <td className="p-2 border-r border-slate-300 text-right font-mono">{r.distanceKm.toLocaleString()}</td>
-                  <td className="p-2 border-r border-slate-300 text-right font-mono">{r.fuelLiters.toLocaleString()} L</td>
-                  <td className="p-2 border-r border-slate-300 text-right font-mono">{r.avgConsumptionL100km} L/100km</td>
-                  <td className="p-2 border-r border-slate-300 text-right font-mono font-bold text-orange-700">{r.fuelCostXOF.toLocaleString()} XOF</td>
+                  <td className="p-2 border-r border-slate-300 text-right font-mono">
+                    {r.distanceKm.toLocaleString()}
+                  </td>
+                  <td className="p-2 border-r border-slate-300 text-right font-mono">
+                    {r.fuelLiters.toLocaleString()} L
+                  </td>
+                  <td className="p-2 border-r border-slate-300 text-right font-mono">
+                    {r.avgConsumptionL100km} L/100km
+                  </td>
+                  <td className="p-2 border-r border-slate-300 text-right font-mono font-bold text-orange-700">
+                    {r.fuelCostXOF.toLocaleString()} XOF
+                  </td>
                   <td className="p-2 text-center font-mono font-bold">{r.safetyScore}/100</td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-slate-200 font-bold border-t-2 border-slate-400">
               <tr>
-                <td className="p-2 border-r border-slate-300" colSpan={2}>TOTAL FLOTTE</td>
-                <td className="p-2 border-r border-slate-300 text-right font-mono">{reportData.totalDistanceKm.toLocaleString()} km</td>
-                <td className="p-2 border-r border-slate-300 text-right font-mono">{reportData.totalFuelLiters.toLocaleString()} L</td>
-                <td className="p-2 border-r border-slate-300 text-right font-mono">{reportData.avgFleetConsumption} L/100km</td>
-                <td className="p-2 border-r border-slate-300 text-right font-mono">{reportData.totalFuelCostXOF.toLocaleString()} XOF</td>
+                <td className="p-2 border-r border-slate-300" colSpan={2}>
+                  TOTAL FLOTTE
+                </td>
+                <td className="p-2 border-r border-slate-300 text-right font-mono">
+                  {reportData.totalDistanceKm.toLocaleString()} km
+                </td>
+                <td className="p-2 border-r border-slate-300 text-right font-mono">
+                  {reportData.totalFuelLiters.toLocaleString()} L
+                </td>
+                <td className="p-2 border-r border-slate-300 text-right font-mono">
+                  {reportData.avgFleetConsumption} L/100km
+                </td>
+                <td className="p-2 border-r border-slate-300 text-right font-mono">
+                  {reportData.totalFuelCostXOF.toLocaleString()} XOF
+                </td>
                 <td className="p-2 text-center font-mono">{reportData.avgSafetyScore}/100</td>
               </tr>
             </tfoot>

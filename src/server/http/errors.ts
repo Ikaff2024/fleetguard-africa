@@ -22,7 +22,7 @@ export class ApiError extends Error {
   static badRequest(message: string, details?: unknown) {
     return new ApiError(400, message, 'BAD_REQUEST', details);
   }
-  static unauthorized(message = "Authentification requise") {
+  static unauthorized(message = 'Authentification requise') {
     return new ApiError(401, message, 'UNAUTHORIZED');
   }
   static forbidden(message = 'Accès refusé à cette ressource') {

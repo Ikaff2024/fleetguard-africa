@@ -12,7 +12,7 @@ interface OfflineSyncContextType {
   enqueueUpdate: (
     type: OfflineQueueItem['type'],
     payload: Record<string, any>,
-    tenantOrgId: string
+    tenantOrgId: string,
   ) => Promise<OfflineQueueItem>;
   triggerManualSync: () => Promise<SyncReport | null>;
   clearSyncedItems: () => Promise<void>;
@@ -25,7 +25,7 @@ const OfflineSyncContext = createContext<OfflineSyncContextType | undefined>(und
 
 export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOnline, setIsOnlineState] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
   const [queueItems, setQueueItems] = useState<OfflineQueueItem[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -55,7 +55,9 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
 
     setIsSyncing(true);
-    setSyncNotification(`Synchronisation de ${pending.length} mise(s) à jour IndexedDB vers le serveur en cours...`);
+    setSyncNotification(
+      `Synchronisation de ${pending.length} mise(s) à jour IndexedDB vers le serveur en cours...`,
+    );
 
     try {
       const report = await offlineSyncService.syncPendingQueue();
@@ -64,11 +66,11 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       if (report.syncedCount > 0) {
         setSyncNotification(
-          `✅ Synchronisation réussie : ${report.syncedCount} mise(s) à jour transmise(s) au serveur central.`
+          `✅ Synchronisation réussie : ${report.syncedCount} mise(s) à jour transmise(s) au serveur central.`,
         );
       } else if (report.failedCount > 0) {
         setSyncNotification(
-          `⚠️ Échec de synchronisation de ${report.failedCount} élément(s). Réessayez une fois la connexion rétablie.`
+          `⚠️ Échec de synchronisation de ${report.failedCount} élément(s). Réessayez une fois la connexion rétablie.`,
         );
       }
 
@@ -82,18 +84,23 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [refreshQueueState]);
 
   // Handle Online / Offline network status changes
-  const setIsOnline = useCallback((onlineStatus: boolean) => {
-    setIsOnlineState(onlineStatus);
-    if (onlineStatus) {
-      setSyncNotification('Connexion réseau rétablie (Online). Lancement de la synchronisation automatique IndexedDB...');
-      // Auto-trigger sync when connectivity is restored!
-      setTimeout(() => {
-        triggerManualSync();
-      }, 500);
-    } else {
-      setSyncNotification('Mode Hors-Ligne activé. Les données seront temporisées dans IndexedDB.');
-    }
-  }, [triggerManualSync]);
+  const setIsOnline = useCallback(
+    (onlineStatus: boolean) => {
+      setIsOnlineState(onlineStatus);
+      if (onlineStatus) {
+        setSyncNotification(
+          'Connexion réseau rétablie (Online). Lancement de la synchronisation automatique IndexedDB...',
+        );
+        // Auto-trigger sync when connectivity is restored!
+        setTimeout(() => {
+          triggerManualSync();
+        }, 500);
+      } else {
+        setSyncNotification('Mode Hors-Ligne activé. Les données seront temporisées dans IndexedDB.');
+      }
+    },
+    [triggerManualSync],
+  );
 
   // Listen for native browser window online/offline events
   useEffect(() => {
@@ -121,14 +128,14 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
     async (
       type: OfflineQueueItem['type'],
       payload: Record<string, any>,
-      tenantOrgId: string
+      tenantOrgId: string,
     ): Promise<OfflineQueueItem> => {
       const item = await offlineSyncService.enqueueItem(type, payload, tenantOrgId);
       await refreshQueueState();
 
       if (!isOnline) {
         setSyncNotification(
-          `📱 [IndexedDB Offline] Mise à jour (${type}) enregistrée localement en attente de réseau.`
+          `📱 [IndexedDB Offline] Mise à jour (${type}) enregistrée localement en attente de réseau.`,
         );
       } else {
         // If online, immediately sync the queue!
@@ -139,19 +146,19 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       return item;
     },
-    [isOnline, refreshQueueState, triggerManualSync]
+    [isOnline, refreshQueueState, triggerManualSync],
   );
 
   const clearSyncedItems = useCallback(async () => {
     await offlineSyncService.clearSyncedItems();
     await refreshQueueState();
-    setSyncNotification('Éléments déjà synchronisés purgés d\'IndexedDB.');
+    setSyncNotification("Éléments déjà synchronisés purgés d'IndexedDB.");
   }, [refreshQueueState]);
 
   const clearAllQueue = useCallback(async () => {
     await offlineSyncService.clearAll();
     await refreshQueueState();
-    setSyncNotification('File d\'attente IndexedDB vidée.');
+    setSyncNotification("File d'attente IndexedDB vidée.");
   }, [refreshQueueState]);
 
   const dismissNotification = useCallback(() => {
@@ -159,7 +166,7 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, []);
 
   const pendingCount = queueItems.filter(
-    item => item.status === 'PENDING' || item.status === 'FAILED'
+    item => item.status === 'PENDING' || item.status === 'FAILED',
   ).length;
 
   return (

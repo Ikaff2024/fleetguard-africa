@@ -3,14 +3,14 @@ import { Organization } from '../../types';
 import {
   MOCK_DIGITAL_BADGES,
   MOCK_DRIVER_REWARD_PROFILES,
-  MOCK_FUEL_BONUS_CONFIG
+  MOCK_FUEL_BONUS_CONFIG,
 } from '../../data/mock-data';
 import {
   DigitalBadge,
   DriverRewardProfile,
   FuelBonusRuleConfig,
   BadgeRarity,
-  PayoutStatus
+  PayoutStatus,
 } from '../../types';
 import {
   Award,
@@ -31,7 +31,7 @@ import {
   Star,
   ChevronRight,
   Info,
-  PlusCircle
+  PlusCircle,
 } from 'lucide-react';
 
 interface RewardsModuleProps {
@@ -39,18 +39,15 @@ interface RewardsModuleProps {
   onNavigateToMessaging?: (driverId: string) => void;
 }
 
-export const RewardsModule: React.FC<RewardsModuleProps> = ({
-  currentOrg,
-  onNavigateToMessaging,
-}) => {
+export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavigateToMessaging }) => {
   // Main Sub-Tab
-  const [activeTab, setActiveTab] = useState<'DRIVER_TRENDS' | 'BADGES_GALLERY' | 'FUEL_BONUSES' | 'BONUS_SIMULATOR'>(
-    'DRIVER_TRENDS'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'DRIVER_TRENDS' | 'BADGES_GALLERY' | 'FUEL_BONUSES' | 'BONUS_SIMULATOR'
+  >('DRIVER_TRENDS');
 
   // Rewards State (mutable)
   const [driverProfiles, setDriverProfiles] = useState<DriverRewardProfile[]>(
-    MOCK_DRIVER_REWARD_PROFILES.filter((p) => p.organizationId === currentOrg.id)
+    MOCK_DRIVER_REWARD_PROFILES.filter(p => p.organizationId === currentOrg.id),
   );
   const [digitalBadges, setDigitalBadges] = useState<DigitalBadge[]>(MOCK_DIGITAL_BADGES);
   const [bonusConfig, setBonusConfig] = useState<FuelBonusRuleConfig>(MOCK_FUEL_BONUS_CONFIG);
@@ -59,11 +56,9 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Selected Driver Detail for Modal/Showcase
-  const [selectedDriverId, setSelectedDriverId] = useState<string>(
-    driverProfiles[0]?.driverId || ''
-  );
+  const [selectedDriverId, setSelectedDriverId] = useState<string>(driverProfiles[0]?.driverId || '');
   const selectedProfile = useMemo(() => {
-    return driverProfiles.find((p) => p.driverId === selectedDriverId) || driverProfiles[0];
+    return driverProfiles.find(p => p.driverId === selectedDriverId) || driverProfiles[0];
   }, [driverProfiles, selectedDriverId]);
 
   // Filters
@@ -140,16 +135,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
   const stats = useMemo(() => {
     const totalBonusesXOF = driverProfiles.reduce((acc, p) => acc + p.fuelBonusEarnedXOF, 0);
     const totalFuelSavedL = driverProfiles.reduce((acc, p) => acc + p.estimatedFuelSavedLiters, 0);
-    const totalBadgesUnlocked = driverProfiles.reduce(
-      (acc, p) => acc + p.unlockedBadges.length,
-      0
-    );
-    const eligibleCount = driverProfiles.filter((p) => p.currentSafetyScore >= 85).length;
+    const totalBadgesUnlocked = driverProfiles.reduce((acc, p) => acc + p.unlockedBadges.length, 0);
+    const eligibleCount = driverProfiles.filter(p => p.currentSafetyScore >= 85).length;
     const avgSafetyScore =
       driverProfiles.length > 0
-        ? (
-            driverProfiles.reduce((acc, p) => acc + p.currentSafetyScore, 0) / driverProfiles.length
-          ).toFixed(1)
+        ? (driverProfiles.reduce((acc, p) => acc + p.currentSafetyScore, 0) / driverProfiles.length).toFixed(
+            1,
+          )
         : '0';
 
     return {
@@ -168,8 +160,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
 
   // Change Payout Status
   const handleApproveBonus = (driverId: string, nextStatus: PayoutStatus) => {
-    setDriverProfiles((prev) =>
-      prev.map((p) => {
+    setDriverProfiles(prev =>
+      prev.map(p => {
         if (p.driverId === driverId) {
           return {
             ...p,
@@ -178,11 +170,11 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
           };
         }
         return p;
-      })
+      }),
     );
-    const profile = driverProfiles.find((p) => p.driverId === driverId);
+    const profile = driverProfiles.find(p => p.driverId === driverId);
     showToast(
-      `Statut prime mis à jour [${nextStatus}] pour ${profile?.driverName} (${profile?.fuelBonusEarnedXOF.toLocaleString()} XOF).`
+      `Statut prime mis à jour [${nextStatus}] pour ${profile?.driverName} (${profile?.fuelBonusEarnedXOF.toLocaleString()} XOF).`,
     );
   };
 
@@ -190,13 +182,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
   const handleGrantBadgeSubmit = () => {
     if (!selectedDriverId || !badgeToGrantId) return;
 
-    const badge = digitalBadges.find((b) => b.id === badgeToGrantId);
+    const badge = digitalBadges.find(b => b.id === badgeToGrantId);
     if (!badge) return;
 
-    setDriverProfiles((prev) =>
-      prev.map((p) => {
+    setDriverProfiles(prev =>
+      prev.map(p => {
         if (p.driverId === selectedDriverId) {
-          const alreadyUnlocked = p.unlockedBadges.some((b) => b.badgeId === badgeToGrantId);
+          const alreadyUnlocked = p.unlockedBadges.some(b => b.badgeId === badgeToGrantId);
           if (alreadyUnlocked) return p;
 
           return {
@@ -214,11 +206,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
           };
         }
         return p;
-      })
+      }),
     );
 
     setIsGrantBadgeModalOpen(false);
-    showToast(`Badge "${badge.title}" décerné à ${selectedProfile?.driverName} (+${badge.expBonusPoints} pts)!`);
+    showToast(
+      `Badge "${badge.title}" décerné à ${selectedProfile?.driverName} (+${badge.expBonusPoints} pts)!`,
+    );
   };
 
   return (
@@ -246,7 +240,9 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
               </span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-3xl leading-relaxed">
-              Valorisez la conduite responsable des chauffeurs en transformant les tendances de sécurité et les litres d'essence économisés en badges numériques d'honneur et en primes financières directes (Orange Money, Wave, MTN MoMo).
+              Valorisez la conduite responsable des chauffeurs en transformant les tendances de sécurité et
+              les litres d'essence économisés en badges numériques d'honneur et en primes financières directes
+              (Orange Money, Wave, MTN MoMo).
             </p>
           </div>
 
@@ -420,10 +416,10 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                               index === 0
                                 ? 'bg-amber-500 text-white shadow-xs'
                                 : index === 1
-                                ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-100'
-                                : index === 2
-                                ? 'bg-amber-700 text-white'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                  ? 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-100'
+                                  : index === 2
+                                    ? 'bg-amber-700 text-white'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                             }`}
                           >
                             #{index + 1}
@@ -448,8 +444,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
 
                         <div className="flex items-center gap-1.5">
                           <div className="flex -space-x-1 overflow-hidden">
-                            {profile.unlockedBadges.slice(0, 2).map((ub) => {
-                              const badge = digitalBadges.find((b) => b.id === ub.badgeId);
+                            {profile.unlockedBadges.slice(0, 2).map(ub => {
+                              const badge = digitalBadges.find(b => b.id === ub.badgeId);
                               if (!badge) return null;
                               return (
                                 <div
@@ -481,7 +477,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                     <div className="w-12 h-12 rounded-full bg-amber-500 text-white font-extrabold text-base flex items-center justify-center shadow-md">
                       {selectedProfile.driverName
                         .split(' ')
-                        .map((n) => n[0])
+                        .map(n => n[0])
                         .join('')}
                     </div>
 
@@ -516,7 +512,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                   <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80">
                     <span className="text-slate-400 block text-[10px]">Score Sécurité (30j):</span>
                     <strong className="text-emerald-600 dark:text-emerald-400 text-sm">
-                      {selectedProfile.currentSafetyScore} / 100 ({selectedProfile.scoreTrend30d >= 0 ? '+' : ''}
+                      {selectedProfile.currentSafetyScore} / 100 (
+                      {selectedProfile.scoreTrend30d >= 0 ? '+' : ''}
                       {selectedProfile.scoreTrend30d}%)
                     </strong>
                   </div>
@@ -557,8 +554,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                           th.trendType === 'POSITIVE'
                             ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300'
                             : th.trendType === 'WARNING'
-                            ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                              ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300'
+                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                         }`}
                       >
                         {th.trendType === 'POSITIVE' ? (
@@ -599,12 +596,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
 
                   {selectedProfile.unlockedBadges.length === 0 ? (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center text-xs text-slate-500">
-                      Aucun badge débloqué pour l'instant. Soumettez un rapport d'éco-conduite pour octroyer son premier badge.
+                      Aucun badge débloqué pour l'instant. Soumettez un rapport d'éco-conduite pour octroyer
+                      son premier badge.
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedProfile.unlockedBadges.map((ub) => {
-                        const badge = digitalBadges.find((b) => b.id === ub.badgeId);
+                      {selectedProfile.unlockedBadges.map(ub => {
+                        const badge = digitalBadges.find(b => b.id === ub.badgeId);
                         if (!badge) return null;
                         const style = getRarityBadgeStyle(badge.rarity);
 
@@ -627,9 +625,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                                 </span>
                               </div>
 
-                              <p className="text-[11px] opacity-90 leading-tight">
-                                {badge.description}
-                              </p>
+                              <p className="text-[11px] opacity-90 leading-tight">{badge.description}</p>
 
                               <div className="text-[10px] opacity-75 font-mono pt-1">
                                 Débloqué le {ub.unlockedAt} • +{badge.expBonusPoints} pts
@@ -650,8 +646,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                     </span>
 
                     <div className="space-y-3">
-                      {selectedProfile.badgeProgress.map((bp) => {
-                        const badge = digitalBadges.find((b) => b.id === bp.badgeId);
+                      {selectedProfile.badgeProgress.map(bp => {
+                        const badge = digitalBadges.find(b => b.id === bp.badgeId);
                         if (!badge) return null;
 
                         return (
@@ -700,7 +696,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Rechercher un badge par nom ou critère..."
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-3 pr-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500"
               />
@@ -709,7 +705,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
             <div className="flex items-center gap-3 text-xs">
               <select
                 value={badgeCategoryFilter}
-                onChange={(e) => setBadgeCategoryFilter(e.target.value)}
+                onChange={e => setBadgeCategoryFilter(e.target.value)}
                 className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs focus:ring-2 focus:ring-amber-500 cursor-pointer"
               >
                 <option value="ALL">Toutes les catégories</option>
@@ -722,7 +718,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
 
               <select
                 value={badgeRarityFilter}
-                onChange={(e) => setBadgeRarityFilter(e.target.value)}
+                onChange={e => setBadgeRarityFilter(e.target.value)}
                 className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs focus:ring-2 focus:ring-amber-500 cursor-pointer"
               >
                 <option value="ALL">Toutes les raretés</option>
@@ -738,21 +734,19 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
           {/* Badges Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {digitalBadges
-              .filter((b) => {
-                const matchesCategory =
-                  badgeCategoryFilter === 'ALL' || b.category === badgeCategoryFilter;
-                const matchesRarity =
-                  badgeRarityFilter === 'ALL' || b.rarity === badgeRarityFilter;
+              .filter(b => {
+                const matchesCategory = badgeCategoryFilter === 'ALL' || b.category === badgeCategoryFilter;
+                const matchesRarity = badgeRarityFilter === 'ALL' || b.rarity === badgeRarityFilter;
                 const matchesSearch =
                   !searchQuery ||
                   b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   b.description.toLowerCase().includes(searchQuery.toLowerCase());
                 return matchesCategory && matchesRarity && matchesSearch;
               })
-              .map((badge) => {
+              .map(badge => {
                 const style = getRarityBadgeStyle(badge.rarity);
-                const driversWithBadge = driverProfiles.filter((p) =>
-                  p.unlockedBadges.some((ub) => ub.badgeId === badge.id)
+                const driversWithBadge = driverProfiles.filter(p =>
+                  p.unlockedBadges.some(ub => ub.badgeId === badge.id),
                 );
 
                 return (
@@ -811,7 +805,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                       </div>
 
                       <div className="flex -space-x-2">
-                        {driversWithBadge.map((d) => (
+                        {driversWithBadge.map(d => (
                           <div
                             key={d.driverId}
                             className="w-6 h-6 rounded-full bg-amber-500 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-xs"
@@ -819,7 +813,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                           >
                             {d.driverName
                               .split(' ')
-                              .map((n) => n[0])
+                              .map(n => n[0])
                               .join('')}
                           </div>
                         ))}
@@ -854,7 +848,9 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed max-w-3xl">
-              Si le conducteur consomme moins que la norme constructeur du véhicule (ex: 29.2 L/100km au lieu de 34 L/100km), la valeur financière des litres économisés est partagée à parts égales entre la société et le chauffeur, versée sur Mobile Money.
+              Si le conducteur consomme moins que la norme constructeur du véhicule (ex: 29.2 L/100km au lieu
+              de 34 L/100km), la valeur financière des litres économisés est partagée à parts égales entre la
+              société et le chauffeur, versée sur Mobile Money.
             </p>
           </div>
 
@@ -887,7 +883,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                 </thead>
 
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                  {driverProfiles.map((profile) => {
+                  {driverProfiles.map(profile => {
                     const isEligible = profile.currentSafetyScore >= 85;
 
                     return (
@@ -951,8 +947,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                             <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
                               APPROUVÉ (Prêt Payout)
                             </span>
-                          ) : profile.payoutStatus === 'CALCULATED' ||
-                            profile.payoutStatus === 'ELIGIBLE' ? (
+                          ) : profile.payoutStatus === 'CALCULATED' || profile.payoutStatus === 'ELIGIBLE' ? (
                             <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300">
                               EN ATTENTE VALIDATION
                             </span>
@@ -965,15 +960,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
 
                         <td className="p-3.5 text-right">
                           {profile.payoutStatus === 'PAID' ? (
-                            <span className="text-[10px] text-emerald-600 font-bold">
-                              Paiement effectué
-                            </span>
+                            <span className="text-[10px] text-emerald-600 font-bold">Paiement effectué</span>
                           ) : isEligible ? (
                             <button
                               onClick={() =>
                                 handleApproveBonus(
                                   profile.driverId,
-                                  profile.payoutStatus === 'APPROVED' ? 'PAID' : 'APPROVED'
+                                  profile.payoutStatus === 'APPROVED' ? 'PAID' : 'APPROVED',
                                 )
                               }
                               className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
@@ -1012,7 +1005,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                 <span>Simulateur B2B de Paramètres de Partage de Gains</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Ajustez les pourcentages de partage d'économie de carburant et les seuils de score de sécurité pour projeter les gains des conducteurs.
+                Ajustez les pourcentages de partage d'économie de carburant et les seuils de score de sécurité
+                pour projeter les gains des conducteurs.
               </p>
             </div>
 
@@ -1025,7 +1019,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                   type="number"
                   step="25"
                   value={simFuelPrice}
-                  onChange={(e) => setSimFuelPrice(parseInt(e.target.value) || 750)}
+                  onChange={e => setSimFuelPrice(parseInt(e.target.value) || 750)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -1041,7 +1035,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                     max="70"
                     step="5"
                     value={simSharedPct}
-                    onChange={(e) => setSimSharedPct(parseInt(e.target.value) || 50)}
+                    onChange={e => setSimSharedPct(parseInt(e.target.value) || 50)}
                     className="w-full accent-amber-500 cursor-pointer"
                   />
                   <span className="font-mono font-bold text-amber-600 text-sm">{simSharedPct}%</span>
@@ -1059,7 +1053,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                     max="95"
                     step="1"
                     value={simMinScore}
-                    onChange={(e) => setSimMinScore(parseInt(e.target.value) || 85)}
+                    onChange={e => setSimMinScore(parseInt(e.target.value) || 85)}
                     className="w-full accent-amber-500 cursor-pointer"
                   />
                   <span className="font-mono font-bold text-emerald-600 text-sm">{simMinScore} / 100</span>
@@ -1078,15 +1072,11 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                   <span className="text-slate-400 text-[10px] block">Masse de Primes Totale:</span>
                   <strong className="text-amber-600 text-sm">
                     {driverProfiles
-                      .filter((p) => p.currentSafetyScore >= simMinScore)
+                      .filter(p => p.currentSafetyScore >= simMinScore)
                       .reduce(
                         (acc, p) =>
-                          acc +
-                          Math.max(
-                            0,
-                            p.estimatedFuelSavedLiters * simFuelPrice * (simSharedPct / 100)
-                          ),
-                        0
+                          acc + Math.max(0, p.estimatedFuelSavedLiters * simFuelPrice * (simSharedPct / 100)),
+                        0,
                       )
                       .toLocaleString()}{' '}
                     XOF
@@ -1098,17 +1088,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                   <strong className="text-emerald-600 text-sm">
                     {Math.round(
                       driverProfiles
-                        .filter((p) => p.currentSafetyScore >= simMinScore)
+                        .filter(p => p.currentSafetyScore >= simMinScore)
                         .reduce(
                           (acc, p) =>
                             acc +
-                            Math.max(
-                              0,
-                              p.estimatedFuelSavedLiters * simFuelPrice * (simSharedPct / 100)
-                            ),
-                          0
-                        ) /
-                        (driverProfiles.filter((p) => p.currentSafetyScore >= simMinScore).length || 1)
+                            Math.max(0, p.estimatedFuelSavedLiters * simFuelPrice * (simSharedPct / 100)),
+                          0,
+                        ) / (driverProfiles.filter(p => p.currentSafetyScore >= simMinScore).length || 1),
                     ).toLocaleString()}{' '}
                     XOF
                   </strong>
@@ -1123,9 +1109,9 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                           acc +
                           Math.max(
                             0,
-                            p.estimatedFuelSavedLiters * simFuelPrice * ((100 - simSharedPct) / 100)
+                            p.estimatedFuelSavedLiters * simFuelPrice * ((100 - simSharedPct) / 100),
                           ),
-                        0
+                        0,
                       )
                       .toLocaleString()}{' '}
                     XOF
@@ -1161,10 +1147,10 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                 </label>
                 <select
                   value={selectedDriverId}
-                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                  onChange={e => setSelectedDriverId(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-bold text-slate-800 dark:text-slate-200"
                 >
-                  {driverProfiles.map((p) => (
+                  {driverProfiles.map(p => (
                     <option key={p.driverId} value={p.driverId}>
                       {p.driverName} ({p.currentSafetyScore}/100)
                     </option>
@@ -1178,10 +1164,10 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                 </label>
                 <select
                   value={badgeToGrantId}
-                  onChange={(e) => setBadgeToGrantId(e.target.value)}
+                  onChange={e => setBadgeToGrantId(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-bold text-slate-800 dark:text-slate-200"
                 >
-                  {digitalBadges.map((b) => (
+                  {digitalBadges.map(b => (
                     <option key={b.id} value={b.id}>
                       {b.title} (+{b.expBonusPoints} PTS) — {b.rarity}
                     </option>
@@ -1196,7 +1182,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({
                 <textarea
                   rows={2}
                   value={grantNote}
-                  onChange={(e) => setGrantNote(e.target.value)}
+                  onChange={e => setGrantNote(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-800 dark:text-slate-200"
                 />
               </div>

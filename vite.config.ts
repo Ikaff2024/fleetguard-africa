@@ -36,8 +36,7 @@ export default defineConfig({
          */
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory'))
-            return 'vendor-charts';
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) return 'vendor-charts';
           if (id.includes('leaflet')) return 'vendor-map';
           if (id.includes('lucide-react')) return 'vendor-icons';
           if (id.includes('motion') || id.includes('framer')) return 'vendor-motion';

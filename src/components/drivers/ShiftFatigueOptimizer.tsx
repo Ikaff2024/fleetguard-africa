@@ -3,14 +3,14 @@ import { Organization, Driver, Vehicle } from '../../types';
 import {
   MOCK_DRIVER_FATIGUE_METRICS,
   MOCK_SHIFT_SCHEDULE_SLOTS,
-  MOCK_LEGAL_FRAMEWORKS
+  MOCK_LEGAL_FRAMEWORKS,
 } from '../../data/mock-data';
 import {
   DriverFatigueMetrics,
   ShiftScheduleSlot,
   ShiftRotationSuggestion,
   LegalRegionFramework,
-  LegalDrivingFrameworkConfig
+  LegalDrivingFrameworkConfig,
 } from '../../types';
 import {
   Zap,
@@ -34,7 +34,7 @@ import {
   Truck,
   Info,
   Check,
-  Award
+  Award,
 } from 'lucide-react';
 
 interface ShiftFatigueOptimizerProps {
@@ -53,29 +53,26 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
   // Region / Legal Framework
   const [selectedRegion, setSelectedRegion] = useState<LegalRegionFramework>('UEMOA_CEDEAO');
   const activeFramework: LegalDrivingFrameworkConfig = useMemo(() => {
-    return (
-      MOCK_LEGAL_FRAMEWORKS.find((f) => f.region === selectedRegion) ||
-      MOCK_LEGAL_FRAMEWORKS[0]
-    );
+    return MOCK_LEGAL_FRAMEWORKS.find(f => f.region === selectedRegion) || MOCK_LEGAL_FRAMEWORKS[0];
   }, [selectedRegion]);
 
   // Main Active Sub-Tab
   const [activeTab, setActiveTab] = useState<'SUGGESTIONS' | 'MATRIX' | 'PLANNER' | 'COMPLIANCE'>(
-    'SUGGESTIONS'
+    'SUGGESTIONS',
   );
 
   // State for Fatigue Metrics and Schedule Slots (Mutable in component)
   const [fatigueMetrics, setFatigueMetrics] = useState<DriverFatigueMetrics[]>(
-    MOCK_DRIVER_FATIGUE_METRICS.filter((m) => m.organizationId === currentOrg.id)
+    MOCK_DRIVER_FATIGUE_METRICS.filter(m => m.organizationId === currentOrg.id),
   );
 
   const [scheduleSlots, setScheduleSlots] = useState<ShiftScheduleSlot[]>(
-    MOCK_SHIFT_SCHEDULE_SLOTS.filter((s) => s.organizationId === currentOrg.id)
+    MOCK_SHIFT_SCHEDULE_SLOTS.filter(s => s.organizationId === currentOrg.id),
   );
 
   // Selected Corridor Route for Algorithmic Rotation
   const [selectedCorridor, setSelectedCorridor] = useState<string>(
-    'Corridor Cotonou - Parakou - Malanville (750 km)'
+    'Corridor Cotonou - Parakou - Malanville (750 km)',
   );
   const [plannedTripHours, setPlannedTripHours] = useState<number>(8.0);
   const [includesNightDriving, setIncludesNightDriving] = useState<boolean>(false);
@@ -88,9 +85,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
 
   // Modal / Alert Notifications State
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
-  const [selectedDriverForRest, setSelectedDriverForRest] = useState<DriverFatigueMetrics | null>(
-    null
-  );
+  const [selectedDriverForRest, setSelectedDriverForRest] = useState<DriverFatigueMetrics | null>(null);
   const [appliedRotationSuccessModal, setAppliedRotationSuccessModal] = useState<boolean>(false);
 
   // Matrix Filter
@@ -103,7 +98,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
   // Filter metrics for organization drivers
   const orgDriversMap = useMemo(() => {
     const map = new Map<string, Driver>();
-    drivers.forEach((d) => map.set(d.id, d));
+    drivers.forEach(d => map.set(d.id, d));
     return map;
   }, [drivers]);
 
@@ -111,16 +106,12 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
   const kpiStats = useMemo(() => {
     const total = fatigueMetrics.length;
     const criticalCount = fatigueMetrics.filter(
-      (m) => m.fatigueLevel === 'CRITICAL' || m.isMandatoryRestEnforced
+      m => m.fatigueLevel === 'CRITICAL' || m.isMandatoryRestEnforced,
     ).length;
-    const highCount = fatigueMetrics.filter((m) => m.fatigueLevel === 'HIGH').length;
-    const lowCount = fatigueMetrics.filter((m) => m.fatigueLevel === 'LOW').length;
+    const highCount = fatigueMetrics.filter(m => m.fatigueLevel === 'HIGH').length;
+    const lowCount = fatigueMetrics.filter(m => m.fatigueLevel === 'LOW').length;
     const avgFatigue =
-      total > 0
-        ? Math.round(
-            fatigueMetrics.reduce((acc, m) => acc + m.fatigueScore, 0) / total
-          )
-        : 0;
+      total > 0 ? Math.round(fatigueMetrics.reduce((acc, m) => acc + m.fatigueScore, 0) / total) : 0;
 
     return { total, criticalCount, highCount, lowCount, avgFatigue };
   }, [fatigueMetrics]);
@@ -129,7 +120,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
   const handleCalculateRotation = () => {
     setIsCalculatingRotation(true);
     setTimeout(() => {
-      const suggestions: ShiftRotationSuggestion[] = fatigueMetrics.map((m) => {
+      const suggestions: ShiftRotationSuggestion[] = fatigueMetrics.map(m => {
         const driver = orgDriversMap.get(m.driverId);
         const driverName = driver?.fullName || 'Conducteur Inconnu';
         const assignedVehicleId = driver?.assignedVehicleId;
@@ -173,7 +164,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
         const warnings: string[] = [];
 
         if (score >= 75) {
-          reasons.push(`Niveau de fatigue bas (${m.fatigueScore}%) avec ${m.remainingDailyHours}h de marge quotidienne.`);
+          reasons.push(
+            `Niveau de fatigue bas (${m.fatigueScore}%) avec ${m.remainingDailyHours}h de marge quotidienne.`,
+          );
           reasons.push(`Repos préalable suffisant (${m.lastRestDurationHours}h de récupération).`);
         } else if (score >= 50) {
           reasons.push(`Adapté comme conducteur de relais ou sur trajet court.`);
@@ -184,7 +177,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
             warnings.push(`Repos obligatoire de 36h-45h en cours d'application.`);
           }
           if (m.remainingDailyHours < plannedTripHours) {
-            warnings.push(`Heures quotidiennes restantes (${m.remainingDailyHours}h) inférieures à la durée du trajet (${plannedTripHours}h).`);
+            warnings.push(
+              `Heures quotidiennes restantes (${m.remainingDailyHours}h) inférieures à la durée du trajet (${plannedTripHours}h).`,
+            );
           }
         }
 
@@ -207,9 +202,10 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
       // Sort by suitability score descending
       const sorted = [...suggestions].sort((a, b) => b.suitabilityScore - a.suitabilityScore);
 
-      const primary = sorted.find((s) => s.suggestedRole === 'PRIMARY_CORRIDOR_DRIVER') || sorted[0];
-      const relay = sorted.find((s) => s.driverId !== primary?.driverId && s.suggestedRole !== 'MANDATORY_REST') || null;
-      const excluded = sorted.filter((s) => s.suggestedRole === 'MANDATORY_REST' || s.suitabilityScore < 35);
+      const primary = sorted.find(s => s.suggestedRole === 'PRIMARY_CORRIDOR_DRIVER') || sorted[0];
+      const relay =
+        sorted.find(s => s.driverId !== primary?.driverId && s.suggestedRole !== 'MANDATORY_REST') || null;
+      const excluded = sorted.filter(s => s.suggestedRole === 'MANDATORY_REST' || s.suitabilityScore < 35);
 
       setActiveRotationResult({ primary, relay, excluded });
       setIsCalculatingRotation(false);
@@ -218,8 +214,8 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
 
   // Toggle Enforce Mandatory Rest for a Driver
   const handleToggleMandatoryRest = (driverId: string) => {
-    setFatigueMetrics((prev) =>
-      prev.map((m) => {
+    setFatigueMetrics(prev =>
+      prev.map(m => {
         if (m.driverId === driverId) {
           const nextEnforced = !m.isMandatoryRestEnforced;
           return {
@@ -232,7 +228,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
           };
         }
         return m;
-      })
+      }),
     );
 
     const driverName = orgDriversMap.get(driverId)?.fullName || 'Le conducteur';
@@ -243,18 +239,15 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
   const handleAutoBalanceSchedule = () => {
     setIsAutoBalancing(true);
     setTimeout(() => {
-      setScheduleSlots((prev) =>
-        prev.map((slot) => {
+      setScheduleSlots(prev =>
+        prev.map(slot => {
           if (slot.status === 'REST_ENFORCED') return slot;
           return {
             ...slot,
             status: 'SCHEDULED',
-            fatigueRiskOnCompletion: Math.min(
-              65,
-              Math.max(25, slot.fatigueRiskOnCompletion - 15)
-            ),
+            fatigueRiskOnCompletion: Math.min(65, Math.max(25, slot.fatigueRiskOnCompletion - 15)),
           };
-        })
+        }),
       );
       setIsAutoBalancing(false);
       showToast('Planning hebdomadaire rééquilibré avec succès. Charge horaire lissée.');
@@ -291,7 +284,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
               </span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-3xl leading-relaxed">
-              Algorithme prédictif de rotation des plannings basé sur l'indice de fatigue physiologique, le suivi du temps de conduite quotidien (max 9h) et le repos hebdomadaire obligatoire pour prévenir le surmenage et l'assoupissement au volant.
+              Algorithme prédictif de rotation des plannings basé sur l'indice de fatigue physiologique, le
+              suivi du temps de conduite quotidien (max 9h) et le repos hebdomadaire obligatoire pour prévenir
+              le surmenage et l'assoupissement au volant.
             </p>
           </div>
 
@@ -303,10 +298,10 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
             </div>
             <select
               value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value as LegalRegionFramework)}
+              onChange={e => setSelectedRegion(e.target.value as LegalRegionFramework)}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs focus:ring-2 focus:ring-orange-500 cursor-pointer"
             >
-              {MOCK_LEGAL_FRAMEWORKS.map((fw) => (
+              {MOCK_LEGAL_FRAMEWORKS.map(fw => (
                 <option key={fw.region} value={fw.region}>
                   {fw.name}
                 </option>
@@ -320,25 +315,32 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400 shrink-0" />
             <span>
-              Conduite Max / Jour: <strong className="text-amber-400">{activeFramework.maxDailyDrivingHours}h</strong>
+              Conduite Max / Jour:{' '}
+              <strong className="text-amber-400">{activeFramework.maxDailyDrivingHours}h</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-sky-400 shrink-0" />
             <span>
-              Plafond Semaine: <strong className="text-sky-400">{activeFramework.maxWeeklyDrivingHours}h</strong>
+              Plafond Semaine:{' '}
+              <strong className="text-sky-400">{activeFramework.maxWeeklyDrivingHours}h</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
-              Pause Obligatoire: <strong className="text-emerald-400">{activeFramework.mandatoryBreakDurationMinutes} min</strong> après <strong className="text-emerald-400">{activeFramework.mandatoryBreakAfterHours}h</strong>
+              Pause Obligatoire:{' '}
+              <strong className="text-emerald-400">
+                {activeFramework.mandatoryBreakDurationMinutes} min
+              </strong>{' '}
+              après <strong className="text-emerald-400">{activeFramework.mandatoryBreakAfterHours}h</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Moon className="w-4 h-4 text-purple-400 shrink-0" />
             <span>
-              Repos Quotidien Min: <strong className="text-purple-400">{activeFramework.minDailyRestHours}h consécutives</strong>
+              Repos Quotidien Min:{' '}
+              <strong className="text-purple-400">{activeFramework.minDailyRestHours}h consécutives</strong>
             </span>
           </div>
         </div>
@@ -477,7 +479,8 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   <span>Configuration du Trajet & Recherche du Binôme Optimisé</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  L'IA analyse le statut de repos de la flotte pour suggérer le conducteur idéal et le relais préventif.
+                  L'IA analyse le statut de repos de la flotte pour suggérer le conducteur idéal et le relais
+                  préventif.
                 </p>
               </div>
 
@@ -502,7 +505,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                 </label>
                 <select
                   value={selectedCorridor}
-                  onChange={(e) => setSelectedCorridor(e.target.value)}
+                  onChange={e => setSelectedCorridor(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="Corridor Cotonou - Parakou - Malanville (750 km)">
@@ -531,7 +534,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                     max="14"
                     step="0.5"
                     value={plannedTripHours}
-                    onChange={(e) => setPlannedTripHours(parseFloat(e.target.value) || 1)}
+                    onChange={e => setPlannedTripHours(parseFloat(e.target.value) || 1)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-orange-500"
                   />
                   <span className="font-mono text-slate-500 font-bold shrink-0">heures</span>
@@ -540,7 +543,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
 
               <div className="flex items-center">
                 <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 w-full cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                  <Moon className={`w-5 h-5 ${includesNightDriving ? 'text-purple-500' : 'text-slate-400'}`} />
+                  <Moon
+                    className={`w-5 h-5 ${includesNightDriving ? 'text-purple-500' : 'text-slate-400'}`}
+                  />
                   <div>
                     <span className="font-bold text-slate-900 dark:text-slate-100 block text-xs">
                       Trajet de Nuit (22h - 06h)
@@ -552,7 +557,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   <input
                     type="checkbox"
                     checked={includesNightDriving}
-                    onChange={(e) => setIncludesNightDriving(e.target.checked)}
+                    onChange={e => setIncludesNightDriving(e.target.checked)}
                     className="ml-auto accent-orange-500 w-4 h-4 cursor-pointer"
                   />
                 </label>
@@ -591,7 +596,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                       <div className="w-12 h-12 rounded-full bg-emerald-600 text-white font-extrabold text-base flex items-center justify-center shadow-md">
                         {activeRotationResult.primary.driverName
                           .split(' ')
-                          .map((n) => n[0])
+                          .map(n => n[0])
                           .join('')}
                       </div>
 
@@ -651,7 +656,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                       <div className="w-12 h-12 rounded-full bg-sky-600 text-white font-extrabold text-base flex items-center justify-center shadow-md">
                         {activeRotationResult.relay.driverName
                           .split(' ')
-                          .map((n) => n[0])
+                          .map(n => n[0])
                           .join('')}
                       </div>
 
@@ -709,7 +714,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {activeRotationResult.excluded.map((ex) => (
+                    {activeRotationResult.excluded.map(ex => (
                       <div
                         key={ex.driverId}
                         className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-rose-200 dark:border-rose-900/40 flex items-center justify-between"
@@ -745,7 +750,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
               <input
                 type="text"
                 value={searchDriverQuery}
-                onChange={(e) => setSearchDriverQuery(e.target.value)}
+                onChange={e => setSearchDriverQuery(e.target.value)}
                 placeholder="Rechercher un conducteur par nom..."
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-3 pr-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-orange-500"
               />
@@ -755,7 +760,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
               <span className="font-bold text-slate-700 dark:text-slate-300">Niveau de Risque:</span>
               <select
                 value={matrixFilterRisk}
-                onChange={(e) => setMatrixFilterRisk(e.target.value)}
+                onChange={e => setMatrixFilterRisk(e.target.value)}
                 className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs focus:ring-2 focus:ring-orange-500 cursor-pointer"
               >
                 <option value="ALL">Tous les niveaux (Tous)</option>
@@ -770,28 +775,26 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
           {/* Drivers Fatigue Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {fatigueMetrics
-              .filter((m) => {
+              .filter(m => {
                 const driver = orgDriversMap.get(m.driverId);
                 const matchesName =
                   !searchDriverQuery ||
                   driver?.fullName.toLowerCase().includes(searchDriverQuery.toLowerCase());
-                const matchesRisk =
-                  matrixFilterRisk === 'ALL' || m.fatigueLevel === matrixFilterRisk;
+                const matchesRisk = matrixFilterRisk === 'ALL' || m.fatigueLevel === matrixFilterRisk;
                 return matchesName && matchesRisk;
               })
-              .map((metric) => {
+              .map(metric => {
                 const driver = orgDriversMap.get(metric.driverId);
                 const driverName = driver?.fullName || 'Conducteur Inconnu';
 
-                const isCritical =
-                  metric.fatigueLevel === 'CRITICAL' || metric.isMandatoryRestEnforced;
+                const isCritical = metric.fatigueLevel === 'CRITICAL' || metric.isMandatoryRestEnforced;
                 const isHigh = metric.fatigueLevel === 'HIGH';
 
                 const cardBg = isCritical
                   ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900'
                   : isHigh
-                  ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-900'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800';
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-900'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800';
 
                 return (
                   <div
@@ -804,16 +807,12 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                         <div className="flex items-center gap-3">
                           <div
                             className={`w-11 h-11 rounded-full text-white font-extrabold text-sm flex items-center justify-center shadow-xs ${
-                              isCritical
-                                ? 'bg-rose-600'
-                                : isHigh
-                                ? 'bg-amber-600'
-                                : 'bg-emerald-600'
+                              isCritical ? 'bg-rose-600' : isHigh ? 'bg-amber-600' : 'bg-emerald-600'
                             }`}
                           >
                             {driverName
                               .split(' ')
-                              .map((n) => n[0])
+                              .map(n => n[0])
                               .join('')}
                           </div>
 
@@ -832,15 +831,11 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                             isCritical
                               ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border-rose-300'
                               : isHigh
-                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
-                              : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300'
+                                ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
+                                : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300'
                           }`}
                         >
-                          {isCritical
-                            ? '🚨 REPOS FORCÉ'
-                            : isHigh
-                            ? '⚠️ VIGILANCE'
-                            : '🟢 DISPONIBLE'}
+                          {isCritical ? '🚨 REPOS FORCÉ' : isHigh ? '⚠️ VIGILANCE' : '🟢 DISPONIBLE'}
                         </span>
                       </div>
 
@@ -855,8 +850,8 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                               isCritical
                                 ? 'text-rose-600 dark:text-rose-400'
                                 : isHigh
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-emerald-600 dark:text-emerald-400'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
                             }`}
                           >
                             {metric.fatigueScore} / 100
@@ -866,11 +861,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                         <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
-                              isCritical
-                                ? 'bg-rose-500'
-                                : isHigh
-                                ? 'bg-amber-500'
-                                : 'bg-emerald-500'
+                              isCritical ? 'bg-rose-500' : isHigh ? 'bg-amber-500' : 'bg-emerald-500'
                             }`}
                             style={{ width: `${metric.fatigueScore}%` }}
                           ></div>
@@ -893,13 +884,13 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                                 metric.hoursDrivenToday >= metric.maxDailyHoursLimit
                                   ? 'bg-rose-500'
                                   : metric.hoursDrivenToday > 7
-                                  ? 'bg-amber-500'
-                                  : 'bg-sky-500'
+                                    ? 'bg-amber-500'
+                                    : 'bg-sky-500'
                               }`}
                               style={{
                                 width: `${Math.min(
                                   100,
-                                  (metric.hoursDrivenToday / metric.maxDailyHoursLimit) * 100
+                                  (metric.hoursDrivenToday / metric.maxDailyHoursLimit) * 100,
                                 )}%`,
                               }}
                             ></div>
@@ -920,13 +911,13 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                                 metric.hoursDrivenThisWeek >= metric.maxWeeklyHoursLimit
                                   ? 'bg-rose-500'
                                   : metric.hoursDrivenThisWeek > 45
-                                  ? 'bg-amber-500'
-                                  : 'bg-emerald-500'
+                                    ? 'bg-amber-500'
+                                    : 'bg-emerald-500'
                               }`}
                               style={{
                                 width: `${Math.min(
                                   100,
-                                  (metric.hoursDrivenThisWeek / metric.maxWeeklyHoursLimit) * 100
+                                  (metric.hoursDrivenThisWeek / metric.maxWeeklyHoursLimit) * 100,
                                 )}%`,
                               }}
                             ></div>
@@ -954,11 +945,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                         }`}
                       >
                         <ShieldAlert className="w-3.5 h-3.5" />
-                        <span>
-                          {metric.isMandatoryRestEnforced
-                            ? 'Lever le Repos'
-                            : 'Imposer Repos 24h'}
-                        </span>
+                        <span>{metric.isMandatoryRestEnforced ? 'Lever le Repos' : 'Imposer Repos 24h'}</span>
                       </button>
 
                       {onNavigateToMessaging && (
@@ -989,7 +976,8 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   <span>Planning Hebdomadaire des Shifts & Simulatrice d'Équilibrage</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Répartition intelligente de la charge de travail entre conducteurs pour éviter la concentration d'heures de nuit.
+                  Répartition intelligente de la charge de travail entre conducteurs pour éviter la
+                  concentration d'heures de nuit.
                 </p>
               </div>
 
@@ -1023,7 +1011,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
-                  {scheduleSlots.map((slot) => {
+                  {scheduleSlots.map(slot => {
                     const isRestEnforced = slot.status === 'REST_ENFORCED';
 
                     return (
@@ -1073,8 +1061,8 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                                 slot.fatigueRiskOnCompletion > 75
                                   ? 'text-rose-600'
                                   : slot.fatigueRiskOnCompletion > 50
-                                  ? 'text-amber-600'
-                                  : 'text-emerald-600'
+                                    ? 'text-amber-600'
+                                    : 'text-emerald-600'
                               }`}
                             >
                               {slot.fatigueRiskOnCompletion}%
@@ -1085,8 +1073,8 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                                   slot.fatigueRiskOnCompletion > 75
                                     ? 'bg-rose-500'
                                     : slot.fatigueRiskOnCompletion > 50
-                                    ? 'bg-amber-500'
-                                    : 'bg-emerald-500'
+                                      ? 'bg-amber-500'
+                                      : 'bg-emerald-500'
                                 }`}
                                 style={{ width: `${slot.fatigueRiskOnCompletion}%` }}
                               ></div>
@@ -1100,15 +1088,13 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                               slot.status === 'COMPLETED'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : slot.status === 'IN_PROGRESS'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : slot.status === 'REST_ENFORCED'
-                                ? 'bg-rose-100 text-rose-800 border-rose-300'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : slot.status === 'REST_ENFORCED'
+                                    ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                    : 'bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
-                            {slot.status === 'REST_ENFORCED'
-                              ? '🚨 REPOSOBLIGATOIRE'
-                              : slot.status}
+                            {slot.status === 'REST_ENFORCED' ? '🚨 REPOSOBLIGATOIRE' : slot.status}
                           </span>
                         </td>
                       </tr>
@@ -1135,7 +1121,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
             </h3>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-4xl">
-              Afin de garantir la sécurité sur les corridors inter-états et lutter contre l'accidentologie liée à la fatigue au volant, le régulateur communautaire impose des seuils stricts aux transporteurs poids lourds.
+              Afin de garantir la sécurité sur les corridors inter-états et lutter contre l'accidentologie
+              liée à la fatigue au volant, le régulateur communautaire impose des seuils stricts aux
+              transporteurs poids lourds.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
@@ -1145,9 +1133,16 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   <span>1. Temps de Conduite Journalier & Hebdomadaire</span>
                 </h4>
                 <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 list-disc list-inside">
-                  <li><strong>Durée journalière maximale:</strong> 9 heures (Extension exceptionnelle à 10 heures au maximum 2 fois par semaine).</li>
-                  <li><strong>Durée hebdomadaire maximale:</strong> 56 heures de conduite cumulée.</li>
-                  <li><strong>Plafond bi-hebdomadaire:</strong> 90 heures sur 2 semaines consécutives.</li>
+                  <li>
+                    <strong>Durée journalière maximale:</strong> 9 heures (Extension exceptionnelle à 10
+                    heures au maximum 2 fois par semaine).
+                  </li>
+                  <li>
+                    <strong>Durée hebdomadaire maximale:</strong> 56 heures de conduite cumulée.
+                  </li>
+                  <li>
+                    <strong>Plafond bi-hebdomadaire:</strong> 90 heures sur 2 semaines consécutives.
+                  </li>
                 </ul>
               </div>
 
@@ -1157,9 +1152,18 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                   <span>2. Pauses de Sécurité & Repos Requis</span>
                 </h4>
                 <ul className="space-y-1.5 text-slate-600 dark:text-slate-300 list-disc list-inside">
-                  <li><strong>Pause obligatoire:</strong> Interruption minimale de 45 minutes après une période de conduite de 4h30.</li>
-                  <li><strong>Repos quotidien:</strong> Au moins 11 heures consécutives de repos par tranche de 24 heures.</li>
-                  <li><strong>Repos hebdomadaire:</strong> Au moins 45 heures de repos ininterrompu toutes les 6 journées de service.</li>
+                  <li>
+                    <strong>Pause obligatoire:</strong> Interruption minimale de 45 minutes après une période
+                    de conduite de 4h30.
+                  </li>
+                  <li>
+                    <strong>Repos quotidien:</strong> Au moins 11 heures consécutives de repos par tranche de
+                    24 heures.
+                  </li>
+                  <li>
+                    <strong>Repos hebdomadaire:</strong> Au moins 45 heures de repos ininterrompu toutes les 6
+                    journées de service.
+                  </li>
                 </ul>
               </div>
             </div>

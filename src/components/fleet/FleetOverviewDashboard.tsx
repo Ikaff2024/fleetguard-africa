@@ -9,15 +9,33 @@ interface FleetOverviewDashboardProps {
 }
 
 const sparklineDataFuel = [
-  { value: 120 }, { value: 135 }, { value: 110 }, { value: 140 }, { value: 155 }, { value: 145 }, { value: 180 }
+  { value: 120 },
+  { value: 135 },
+  { value: 110 },
+  { value: 140 },
+  { value: 155 },
+  { value: 145 },
+  { value: 180 },
 ];
 
 const sparklineDataHealth = [
-  { value: 85 }, { value: 86 }, { value: 84 }, { value: 88 }, { value: 89 }, { value: 92 }, { value: 94 }
+  { value: 85 },
+  { value: 86 },
+  { value: 84 },
+  { value: 88 },
+  { value: 89 },
+  { value: 92 },
+  { value: 94 },
 ];
 
 const sparklineDataActive = [
-  { value: 10 }, { value: 11 }, { value: 11 }, { value: 12 }, { value: 12 }, { value: 14 }, { value: 15 }
+  { value: 10 },
+  { value: 11 },
+  { value: 11 },
+  { value: 12 },
+  { value: 12 },
+  { value: 14 },
+  { value: 15 },
 ];
 
 export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ currentOrg }) => {
@@ -25,12 +43,12 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
   const fuelLogs = MOCK_FUEL_LOGS.filter(f => f.organizationId === currentOrg.id);
 
   const activeVehicles = vehicles.filter(v => v.status === 'ACTIVE').length;
-  
+
   // Calculate today's fuel (mock data calculation)
   const today = new Date().toISOString().split('T')[0];
-  const totalFuelToday = fuelLogs
-    .filter(log => log.loggedAt.startsWith(today))
-    .reduce((sum, log) => sum + log.litersAdded, 0) || 450; // Fallback mock value
+  const totalFuelToday =
+    fuelLogs.filter(log => log.loggedAt.startsWith(today)).reduce((sum, log) => sum + log.litersAdded, 0) ||
+    450; // Fallback mock value
 
   const healthScore = 94; // Mock score
 
@@ -46,7 +64,8 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
                 <span className="text-xs font-bold uppercase tracking-wider">Flotte Active</span>
               </div>
               <div className="text-3xl font-extrabold text-slate-900 font-mono">
-                {activeVehicles} <span className="text-sm font-medium text-slate-500">/ {vehicles.length}</span>
+                {activeVehicles}{' '}
+                <span className="text-sm font-medium text-slate-500">/ {vehicles.length}</span>
               </div>
             </div>
             <div className="flex flex-col items-end">
@@ -59,7 +78,14 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparklineDataActive}>
                 <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
-                <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -73,9 +99,7 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
                 <Activity className="w-4 h-4" />
                 <span className="text-xs font-bold uppercase tracking-wider">Score de Santé</span>
               </div>
-              <div className="text-3xl font-extrabold text-slate-900 font-mono">
-                {healthScore}%
-              </div>
+              <div className="text-3xl font-extrabold text-slate-900 font-mono">{healthScore}%</div>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-emerald-600 bg-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -87,7 +111,14 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparklineDataHealth}>
                 <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
-                <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -101,9 +132,7 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
                 <Droplet className="w-4 h-4 text-orange-500" />
                 <span className="text-xs font-bold uppercase tracking-wider">Carburant (Aujourd'hui)</span>
               </div>
-              <div className="text-3xl font-extrabold text-slate-900 font-mono">
-                {totalFuelToday} L
-              </div>
+              <div className="text-3xl font-extrabold text-slate-900 font-mono">{totalFuelToday} L</div>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-rose-600 bg-rose-50 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -115,7 +144,14 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparklineDataFuel}>
                 <YAxis domain={['dataMin - 20', 'dataMax + 20']} hide />
-                <Line type="monotone" dataKey="value" stroke="#f97316" strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>

@@ -173,7 +173,7 @@ describe('Ingestion télémétrique', () => {
 });
 
 describe('Synchronisation hors-ligne', () => {
-  it("écarte les éléments rattachés à une autre organisation", async () => {
+  it('écarte les éléments rattachés à une autre organisation', async () => {
     const res = await request(app)
       .post('/api/v1/sync/offline-batch')
       .set('X-Organization-Id', TENANT_A)

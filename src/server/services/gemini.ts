@@ -90,10 +90,7 @@ export async function generateFleetAnalysis(prompt: string, demoAnswer: string):
 
   const answer = response.text?.trim();
   if (!answer) {
-    throw ApiError.serviceUnavailable(
-      "Le moteur d'analyse a renvoyé une réponse vide.",
-      'AI_EMPTY_RESPONSE',
-    );
+    throw ApiError.serviceUnavailable("Le moteur d'analyse a renvoyé une réponse vide.", 'AI_EMPTY_RESPONSE');
   }
 
   return { answer, isSimulated: false, model: env.GEMINI_MODEL, generatedAt: new Date().toISOString() };
@@ -156,7 +153,10 @@ export async function generateSafetyCoaching(
     'coaching chauffeur',
   );
 
-  const raw = (response.text ?? '').replace(/```json/gi, '').replace(/```/g, '').trim();
+  const raw = (response.text ?? '')
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
 
   let parsedJson: unknown;
   try {

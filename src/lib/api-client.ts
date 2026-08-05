@@ -101,8 +101,7 @@ async function request<T>(
 
 export const apiClient = {
   get: <T>(path: string, options: RequestOptions) => request<T>('GET', path, options),
-  post: <T>(path: string, body: unknown, options: RequestOptions) =>
-    request<T>('POST', path, options, body),
+  post: <T>(path: string, body: unknown, options: RequestOptions) => request<T>('POST', path, options, body),
 };
 
 /** Marqueur commun aux réponses produites par le moteur d'analyse. */

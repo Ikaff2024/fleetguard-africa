@@ -1,7 +1,27 @@
 import React, { useState } from 'react';
-import { MOCK_VEHICLES, MOCK_DRIVERS, MOCK_MAINTENANCE_LOGS, MOCK_FUEL_LOGS, MOCK_COMPLIANCE_DOCS } from '../../data/mock-data';
+import {
+  MOCK_VEHICLES,
+  MOCK_DRIVERS,
+  MOCK_MAINTENANCE_LOGS,
+  MOCK_FUEL_LOGS,
+  MOCK_COMPLIANCE_DOCS,
+} from '../../data/mock-data';
 import { Organization } from '../../types';
-import { Truck, Users, Wrench, Fuel, FileCheck, ShieldAlert, Plus, MapPin, BellRing, Database, CheckCircle2, Printer, LayoutDashboard } from 'lucide-react';
+import {
+  Truck,
+  Users,
+  Wrench,
+  Fuel,
+  FileCheck,
+  ShieldAlert,
+  Plus,
+  MapPin,
+  BellRing,
+  Database,
+  CheckCircle2,
+  Printer,
+  LayoutDashboard,
+} from 'lucide-react';
 import { GeofenceConfigPanel } from './GeofenceConfigPanel';
 import { FleetOverviewDashboard } from './FleetOverviewDashboard';
 import { FleetComplianceTracker } from './FleetComplianceTracker';
@@ -14,7 +34,9 @@ interface FleetManagementViewProps {
 }
 
 export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ currentOrg }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'vehicles' | 'drivers' | 'geofencing' | 'maintenance' | 'fuel' | 'compliance'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<
+    'overview' | 'vehicles' | 'drivers' | 'geofencing' | 'maintenance' | 'fuel' | 'compliance'
+  >('overview');
   const [showAddFuelModal, setShowAddFuelModal] = useState<boolean>(false);
   const [showPrintMaintenanceModal, setShowPrintMaintenanceModal] = useState<boolean>(false);
 
@@ -47,7 +69,7 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         loggedAt: new Date().toISOString(),
         currency: currentOrg.currency,
       },
-      currentOrg.id
+      currentOrg.id,
     );
 
     setShowAddFuelModal(false);
@@ -60,7 +82,8 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <div>
           <h2 className="text-xl font-bold text-slate-900">Gestion de Flotte & Opérations</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Suivi des camions, chauffeurs, zones géofencées, carnets d'entretien, ravitaillements et conformités (CEDEAO / EAC).
+            Suivi des camions, chauffeurs, zones géofencées, carnets d'entretien, ravitaillements et
+            conformités (CEDEAO / EAC).
           </p>
         </div>
 
@@ -95,7 +118,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('overview')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'overview' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'overview'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <LayoutDashboard className="w-4 h-4 text-orange-500" />
@@ -105,7 +130,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('vehicles')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'vehicles' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'vehicles'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Truck className="w-4 h-4 text-orange-500" />
@@ -115,7 +142,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('drivers')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'drivers' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'drivers'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Users className="w-4 h-4 text-orange-500" />
@@ -125,7 +154,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('geofencing')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'geofencing' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'geofencing'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <MapPin className="w-4 h-4 text-orange-500" />
@@ -135,7 +166,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('maintenance')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'maintenance' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'maintenance'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Wrench className="w-4 h-4 text-orange-500" />
@@ -145,7 +178,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('fuel')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'fuel' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'fuel'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Fuel className="w-4 h-4 text-orange-500" />
@@ -155,7 +190,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         <button
           onClick={() => setActiveSubTab('compliance')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
-            activeSubTab === 'compliance' ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs' : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+            activeSubTab === 'compliance'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <FileCheck className="w-4 h-4 text-orange-500" />
@@ -192,15 +229,25 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                     return (
                       <tr key={v.id} className="hover:bg-slate-50/80 transition">
                         <td className="p-3 font-mono font-bold text-orange-600">{v.immatriculation}</td>
-                        <td className="p-3 font-semibold">{v.make} {v.model} ({v.year})</td>
+                        <td className="p-3 font-semibold">
+                          {v.make} {v.model} ({v.year})
+                        </td>
                         <td className="p-3 text-slate-500">{v.type}</td>
                         <td className="p-3 font-mono">{v.currentOdometerKm.toLocaleString()} km</td>
-                        <td className="p-3 font-mono">{v.tankCapacityLiters} L ({v.expectedConsumptionL100km} L/100km)</td>
-                        <td className="p-3 font-medium text-slate-700">{driver?.fullName || 'Non assigné'}</td>
+                        <td className="p-3 font-mono">
+                          {v.tankCapacityLiters} L ({v.expectedConsumptionL100km} L/100km)
+                        </td>
+                        <td className="p-3 font-medium text-slate-700">
+                          {driver?.fullName || 'Non assigné'}
+                        </td>
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                            v.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              v.status === 'ACTIVE'
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-orange-50 text-orange-700 border border-orange-200'
+                            }`}
+                          >
                             {v.status}
                           </span>
                         </td>
@@ -215,7 +262,10 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
           {activeSubTab === 'maintenance' && (
             <div className="space-y-3">
               {maintenance.map(m => (
-                <div key={m.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start justify-between gap-4">
+                <div
+                  key={m.id}
+                  className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start justify-between gap-4"
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-xs text-slate-900">{m.type}</span>
@@ -227,7 +277,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                     <p className="text-[11px] text-slate-500 mt-1">Fournisseur: {m.serviceProvider}</p>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono font-bold text-orange-600 text-sm">{m.cost.toLocaleString()} {m.currency}</div>
+                    <div className="font-mono font-bold text-orange-600 text-sm">
+                      {m.cost.toLocaleString()} {m.currency}
+                    </div>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-bold">
                       {m.status}
                     </span>
@@ -243,7 +295,8 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                 <div>
                   <h4 className="font-bold text-xs text-slate-900">Saisie Ravitaillements Carburant</h4>
                   <p className="text-[11px] text-slate-500">
-                    Les saisies effectuées hors-ligne sont immédiatement temporisées dans IndexedDB localement.
+                    Les saisies effectuées hors-ligne sont immédiatement temporisées dans IndexedDB
+                    localement.
                   </p>
                 </div>
                 <button
@@ -262,21 +315,33 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2">
                         <Fuel className="w-5 h-5 text-orange-500" />
-                        <h3 className="font-bold text-sm text-slate-900">Nouveau Ravitaillement (Plein Carburant)</h3>
+                        <h3 className="font-bold text-sm text-slate-900">
+                          Nouveau Ravitaillement (Plein Carburant)
+                        </h3>
                       </div>
-                      <button onClick={() => setShowAddFuelModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                      <button
+                        onClick={() => setShowAddFuelModal(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        ✕
+                      </button>
                     </div>
 
                     {!isOnline && (
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
                         <Database className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Mode Hors-Ligne : La saisie sera enregistrée dans <strong>IndexedDB</strong> et synchronisée ultérieurement.</span>
+                        <span>
+                          Mode Hors-Ligne : La saisie sera enregistrée dans <strong>IndexedDB</strong> et
+                          synchronisée ultérieurement.
+                        </span>
                       </div>
                     )}
 
                     <form onSubmit={handleAddFuelLogSubmit} className="space-y-3 text-xs">
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1">Station Service / Lieu :</label>
+                        <label className="block font-bold text-slate-700 mb-1">
+                          Station Service / Lieu :
+                        </label>
                         <input
                           type="text"
                           value={stationName}
@@ -295,7 +360,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                             className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-bold"
                           >
                             {vehicles.map(v => (
-                              <option key={v.id} value={v.immatriculation}>{v.immatriculation} ({v.make})</option>
+                              <option key={v.id} value={v.immatriculation}>
+                                {v.immatriculation} ({v.make})
+                              </option>
                             ))}
                           </select>
                         </div>
@@ -314,7 +381,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                       </div>
 
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1">Prix Unitaire par Litre ({currentOrg.currency}) :</label>
+                        <label className="block font-bold text-slate-700 mb-1">
+                          Prix Unitaire par Litre ({currentOrg.currency}) :
+                        </label>
                         <input
                           type="number"
                           value={pricePerL}
@@ -346,24 +415,35 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
               )}
 
               {fuelLogs.map(f => (
-                <div key={f.id} className={`p-4 rounded-xl border ${f.suspectedFuelTheft ? 'border-red-300 bg-red-50/60' : 'border-slate-200 bg-slate-50'} flex items-center justify-between gap-4`}>
+                <div
+                  key={f.id}
+                  className={`p-4 rounded-xl border ${f.suspectedFuelTheft ? 'border-red-300 bg-red-50/60' : 'border-slate-200 bg-slate-50'} flex items-center justify-between gap-4`}
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-xs text-slate-900">{f.stationName}</span>
                       <span className="text-[10px] text-slate-500 font-mono">Reçu #{f.receiptNumber}</span>
                     </div>
                     <div className="text-xs text-slate-700 mt-1">
-                      Quantité : <strong className="text-orange-600 font-mono">{f.litersAdded} L</strong> à {f.pricePerLiter} {f.currency}/L
+                      Quantité : <strong className="text-orange-600 font-mono">{f.litersAdded} L</strong> à{' '}
+                      {f.pricePerLiter} {f.currency}/L
                     </div>
                     {f.calculatedL100km && (
                       <div className="text-[11px] text-slate-500 mt-0.5">
-                        Consommation mesurée : <strong className={f.suspectedFuelTheft ? 'text-red-600 font-bold' : 'text-green-600'}>{f.calculatedL100km} L/100km</strong>
+                        Consommation mesurée :{' '}
+                        <strong
+                          className={f.suspectedFuelTheft ? 'text-red-600 font-bold' : 'text-green-600'}
+                        >
+                          {f.calculatedL100km} L/100km
+                        </strong>
                       </div>
                     )}
                   </div>
 
                   <div className="text-right">
-                    <div className="font-mono font-bold text-slate-900 text-sm">{f.totalCost.toLocaleString()} {f.currency}</div>
+                    <div className="font-mono font-bold text-slate-900 text-sm">
+                      {f.totalCost.toLocaleString()} {f.currency}
+                    </div>
                     {f.suspectedFuelTheft && (
                       <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200 font-bold flex items-center gap-1 mt-1">
                         <ShieldAlert className="w-3 h-3 text-red-600" />
@@ -376,9 +456,7 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
             </div>
           )}
 
-          {activeSubTab === 'compliance' && (
-            <FleetComplianceTracker currentOrg={currentOrg} />
-          )}
+          {activeSubTab === 'compliance' && <FleetComplianceTracker currentOrg={currentOrg} />}
         </div>
       )}
 
@@ -408,7 +486,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
           </div>
 
           <div>
-            <h3 className="font-bold text-xs uppercase text-slate-800 mb-2">Historique des Interventions Ateliers</h3>
+            <h3 className="font-bold text-xs uppercase text-slate-800 mb-2">
+              Historique des Interventions Ateliers
+            </h3>
             <table className="w-full text-left text-[11px] border border-slate-300">
               <thead className="bg-slate-100 font-bold border-b border-slate-300">
                 <tr>
@@ -421,7 +501,7 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {maintenance.map((m) => (
+                {maintenance.map(m => (
                   <tr key={m.id}>
                     <td className="p-2 border-r border-slate-300 font-mono text-[10px]">{m.performedAt}</td>
                     <td className="p-2 border-r border-slate-300 font-bold">{m.type}</td>
@@ -438,7 +518,9 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
           </div>
 
           <div>
-            <h3 className="font-bold text-xs uppercase text-slate-800 mb-2">Statut du Parcs de Véhicules & Odomètres</h3>
+            <h3 className="font-bold text-xs uppercase text-slate-800 mb-2">
+              Statut du Parcs de Véhicules & Odomètres
+            </h3>
             <table className="w-full text-left text-[11px] border border-slate-300">
               <thead className="bg-slate-100 font-bold border-b border-slate-300">
                 <tr>
@@ -449,11 +531,17 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {vehicles.map((v) => (
+                {vehicles.map(v => (
                   <tr key={v.id}>
-                    <td className="p-2 border-r border-slate-300 font-mono font-bold text-orange-700">{v.immatriculation}</td>
-                    <td className="p-2 border-r border-slate-300 font-semibold">{v.make} {v.model} ({v.year})</td>
-                    <td className="p-2 border-r border-slate-300 text-right font-mono font-bold">{v.currentOdometerKm.toLocaleString()} km</td>
+                    <td className="p-2 border-r border-slate-300 font-mono font-bold text-orange-700">
+                      {v.immatriculation}
+                    </td>
+                    <td className="p-2 border-r border-slate-300 font-semibold">
+                      {v.make} {v.model} ({v.year})
+                    </td>
+                    <td className="p-2 border-r border-slate-300 text-right font-mono font-bold">
+                      {v.currentOdometerKm.toLocaleString()} km
+                    </td>
                     <td className="p-2 text-center font-bold text-[10px]">{v.status}</td>
                   </tr>
                 ))}
@@ -465,4 +553,3 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
     </div>
   );
 };
-

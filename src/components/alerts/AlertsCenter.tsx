@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Organization } from '../../types';
-import {
-  MOCK_VEHICLES,
-  MOCK_DRIVERS,
-} from '../../data/mock-data';
+import { MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import { ApiClientError, apiClient } from '../../lib/api-client';
 import type { SafetyCoachingResponse } from '../scoring/ProactiveSafetyTips';
 import { FuelAnomalyDetector } from './FuelAnomalyDetector';
@@ -30,7 +27,7 @@ import {
   ShieldCheck,
   AlertOctagon,
   Flame,
-  Printer
+  Printer,
 } from 'lucide-react';
 import { PrintableReportModal } from '../common/PrintableReportModal';
 
@@ -64,18 +61,15 @@ interface AlertsCenterProps {
   onNavigateToMap?: (vehicleId?: string) => void;
 }
 
-export const AlertsCenter: React.FC<AlertsCenterProps> = ({
-  currentOrg,
-  onNavigateToMap,
-}) => {
+export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNavigateToMap }) => {
   // Filter mock data for active organization
   const orgVehicles = useMemo(
-    () => MOCK_VEHICLES.filter((v) => v.organizationId === currentOrg.id),
-    [currentOrg.id]
+    () => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id),
+    [currentOrg.id],
   );
   const orgDrivers = useMemo(
-    () => MOCK_DRIVERS.filter((d) => d.organizationId === currentOrg.id),
-    [currentOrg.id]
+    () => MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id),
+    [currentOrg.id],
   );
 
   // Generate initial unified alerts from mock datasets
@@ -91,7 +85,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'UNHANDLED',
       recordedAt: '2026-08-04T03:45:00.000Z',
       title: 'Franchissement Vitesse Port de Cotonou',
-      description: 'Dépassement de la limite de vitesse imposée (48 km/h enregistré contre 30 km/h autorisés) dans le périmètre du Port Autonome de Cotonou.',
+      description:
+        'Dépassement de la limite de vitesse imposée (48 km/h enregistré contre 30 km/h autorisés) dans le périmètre du Port Autonome de Cotonou.',
       vehicleId: 'veh_actros_01',
       driverId: 'drv_moussa_04',
       locationName: 'Port Autonome de Cotonou (Zone Portuaire)',
@@ -110,7 +105,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'IN_REVIEW',
       recordedAt: '2026-08-03T22:15:00.000Z',
       title: 'Sortie de Zone Sécurisée Frontière Malanville',
-      description: 'Le camion container a franchi la geofence frontalière sans validation préalable du manifeste douanier.',
+      description:
+        'Le camion container a franchi la geofence frontalière sans validation préalable du manifeste douanier.',
       vehicleId: 'veh_volvo_02',
       driverId: 'drv_koffi_01',
       locationName: 'Poste Frontière Malanville (Bénin / Niger)',
@@ -130,7 +126,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'UNHANDLED',
       recordedAt: '2026-08-04T02:10:00.000Z',
       title: 'Excès de Vitesse Prolongé Corridor RNIE 2',
-      description: 'Vitesse de 98.5 km/h maintenue pendant plus de 2 minutes sur un axe limité à 80 km/h aux abords de Savè.',
+      description:
+        'Vitesse de 98.5 km/h maintenue pendant plus de 2 minutes sur un axe limité à 80 km/h aux abords de Savè.',
       vehicleId: 'veh_actros_01',
       driverId: 'drv_moussa_04',
       locationName: 'Nationale RNIE 2 (Bohicon - Parakou)',
@@ -148,8 +145,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       severity: 'MEDIUM',
       status: 'UNHANDLED',
       recordedAt: '2026-08-03T16:45:00.000Z',
-      title: 'Freinage d\'Urgence Brutal (-0.45g)',
-      description: 'Décélération violente détectée par le boîtier GPS. Risque de détérioration du système de freinage ou perte de chargement.',
+      title: "Freinage d'Urgence Brutal (-0.45g)",
+      description:
+        'Décélération violente détectée par le boîtier GPS. Risque de détérioration du système de freinage ou perte de chargement.',
       vehicleId: 'veh_actros_01',
       driverId: 'drv_moussa_04',
       locationName: 'Traversée Urbaine Savè',
@@ -168,7 +166,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'IN_REVIEW',
       recordedAt: '2026-08-02T02:15:00.000Z',
       title: 'Conduite Nocturne Non Autorisée (Risque Fatigue)',
-      description: 'Déplacement effectué entre 02h00 et 04h00 du matin, violant les règles de sécurité relatives à la fatigue des chauffeurs.',
+      description:
+        'Déplacement effectué entre 02h00 et 04h00 du matin, violant les règles de sécurité relatives à la fatigue des chauffeurs.',
       vehicleId: 'veh_hilux_03',
       driverId: 'drv_ibrahim_02',
       locationName: 'Axe Cotonou - Porto-Novo',
@@ -188,7 +187,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'UNHANDLED',
       recordedAt: '2026-08-03T18:15:00.000Z',
       title: 'Anomalie Majeure Consommation Gazole (Siphonnage Présumé)',
-      description: 'Ravitaillement de 280L à Parakou affichant un ratio calculé anormal de 48.5 L/100km (+42% par rapport au nominal).',
+      description:
+        'Ravitaillement de 280L à Parakou affichant un ratio calculé anormal de 48.5 L/100km (+42% par rapport au nominal).',
       vehicleId: 'veh_actros_01',
       driverId: 'drv_moussa_04',
       locationName: 'Station Total Parakou Centre',
@@ -205,7 +205,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'UNHANDLED',
       recordedAt: '2026-08-01T09:00:00.000Z',
       title: 'Remplacement Plaquettes & Amortisseurs en Cours',
-      description: 'Véhicule immobilisé pour maintenance corrective au niveau du système de freinage avant suite à l\'usure prématurée.',
+      description:
+        "Véhicule immobilisé pour maintenance corrective au niveau du système de freinage avant suite à l'usure prématurée.",
       vehicleId: 'veh_hilux_03',
       driverId: 'drv_ibrahim_02',
       locationName: 'Atelier Interne TransAfrik Cotonou',
@@ -223,7 +224,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       status: 'UNHANDLED',
       recordedAt: '2026-08-04T01:00:00.000Z',
       title: 'Échéance Visite Technique CNSR Imminente',
-      description: 'La visite technique obligatoire du camion Mercedes Actros expire le 10 août 2026 (dans 6 jours). Risque d\'amende et d\'immobilisation.',
+      description:
+        "La visite technique obligatoire du camion Mercedes Actros expire le 10 août 2026 (dans 6 jours). Risque d'amende et d'immobilisation.",
       vehicleId: 'veh_actros_01',
       driverId: 'drv_moussa_04',
       metricValue: 'Expire le 10/08',
@@ -244,8 +246,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
   // Handler for new real-time fuel anomalies detected by telemetry
   const handleFuelAnomalyTriggered = (newAlert: UnifiedAlert) => {
-    setAlerts((prev) => {
-      if (prev.some((a) => a.id === newAlert.id)) return prev;
+    setAlerts(prev => {
+      if (prev.some(a => a.id === newAlert.id)) return prev;
       return [newAlert, ...prev];
     });
   };
@@ -275,57 +277,59 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
   // Filtered & Sorted Feed
   const filteredAlerts = useMemo(() => {
-    return alerts.filter((alert) => {
-      // Category filter
-      if (selectedCategory !== 'ALL' && alert.category !== selectedCategory) {
-        return false;
-      }
-      // Severity filter
-      if (selectedSeverity !== 'ALL' && alert.severity !== selectedSeverity) {
-        return false;
-      }
-      // Status filter
-      if (selectedStatus !== 'ALL' && alert.status !== selectedStatus) {
-        return false;
-      }
-      // Search query filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const veh = orgVehicles.find((v) => v.id === alert.vehicleId);
-        const drv = orgDrivers.find((d) => d.id === alert.driverId);
+    return alerts
+      .filter(alert => {
+        // Category filter
+        if (selectedCategory !== 'ALL' && alert.category !== selectedCategory) {
+          return false;
+        }
+        // Severity filter
+        if (selectedSeverity !== 'ALL' && alert.severity !== selectedSeverity) {
+          return false;
+        }
+        // Status filter
+        if (selectedStatus !== 'ALL' && alert.status !== selectedStatus) {
+          return false;
+        }
+        // Search query filter
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const veh = orgVehicles.find(v => v.id === alert.vehicleId);
+          const drv = orgDrivers.find(d => d.id === alert.driverId);
 
-        const matchTitle = alert.title.toLowerCase().includes(q);
-        const matchDesc = alert.description.toLowerCase().includes(q);
-        const matchLocation = (alert.locationName || '').toLowerCase().includes(q);
-        const matchVeh = veh
-          ? `${veh.immatriculation} ${veh.make} ${veh.model}`.toLowerCase().includes(q)
-          : false;
-        const matchDrv = drv ? drv.fullName.toLowerCase().includes(q) : false;
+          const matchTitle = alert.title.toLowerCase().includes(q);
+          const matchDesc = alert.description.toLowerCase().includes(q);
+          const matchLocation = (alert.locationName || '').toLowerCase().includes(q);
+          const matchVeh = veh
+            ? `${veh.immatriculation} ${veh.make} ${veh.model}`.toLowerCase().includes(q)
+            : false;
+          const matchDrv = drv ? drv.fullName.toLowerCase().includes(q) : false;
 
-        return matchTitle || matchDesc || matchLocation || matchVeh || matchDrv;
-      }
-      return true;
-    }).sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
+          return matchTitle || matchDesc || matchLocation || matchVeh || matchDrv;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
   }, [alerts, selectedCategory, selectedSeverity, selectedStatus, searchQuery, orgVehicles, orgDrivers]);
 
   // Statistics
   const stats = useMemo(() => {
     const total = alerts.length;
-    const unhandled = alerts.filter((a) => a.status === 'UNHANDLED').length;
-    const geofenceCount = alerts.filter((a) => a.category === 'GEOFENCE').length;
-    const harshCount = alerts.filter((a) => a.category === 'HARSH_DRIVING').length;
+    const unhandled = alerts.filter(a => a.status === 'UNHANDLED').length;
+    const geofenceCount = alerts.filter(a => a.category === 'GEOFENCE').length;
+    const harshCount = alerts.filter(a => a.category === 'HARSH_DRIVING').length;
     const maintFuelCount = alerts.filter(
-      (a) => a.category === 'MAINTENANCE' || a.category === 'FUEL_ANOMALY' || a.category === 'COMPLIANCE'
+      a => a.category === 'MAINTENANCE' || a.category === 'FUEL_ANOMALY' || a.category === 'COMPLIANCE',
     ).length;
-    const criticalCount = alerts.filter((a) => a.severity === 'CRITICAL').length;
+    const criticalCount = alerts.filter(a => a.severity === 'CRITICAL').length;
 
     return { total, unhandled, geofenceCount, harshCount, maintFuelCount, criticalCount };
   }, [alerts]);
 
   // Handlers
   const handleOpenSMSModal = (alert: UnifiedAlert) => {
-    const driver = orgDrivers.find((d) => d.id === alert.driverId);
-    const vehicle = orgVehicles.find((v) => v.id === alert.vehicleId);
+    const driver = orgDrivers.find(d => d.id === alert.driverId);
+    const vehicle = orgVehicles.find(v => v.id === alert.vehicleId);
     const driverName = driver ? driver.fullName : 'Chauffeur';
     const plate = vehicle ? vehicle.immatriculation : 'Véhicule';
 
@@ -349,8 +353,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       setSmsSending(false);
       setSmsSuccess(true);
       // Mark actions taken
-      setAlerts((prev) =>
-        prev.map((a) =>
+      setAlerts(prev =>
+        prev.map(a =>
           a.id === smsModalAlert.id
             ? {
                 ...a,
@@ -360,8 +364,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                   `SMS envoyé le ${new Date().toLocaleTimeString('fr-FR')}`,
                 ],
               }
-            : a
-        )
+            : a,
+        ),
       );
       setTimeout(() => {
         setSmsModalAlert(null);
@@ -397,7 +401,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
           '',
           'CONSEILS POUR LE GESTIONNAIRE :',
           ...data.actionableTips.map(
-            (t, i) => `${i + 1}. [${t.category}] ${t.title} : ${t.recommendation} (Impact estimé : ${t.expectedImpact})`,
+            (t, i) =>
+              `${i + 1}. [${t.category}] ${t.title} : ${t.recommendation} (Impact estimé : ${t.expectedImpact})`,
           ),
         ].join('\n'),
       );
@@ -405,9 +410,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       // Auparavant, un échec produisait une « ANALYSE IA » écrite en dur, que
       // rien ne distinguait d'une vraie. Un échec doit rester un échec.
       setAiAnalysisResult(null);
-      setAiError(
-        err instanceof ApiClientError ? err.message : "L'analyse n'a pas pu être produite.",
-      );
+      setAiError(err instanceof ApiClientError ? err.message : "L'analyse n'a pas pu être produite.");
     } finally {
       setAiLoading(false);
     }
@@ -420,8 +423,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
   const handleConfirmResolution = () => {
     if (!resolveModalAlert) return;
-    setAlerts((prev) =>
-      prev.map((a) =>
+    setAlerts(prev =>
+      prev.map(a =>
         a.id === resolveModalAlert.id
           ? {
               ...a,
@@ -429,8 +432,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               resolvedAt: new Date().toISOString(),
               resolutionNote: resolutionNote.trim() || 'Classé résolu par le gestionnaire de flotte.',
             }
-          : a
-      )
+          : a,
+      ),
     );
     setResolveModalAlert(null);
   };
@@ -442,8 +445,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
   const handleConfirmMaintenance = () => {
     if (!maintModalAlert) return;
-    setAlerts((prev) =>
-      prev.map((a) =>
+    setAlerts(prev =>
+      prev.map(a =>
         a.id === maintModalAlert.id
           ? {
               ...a,
@@ -453,8 +456,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                 `Ordre de service créé chez ${maintProvider} le ${new Date().toLocaleDateString('fr-FR')}`,
               ],
             }
-          : a
-      )
+          : a,
+      ),
     );
     setMaintSuccess(true);
     setTimeout(() => {
@@ -465,7 +468,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
   const handleSimulateNewAlert = () => {
     const randomVehicle = orgVehicles[Math.floor(Math.random() * orgVehicles.length)] || orgVehicles[0];
-    const randomDriver = orgDrivers.find((d) => d.assignedVehicleId === randomVehicle?.id) || orgDrivers[0];
+    const randomDriver = orgDrivers.find(d => d.assignedVehicleId === randomVehicle?.id) || orgDrivers[0];
 
     const newSimulatedAlert: UnifiedAlert = {
       id: `alt_sim_${Date.now()}`,
@@ -486,7 +489,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
       actionsTaken: [],
     };
 
-    setAlerts((prev) => [newSimulatedAlert, ...prev]);
+    setAlerts(prev => [newSimulatedAlert, ...prev]);
   };
 
   const getCategoryBadge = (category: AlertCategory) => {
@@ -617,7 +620,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               )}
             </h2>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Agrégation en temps réel des franchissements de geofence, anomalies de maintenance/carburant, et comportements de conduite à risque avec boutons d'actions directes.
+              Agrégation en temps réel des franchissements de geofence, anomalies de maintenance/carburant, et
+              comportements de conduite à risque avec boutons d'actions directes.
             </p>
           </div>
 
@@ -631,7 +635,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               }`}
             >
               <Flame className="w-4 h-4" />
-              <span>{showDetectorPanel ? 'Masquer Détecteur Siphonnage' : 'Détecteur Siphonnage Temps Réel'}</span>
+              <span>
+                {showDetectorPanel ? 'Masquer Détecteur Siphonnage' : 'Détecteur Siphonnage Temps Réel'}
+              </span>
             </button>
 
             <button
@@ -655,10 +661,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
       {/* Real-time Fuel Anomaly Detector Integration */}
       {showDetectorPanel && (
-        <FuelAnomalyDetector
-          currentOrg={currentOrg}
-          onAlertTriggered={handleFuelAnomalyTriggered}
-        />
+        <FuelAnomalyDetector currentOrg={currentOrg} onAlertTriggered={handleFuelAnomalyTriggered} />
       )}
 
       {/* KPI Cards Overview */}
@@ -668,9 +671,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <span>Total Alertes</span>
             <AlertTriangle className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-2 font-mono">
-            {stats.total}
-          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-2 font-mono">{stats.total}</div>
           <div className="text-[10px] text-slate-500 mt-1">Événements enregistrés</div>
         </div>
 
@@ -679,9 +680,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <span>Non Traitées</span>
             <ShieldAlert className="w-4 h-4 text-red-600 animate-pulse" />
           </div>
-          <div className="text-2xl font-extrabold text-red-700 mt-2 font-mono">
-            {stats.unhandled}
-          </div>
+          <div className="text-2xl font-extrabold text-red-700 mt-2 font-mono">{stats.unhandled}</div>
           <div className="text-[10px] text-red-600 font-medium mt-1">Intervention requise</div>
         </div>
 
@@ -690,9 +689,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <span>Geofencing</span>
             <Compass className="w-4 h-4 text-indigo-600" />
           </div>
-          <div className="text-2xl font-extrabold text-indigo-800 mt-2 font-mono">
-            {stats.geofenceCount}
-          </div>
+          <div className="text-2xl font-extrabold text-indigo-800 mt-2 font-mono">{stats.geofenceCount}</div>
           <div className="text-[10px] text-indigo-600 font-medium mt-1">Ports, frontières, corridors</div>
         </div>
 
@@ -701,9 +698,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <span>Conduite Dangereuse</span>
             <AlertTriangle className="w-4 h-4 text-orange-600" />
           </div>
-          <div className="text-2xl font-extrabold text-orange-800 mt-2 font-mono">
-            {stats.harshCount}
-          </div>
+          <div className="text-2xl font-extrabold text-orange-800 mt-2 font-mono">{stats.harshCount}</div>
           <div className="text-[10px] text-orange-600 font-medium mt-1">Vitesse, freinages, nuit</div>
         </div>
 
@@ -712,9 +707,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <span>Maintenance & Gazole</span>
             <Wrench className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-extrabold text-amber-800 mt-2 font-mono">
-            {stats.maintFuelCount}
-          </div>
+          <div className="text-2xl font-extrabold text-amber-800 mt-2 font-mono">{stats.maintFuelCount}</div>
           <div className="text-[10px] text-amber-600 font-medium mt-1">Anomalies & papiers</div>
         </div>
       </div>
@@ -731,7 +724,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               { id: 'MAINTENANCE', label: 'Maintenance' },
               { id: 'FUEL_ANOMALY', label: 'Anomalies Gazole' },
               { id: 'COMPLIANCE', label: 'Papiers & Visite' },
-            ].map((tab) => (
+            ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setSelectedCategory(tab.id)}
@@ -753,7 +746,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               type="text"
               placeholder="Rechercher immat, chauffeur..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
             />
           </div>
@@ -765,7 +758,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               <span className="font-semibold text-slate-600">Sévérité:</span>
               <select
                 value={selectedSeverity}
-                onChange={(e) => setSelectedSeverity(e.target.value)}
+                onChange={e => setSelectedSeverity(e.target.value)}
                 className="bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs font-semibold text-slate-700 cursor-pointer"
               >
                 <option value="ALL">Toutes les sévérités</option>
@@ -780,7 +773,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               <span className="font-semibold text-slate-600">Statut:</span>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
+                onChange={e => setSelectedStatus(e.target.value)}
                 className="bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs font-semibold text-slate-700 cursor-pointer"
               >
                 <option value="ALL">Tous les statuts</option>
@@ -803,7 +796,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
           <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3">
             <ShieldCheck className="w-12 h-12 text-slate-300 mx-auto" />
             <h3 className="text-sm font-bold text-slate-700">Aucune alerte ne correspond à vos filtres</h3>
-            <p className="text-xs text-slate-500">Essayez de réinitialiser vos critères de recherche ou de modifier les filtres ci-dessus.</p>
+            <p className="text-xs text-slate-500">
+              Essayez de réinitialiser vos critères de recherche ou de modifier les filtres ci-dessus.
+            </p>
             <button
               onClick={() => {
                 setSelectedCategory('ALL');
@@ -817,9 +812,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             </button>
           </div>
         ) : (
-          filteredAlerts.map((alert) => {
-            const vehicle = orgVehicles.find((v) => v.id === alert.vehicleId);
-            const driver = orgDrivers.find((d) => d.id === alert.driverId);
+          filteredAlerts.map(alert => {
+            const vehicle = orgVehicles.find(v => v.id === alert.vehicleId);
+            const driver = orgDrivers.find(d => d.id === alert.driverId);
 
             return (
               <div
@@ -828,8 +823,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                   alert.status === 'UNHANDLED'
                     ? 'border-red-300 bg-gradient-to-r from-red-50/30 via-white to-white'
                     : alert.status === 'RESOLVED'
-                    ? 'border-emerald-200 bg-slate-50/40 opacity-80'
-                    : 'border-slate-200'
+                      ? 'border-emerald-200 bg-slate-50/40 opacity-80'
+                      : 'border-slate-200'
                 }`}
               >
                 {/* Alert Top Row */}
@@ -852,7 +847,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
                   {alert.metricValue && (
                     <div className="bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-right">
-                      <div className="text-[9px] font-semibold text-slate-500 uppercase">{alert.metricLabel || 'Valeur'}</div>
+                      <div className="text-[9px] font-semibold text-slate-500 uppercase">
+                        {alert.metricLabel || 'Valeur'}
+                      </div>
                       <div className="text-xs font-mono font-bold text-slate-900">{alert.metricValue}</div>
                     </div>
                   )}
@@ -860,12 +857,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
                 {/* Title & Description */}
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
-                    {alert.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {alert.description}
-                  </p>
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug">{alert.title}</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">{alert.description}</p>
                 </div>
 
                 {/* Context Details (Vehicle, Driver, Location) */}
@@ -874,7 +867,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                     <div className="flex items-center gap-1.5 font-semibold text-slate-800">
                       <Truck className="w-3.5 h-3.5 text-orange-500" />
                       <span>{vehicle.immatriculation}</span>
-                      <span className="text-slate-400 font-normal">({vehicle.make} {vehicle.model})</span>
+                      <span className="text-slate-400 font-normal">
+                        ({vehicle.make} {vehicle.model})
+                      </span>
                     </div>
                   )}
 
@@ -898,7 +893,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                 {alert.actionsTaken && alert.actionsTaken.length > 0 && (
                   <div className="text-[11px] text-slate-500 bg-amber-50/50 border border-amber-200/60 rounded-md p-2 flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span><strong>Historique d'action :</strong> {alert.actionsTaken.join(' • ')}</span>
+                    <span>
+                      <strong>Historique d'action :</strong> {alert.actionsTaken.join(' • ')}
+                    </span>
                   </div>
                 )}
 
@@ -906,7 +903,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                 {alert.status === 'RESOLVED' && alert.resolutionNote && (
                   <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md p-2 flex items-center gap-2">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span><strong>Note de résolution :</strong> {alert.resolutionNote}</span>
+                    <span>
+                      <strong>Note de résolution :</strong> {alert.resolutionNote}
+                    </span>
                   </div>
                 )}
 
@@ -936,7 +935,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                     )}
 
                     {/* Action 3: Create Service / Maintenance Order */}
-                    {(alert.category === 'MAINTENANCE' || alert.category === 'FUEL_ANOMALY' || alert.category === 'HARSH_DRIVING') && (
+                    {(alert.category === 'MAINTENANCE' ||
+                      alert.category === 'FUEL_ANOMALY' ||
+                      alert.category === 'HARSH_DRIVING') && (
                       <button
                         onClick={() => handleOpenMaintenanceModal(alert)}
                         className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
@@ -989,9 +990,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-blue-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Envoi Notification SMS / WhatsApp
-                </h3>
+                <h3 className="text-base font-bold text-slate-900">Envoi Notification SMS / WhatsApp</h3>
               </div>
               <button
                 onClick={() => setSmsModalAlert(null)}
@@ -1011,7 +1010,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                 <textarea
                   rows={4}
                   value={smsMessage}
-                  onChange={(e) => setSmsMessage(e.target.value)}
+                  onChange={e => setSmsMessage(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
@@ -1060,9 +1059,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-purple-700 font-bold">
                 <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Analyse Diagnostique Gemini 3.6
-                </h3>
+                <h3 className="text-base font-bold text-slate-900">Analyse Diagnostique Gemini 3.6</h3>
               </div>
               <button
                 onClick={() => setAiModalAlert(null)}
@@ -1080,7 +1077,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             {aiLoading ? (
               <div className="py-8 text-center space-y-3">
                 <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
-                <p className="text-xs font-bold text-slate-700">Calcul du risque & recommandation IA en cours...</p>
+                <p className="text-xs font-bold text-slate-700">
+                  Calcul du risque & recommandation IA en cours...
+                </p>
               </div>
             ) : aiError ? (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-900 space-y-2">
@@ -1096,8 +1095,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                   <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-[11px] text-amber-900 font-semibold flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>
-                      Exemple de démonstration — ce texte ne résulte pas de l'analyse de cette
-                      alerte. Ne fondez aucune décision disciplinaire dessus.
+                      Exemple de démonstration — ce texte ne résulte pas de l'analyse de cette alerte. Ne
+                      fondez aucune décision disciplinaire dessus.
                     </span>
                   </div>
                 )}
@@ -1126,9 +1125,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Clôture d'Alerte
-                </h3>
+                <h3 className="text-base font-bold text-slate-900">Clôture d'Alerte</h3>
               </div>
               <button
                 onClick={() => setResolveModalAlert(null)}
@@ -1144,12 +1141,14 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               </p>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Note de résolution (optionnel) :</label>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Note de résolution (optionnel) :
+                </label>
                 <input
                   type="text"
                   placeholder="Ex: Chauffeur rappelé à l'ordre, vitesse régulée..."
                   value={resolutionNote}
-                  onChange={(e) => setResolutionNote(e.target.value)}
+                  onChange={e => setResolutionNote(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
@@ -1181,9 +1180,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-amber-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Créer Ordre d'Intervention / Service
-                </h3>
+                <h3 className="text-base font-bold text-slate-900">Créer Ordre d'Intervention / Service</h3>
               </div>
               <button
                 onClick={() => setMaintModalAlert(null)}
@@ -1199,13 +1196,17 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               </p>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Prestataire / Atelier sélectionné :</label>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Prestataire / Atelier sélectionné :
+                </label>
                 <select
                   value={maintProvider}
-                  onChange={(e) => setMaintProvider(e.target.value)}
+                  onChange={e => setMaintProvider(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs text-slate-800 font-semibold cursor-pointer"
                 >
-                  <option value="Garage Central CFAO Motors Cotonou">Garage Central CFAO Motors Cotonou</option>
+                  <option value="Garage Central CFAO Motors Cotonou">
+                    Garage Central CFAO Motors Cotonou
+                  </option>
                   <option value="Atelier Interne TransAfrik">Atelier Interne TransAfrik</option>
                   <option value="Station Service Oryx Parakou">Station Service Oryx Parakou</option>
                 </select>
@@ -1256,13 +1257,13 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             <div>
               <div className="text-[10px] text-slate-500 uppercase">Alertes Critiques</div>
               <div className="font-extrabold text-red-600 text-sm">
-                {filteredAlerts.filter((a) => a.severity === 'CRITICAL').length}
+                {filteredAlerts.filter(a => a.severity === 'CRITICAL').length}
               </div>
             </div>
             <div>
               <div className="text-[10px] text-slate-500 uppercase">Anomalies Carburant</div>
               <div className="font-extrabold text-amber-600 text-sm">
-                {filteredAlerts.filter((a) => a.category === 'FUEL_ANOMALY').length}
+                {filteredAlerts.filter(a => a.category === 'FUEL_ANOMALY').length}
               </div>
             </div>
           </div>
@@ -1279,16 +1280,20 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredAlerts.map((alt) => {
-                const veh = orgVehicles.find((v) => v.id === alt.vehicleId);
-                const drv = orgDrivers.find((d) => d.id === alt.driverId);
+              {filteredAlerts.map(alt => {
+                const veh = orgVehicles.find(v => v.id === alt.vehicleId);
+                const drv = orgDrivers.find(d => d.id === alt.driverId);
                 return (
                   <tr key={alt.id}>
                     <td className="p-2 border-r border-slate-300 font-mono text-[10px]">
                       {new Date(alt.recordedAt).toLocaleString('fr-FR')}
                     </td>
                     <td className="p-2 border-r border-slate-300 font-bold text-[10px]">
-                      <span className={alt.severity === 'CRITICAL' ? 'text-red-700 font-extrabold' : 'text-slate-800'}>
+                      <span
+                        className={
+                          alt.severity === 'CRITICAL' ? 'text-red-700 font-extrabold' : 'text-slate-800'
+                        }
+                      >
                         [{alt.category}] {alt.severity}
                       </span>
                     </td>
@@ -1303,9 +1308,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
                     <td className="p-2 border-r border-slate-300 text-[10px] font-mono">
                       {alt.locationName || 'GPS indéterminé'}
                     </td>
-                    <td className="p-2 text-center font-bold text-[10px]">
-                      {alt.status}
-                    </td>
+                    <td className="p-2 text-center font-bold text-[10px]">{alt.status}</td>
                   </tr>
                 );
               })}
@@ -1343,7 +1346,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               <div className="grid grid-cols-2 gap-4 text-xs font-mono pt-2 border-t border-slate-200">
                 <div>
                   <span className="text-slate-500 block text-[10px]">HORODATAGE ENREGISTRÉ:</span>
-                  <strong className="text-slate-900">{new Date(singlePrintAlert.recordedAt).toLocaleString('fr-FR')}</strong>
+                  <strong className="text-slate-900">
+                    {new Date(singlePrintAlert.recordedAt).toLocaleString('fr-FR')}
+                  </strong>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">MÉTRIQUE CONSTATÉE:</span>
@@ -1357,11 +1362,19 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               <div>
                 <h4 className="font-bold text-xs uppercase text-slate-800 mb-2">Informations Véhicule</h4>
                 {(() => {
-                  const v = orgVehicles.find((veh) => veh.id === singlePrintAlert.vehicleId);
+                  const v = orgVehicles.find(veh => veh.id === singlePrintAlert.vehicleId);
                   return (
                     <div className="space-y-1 text-xs">
-                      <div>Immatriculation : <strong className="font-mono text-orange-700">{v?.immatriculation || 'N/A'}</strong></div>
-                      <div>Marque & Modèle : <strong>{v?.make} {v?.model}</strong></div>
+                      <div>
+                        Immatriculation :{' '}
+                        <strong className="font-mono text-orange-700">{v?.immatriculation || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        Marque & Modèle :{' '}
+                        <strong>
+                          {v?.make} {v?.model}
+                        </strong>
+                      </div>
                       <div>Capacité Réservoir : {v?.tankCapacityLiters} L</div>
                     </div>
                   );
@@ -1371,12 +1384,18 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
               <div>
                 <h4 className="font-bold text-xs uppercase text-slate-800 mb-2">Informations Chauffeur</h4>
                 {(() => {
-                  const d = orgDrivers.find((drv) => drv.id === singlePrintAlert.driverId);
+                  const d = orgDrivers.find(drv => drv.id === singlePrintAlert.driverId);
                   return (
                     <div className="space-y-1 text-xs">
-                      <div>Nom Complet : <strong>{d?.fullName || 'Non spécifié'}</strong></div>
-                      <div>Téléphone : <strong className="font-mono">{d?.phone || 'N/A'}</strong></div>
-                      <div>Score Sécurité : <strong>{d?.currentSafetyScore || 90} / 100</strong></div>
+                      <div>
+                        Nom Complet : <strong>{d?.fullName || 'Non spécifié'}</strong>
+                      </div>
+                      <div>
+                        Téléphone : <strong className="font-mono">{d?.phone || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        Score Sécurité : <strong>{d?.currentSafetyScore || 90} / 100</strong>
+                      </div>
                     </div>
                   );
                 })()}
@@ -1385,8 +1404,12 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
 
             {/* Location & GPS Box */}
             <div className="border border-slate-300 p-3 rounded-lg text-xs space-y-1">
-              <span className="font-bold text-slate-800 block uppercase text-[10px]">Localisation Spatiale / GPS:</span>
-              <div className="font-mono font-bold text-slate-900">{singlePrintAlert.locationName || 'Zone indéterminée'}</div>
+              <span className="font-bold text-slate-800 block uppercase text-[10px]">
+                Localisation Spatiale / GPS:
+              </span>
+              <div className="font-mono font-bold text-slate-900">
+                {singlePrintAlert.locationName || 'Zone indéterminée'}
+              </div>
               {singlePrintAlert.latitude && (
                 <div className="text-[10px] text-slate-500 font-mono">
                   Coordonnées GPS: Lat {singlePrintAlert.latitude}, Long {singlePrintAlert.longitude}
@@ -1397,7 +1420,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({
             {/* Actions Taken Box */}
             {singlePrintAlert.actionsTaken && singlePrintAlert.actionsTaken.length > 0 && (
               <div className="border border-slate-300 p-3 rounded-lg text-xs space-y-1 bg-amber-50">
-                <span className="font-bold text-amber-900 block uppercase text-[10px]">Historique d'Interventions Régulation:</span>
+                <span className="font-bold text-amber-900 block uppercase text-[10px]">
+                  Historique d'Interventions Régulation:
+                </span>
                 <ul className="list-disc list-inside text-amber-800 font-mono text-[11px]">
                   {singlePrintAlert.actionsTaken.map((act, i) => (
                     <li key={i}>{act}</li>

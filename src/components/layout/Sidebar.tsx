@@ -1,19 +1,20 @@
 import React from 'react';
-import { 
-  FileCode2, 
-  MapPin, 
-  Truck, 
-  Award, 
-  Wrench, 
-  Sparkles, 
-  ShieldAlert, 
+import {
+  FileCode2,
+  MapPin,
+  Truck,
+  Award,
+  Wrench,
+  Sparkles,
+  ShieldAlert,
   ChevronRight,
   Database,
   Cpu,
-  Gift
+  Gift,
 } from 'lucide-react';
 
-export type NavigationTab = 'sprint0' | 'live-map' | 'alerts' | 'fleet' | 'scoring' | 'rewards' | 'maintenance-fuel' | 'ai-hub';
+export type NavigationTab =
+  'sprint0' | 'live-map' | 'alerts' | 'fleet' | 'scoring' | 'rewards' | 'maintenance-fuel' | 'ai-hub';
 
 interface SidebarProps {
   activeTab: NavigationTab;
@@ -28,10 +29,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingGpsCount = 0,
   alertsCount = 2,
 }) => {
-  const menuItems: { id: NavigationTab; label: string; icon: React.FC<{ className?: string }>; badge?: string; badgeColor?: string }[] = [
+  const menuItems: {
+    id: NavigationTab;
+    label: string;
+    icon: React.FC<{ className?: string }>;
+    badge?: string;
+    badgeColor?: string;
+  }[] = [
     {
       id: 'sprint0',
-      label: "Dossier Sprint 0 (PRD & Arch)",
+      label: 'Dossier Sprint 0 (PRD & Arch)',
       icon: FileCode2,
       badge: 'Livrables 1-10',
       badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
@@ -119,11 +126,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 <div className="flex items-center gap-1.5">
                   {item.badge && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'}`}
+                    >
                       {item.badge}
                     </span>
                   )}
-                  <ChevronRight className={`w-3.5 h-3.5 text-slate-600 transition-transform ${isActive ? 'translate-x-0.5 text-orange-400' : ''}`} />
+                  <ChevronRight
+                    className={`w-3.5 h-3.5 text-slate-600 transition-transform ${isActive ? 'translate-x-0.5 text-orange-400' : ''}`}
+                  />
                 </div>
               </button>
             );
@@ -149,7 +160,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Database className="w-3.5 h-3.5 text-emerald-400" />
               Stack Sprint 0
             </span>
-            <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">PostgreSQL</span>
+            <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+              PostgreSQL
+            </span>
           </div>
           <p className="text-[10px] leading-relaxed text-slate-500">
             Node NestJS • Android Kotlin Native • Redis BullMQ • Gemini AI

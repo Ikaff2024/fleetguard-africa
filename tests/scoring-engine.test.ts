@@ -66,9 +66,7 @@ describe('calculateDriverSafetyScore', () => {
   it('est déterministe : deux calculs identiques donnent le même score', () => {
     const input = { ...cleanRun, overspeedEventsCount: 3, harshBrakingEventsCount: 2 };
 
-    expect(calculateDriverSafetyScore(input, config)).toEqual(
-      calculateDriverSafetyScore(input, config),
-    );
+    expect(calculateDriverSafetyScore(input, config)).toEqual(calculateDriverSafetyScore(input, config));
   });
 
   it('normalise par la distance : le même nombre d’incidents pèse moins sur un long trajet', () => {

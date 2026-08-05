@@ -18,7 +18,7 @@ import {
   Target,
   Truck,
   Check,
-  Share2
+  Share2,
 } from 'lucide-react';
 
 interface ProactiveSafetyTipsProps {
@@ -32,7 +32,8 @@ export interface RiskTrend {
 }
 
 export interface ActionableTip {
-  category: 'Sécurité Routière' | 'Éco-Conduite & Carburant' | 'Conduite Nocturne' | 'Respect des Corridors' | string;
+  category:
+    'Sécurité Routière' | 'Éco-Conduite & Carburant' | 'Conduite Nocturne' | 'Respect des Corridors' | string;
   title: string;
   recommendation: string;
   expectedImpact: string;
@@ -58,9 +59,11 @@ export type SafetyCoachingResponse = SafetyTipsResponse & AiGenerated;
 
 export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ currentOrg }) => {
   const drivers = MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  const [selectedDriverId, setSelectedDriverId] = useState<string>(drivers[0]?.id || MOCK_DRIVERS[0]?.id || '');
+  const [selectedDriverId, setSelectedDriverId] = useState<string>(
+    drivers[0]?.id || MOCK_DRIVERS[0]?.id || '',
+  );
   const [focusArea, setFocusArea] = useState<string>('Toutes catégories');
-  
+
   const [loading, setLoading] = useState<boolean>(false);
   const [tipsData, setTipsData] = useState<SafetyCoachingResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -86,9 +89,7 @@ export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ curren
       // la fiche du chauffeur précédent et le manager coache la mauvaise personne.
       setTipsData(null);
       setErrorMessage(
-        err instanceof ApiClientError
-          ? err.message
-          : "La fiche de coaching n'a pas pu être générée.",
+        err instanceof ApiClientError ? err.message : "La fiche de coaching n'a pas pu être générée.",
       );
     } finally {
       setLoading(false);
@@ -129,12 +130,24 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
   const getSeverityBadge = (severity: 'LOW' | 'MEDIUM' | 'HIGH') => {
     switch (severity) {
       case 'HIGH':
-        return <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded border border-red-200 uppercase">Risque Élevé</span>;
+        return (
+          <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded border border-red-200 uppercase">
+            Risque Élevé
+          </span>
+        );
       case 'MEDIUM':
-        return <span className="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded border border-orange-200 uppercase">Vigilance Modérée</span>;
+        return (
+          <span className="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded border border-orange-200 uppercase">
+            Vigilance Modérée
+          </span>
+        );
       case 'LOW':
       default:
-        return <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200 uppercase">Risque Faible</span>;
+        return (
+          <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200 uppercase">
+            Risque Faible
+          </span>
+        );
     }
   };
 
@@ -169,7 +182,8 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
               Conseils de Sécurité & Éco-Conduite Proactifs
             </h2>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Analyse prédictive des tendances comportementales des chauffeurs par IA. Génère des recommandations concrètes et adaptées aux réalités des corridors routiers africains.
+              Analyse prédictive des tendances comportementales des chauffeurs par IA. Génère des
+              recommandations concrètes et adaptées aux réalités des corridors routiers africains.
             </p>
           </div>
 
@@ -192,9 +206,7 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Chauffeur à Analyser
-            </label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Chauffeur à Analyser</label>
             <select
               value={selectedDriverId}
               onChange={e => setSelectedDriverId(e.target.value)}
@@ -257,7 +269,8 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
             Génération de l'Analyse Comportementale IA...
           </h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Gemini analyse les logs télématiques GPS, les événements de freinage, la consommation gazole et l'historique nocturne de <strong>{selectedDriver?.fullName}</strong>.
+            Gemini analyse les logs télématiques GPS, les événements de freinage, la consommation gazole et
+            l'historique nocturne de <strong>{selectedDriver?.fullName}</strong>.
           </p>
         </div>
       )}
@@ -288,8 +301,8 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
               <p className="text-xs text-amber-900 font-semibold">
                 Fiche de démonstration — elle n'est pas fondée sur les données réelles de{' '}
-                {selectedDriver?.fullName}. Ne l'utilisez pas comme support d'entretien : configurez
-                le moteur d'analyse pour obtenir un coaching personnalisé.
+                {selectedDriver?.fullName}. Ne l'utilisez pas comme support d'entretien : configurez le moteur
+                d'analyse pour obtenir un coaching personnalisé.
               </p>
             </div>
           )}
@@ -297,7 +310,10 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-orange-100 border-2 border-orange-500 text-orange-700 flex items-center justify-center text-xl font-bold shrink-0">
-                {selectedDriver?.fullName.split(' ').map(n => n[0]).join('')}
+                {selectedDriver?.fullName
+                  .split(' ')
+                  .map(n => n[0])
+                  .join('')}
               </div>
 
               <div>
@@ -311,19 +327,29 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
                   <span className="flex items-center gap-1">
                     <Truck className="w-3.5 h-3.5 text-slate-400" />
-                    Véhicule: <strong>{assignedVehicle ? `${assignedVehicle.immatriculation} (${assignedVehicle.make})` : 'Flotte'}</strong>
+                    Véhicule:{' '}
+                    <strong>
+                      {assignedVehicle
+                        ? `${assignedVehicle.immatriculation} (${assignedVehicle.make})`
+                        : 'Flotte'}
+                    </strong>
                   </span>
                   <span>•</span>
-                  <span>Kilométrage: <strong>{selectedDriver?.totalKmDriven.toLocaleString()} km</strong></span>
+                  <span>
+                    Kilométrage: <strong>{selectedDriver?.totalKmDriven.toLocaleString()} km</strong>
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-6 border-l border-slate-100 pl-6">
               <div>
-                <div className="text-[11px] text-slate-500 font-semibold uppercase">Score de Sécurité Actuel</div>
+                <div className="text-[11px] text-slate-500 font-semibold uppercase">
+                  Score de Sécurité Actuel
+                </div>
                 <div className="text-3xl font-extrabold text-orange-600 font-mono">
-                  {selectedDriver?.currentSafetyScore} <span className="text-xs text-slate-400 font-normal">/ 100</span>
+                  {selectedDriver?.currentSafetyScore}{' '}
+                  <span className="text-xs text-slate-400 font-normal">/ 100</span>
                 </div>
               </div>
 
@@ -344,9 +370,7 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
               <BrainCircuit className="w-4 h-4 text-orange-600" />
               <span>Synthèse Comportementale par l'IA</span>
             </div>
-            <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              "{tipsData.profileSummary}"
-            </p>
+            <p className="text-xs text-slate-700 leading-relaxed font-medium">"{tipsData.profileSummary}"</p>
           </div>
 
           {/* Identified Risk Trends & Actionable Coaching Tips Grid */}
@@ -367,14 +391,10 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
                 {tipsData.identifiedRiskTrends.map((trend, idx) => (
                   <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-xs font-bold text-slate-900 leading-tight">
-                        {trend.title}
-                      </h4>
+                      <h4 className="text-xs font-bold text-slate-900 leading-tight">{trend.title}</h4>
                       {getSeverityBadge(trend.severity)}
                     </div>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      {trend.description}
-                    </p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">{trend.description}</p>
                   </div>
                 ))}
               </div>
@@ -424,13 +444,9 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
                           </button>
                         </div>
 
-                        <h4 className="text-xs font-bold text-slate-900 leading-snug">
-                          {tip.title}
-                        </h4>
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug">{tip.title}</h4>
 
-                        <p className="text-[11px] text-slate-600 leading-relaxed">
-                          {tip.recommendation}
-                        </p>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">{tip.recommendation}</p>
                       </div>
 
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
@@ -453,23 +469,27 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
                 <Target className="w-4 h-4 text-orange-400" />
                 <span>Objectif de Performance & Incentive Chauffeur</span>
               </div>
-              <h3 className="text-lg font-bold text-white">
-                {tipsData.targetMilestone.targetGoal}
-              </h3>
+              <h3 className="text-lg font-bold text-white">{tipsData.targetMilestone.targetGoal}</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Recompense motivante préconisée : <strong className="text-green-400">{tipsData.targetMilestone.potentialBonusReward}</strong>.
+                Recompense motivante préconisée :{' '}
+                <strong className="text-green-400">{tipsData.targetMilestone.potentialBonusReward}</strong>.
               </p>
             </div>
 
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-center min-w-[200px]">
-              <div className="text-[11px] text-slate-400 font-semibold uppercase mb-1">Cible Score à 30 Jours</div>
+              <div className="text-[11px] text-slate-400 font-semibold uppercase mb-1">
+                Cible Score à 30 Jours
+              </div>
               <div className="text-3xl font-extrabold text-green-400 font-mono">
-                {tipsData.targetMilestone.targetScore} <span className="text-xs text-slate-400 font-normal">/ 100</span>
+                {tipsData.targetMilestone.targetScore}{' '}
+                <span className="text-xs text-slate-400 font-normal">/ 100</span>
               </div>
               <div className="w-full bg-slate-700 h-2 rounded-full mt-3 overflow-hidden">
                 <div
                   className="bg-green-400 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, (selectedDriver?.currentSafetyScore / tipsData.targetMilestone.targetScore) * 100)}%` }}
+                  style={{
+                    width: `${Math.min(100, (selectedDriver?.currentSafetyScore / tipsData.targetMilestone.targetScore) * 100)}%`,
+                  }}
                 />
               </div>
             </div>

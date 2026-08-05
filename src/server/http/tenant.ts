@@ -32,11 +32,7 @@ export function resolveTenant(req: Request, _res: Response, next: NextFunction) 
   const raw = (req.header('x-organization-id') || req.query.organizationId) as string | undefined;
 
   if (!raw) {
-    return next(
-      ApiError.badRequest(
-        "Organisation non précisée : renseignez l'en-tête X-Organization-Id.",
-      ),
-    );
+    return next(ApiError.badRequest("Organisation non précisée : renseignez l'en-tête X-Organization-Id."));
   }
 
   const organization = findOrganizationById(raw);
@@ -53,7 +49,7 @@ export function resolveTenant(req: Request, _res: Response, next: NextFunction) 
 /** Récupère le tenant résolu, ou échoue bruyamment si le middleware a été oublié. */
 export function requireTenant(req: Request): Organization {
   if (!req.tenant) {
-    throw new ApiError(500, "Tenant non résolu : middleware resolveTenant manquant sur cette route.");
+    throw new ApiError(500, 'Tenant non résolu : middleware resolveTenant manquant sur cette route.');
   }
   return req.tenant;
 }

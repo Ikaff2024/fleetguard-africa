@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
-import { 
-  SPRINT_0_DOCS 
-} from '../../data/sprint0-docs';
-import { 
-  FileText, 
-  Layers, 
-  Workflow, 
-  Database, 
-  Users, 
-  Code, 
-  Radio, 
-  Layout, 
-  CheckCircle2, 
-  Calendar, 
-  Copy, 
-  Check, 
+import { SPRINT_0_DOCS } from '../../data/sprint0-docs';
+import {
+  FileText,
+  Layers,
+  Workflow,
+  Database,
+  Users,
+  Code,
+  Radio,
+  Layout,
+  CheckCircle2,
+  Calendar,
+  Copy,
+  Check,
   Smartphone,
   ShieldCheck,
   Zap,
-  Server
+  Server,
 } from 'lucide-react';
 
 export const Sprint0DocViewer: React.FC = () => {
@@ -27,15 +25,15 @@ export const Sprint0DocViewer: React.FC = () => {
 
   const sections = [
     { id: 1, title: "1. Décisions d'Architecture", icon: Layers },
-    { id: 2, title: "2. Monorepo & Fichiers", icon: FileText },
-    { id: 3, title: "3. Diagramme Logique", icon: Workflow },
-    { id: 4, title: "4. Schéma Prisma DB", icon: Database },
-    { id: 5, title: "5. Matrice RBAC Rôles", icon: Users },
-    { id: 6, title: "6. Contrats API v1", icon: Code },
-    { id: 7, title: "7. Protocole GPS & Sync", icon: Radio },
-    { id: 8, title: "8. Maquettes Écrans", icon: Layout },
-    { id: 9, title: "9. Plan de Tests", icon: CheckCircle2 },
-    { id: 10, title: "10. Roadmap Sprints 0-5", icon: Calendar },
+    { id: 2, title: '2. Monorepo & Fichiers', icon: FileText },
+    { id: 3, title: '3. Diagramme Logique', icon: Workflow },
+    { id: 4, title: '4. Schéma Prisma DB', icon: Database },
+    { id: 5, title: '5. Matrice RBAC Rôles', icon: Users },
+    { id: 6, title: '6. Contrats API v1', icon: Code },
+    { id: 7, title: '7. Protocole GPS & Sync', icon: Radio },
+    { id: 8, title: '8. Maquettes Écrans', icon: Layout },
+    { id: 9, title: '9. Plan de Tests', icon: CheckCircle2 },
+    { id: 10, title: '10. Roadmap Sprints 0-5', icon: Calendar },
   ];
 
   const handleCopyPrisma = () => {
@@ -54,9 +52,7 @@ export const Sprint0DocViewer: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               <span>Sprint 0 • Livrables Complets de Conception</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {SPRINT_0_DOCS.title}
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{SPRINT_0_DOCS.title}</h2>
             <p className="text-slate-500 text-xs mt-1">
               Version {SPRINT_0_DOCS.version} • Conçu par {SPRINT_0_DOCS.author} • {SPRINT_0_DOCS.date}
             </p>
@@ -107,7 +103,8 @@ export const Sprint0DocViewer: React.FC = () => {
                   Hypothèses & Décisions d'Architecture (Android Native Kotlin vs React Native)
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Justification technique adaptée à la connectivité intermittente et à la gestion agressive de batterie en Afrique.
+                  Justification technique adaptée à la connectivité intermittente et à la gestion agressive de
+                  batterie en Afrique.
                 </p>
               </div>
             </div>
@@ -119,7 +116,9 @@ export const Sprint0DocViewer: React.FC = () => {
                   Réseau Intermittent (Zone Blanche)
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Utilisation d'une base de données locale <strong>Room (SQLite)</strong> sur Android. Les points GPS sont enregistrés localement avec un timestamp atomique avant toute tentative d'envoi réseau.
+                  Utilisation d'une base de données locale <strong>Room (SQLite)</strong> sur Android. Les
+                  points GPS sont enregistrés localement avec un timestamp atomique avant toute tentative
+                  d'envoi réseau.
                 </p>
               </div>
 
@@ -129,7 +128,9 @@ export const Sprint0DocViewer: React.FC = () => {
                   Arrière-Plan Persistant
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  <strong>Foreground Service Kotlin</strong> avec notification obligatoire. Empêche la fermeture du processus GPS par l'OS Android (Transsion, Xiaomi, Samsung) lors de longs trajets sans interaction.
+                  <strong>Foreground Service Kotlin</strong> avec notification obligatoire. Empêche la
+                  fermeture du processus GPS par l'OS Android (Transsion, Xiaomi, Samsung) lors de longs
+                  trajets sans interaction.
                 </p>
               </div>
 
@@ -139,7 +140,10 @@ export const Sprint0DocViewer: React.FC = () => {
                   Idempotence & Multi-Tenant
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Envoi par batchs de 50 points avec token <code className="text-orange-600 font-semibold">X-Batch-Id</code>. Dédoublonnage instantané côté serveur via Redis et cloisonnement strict des données par <code className="text-orange-600 font-semibold">organizationId</code>.
+                  Envoi par batchs de 50 points avec token{' '}
+                  <code className="text-orange-600 font-semibold">X-Batch-Id</code>. Dédoublonnage instantané
+                  côté serveur via Redis et cloisonnement strict des données par{' '}
+                  <code className="text-orange-600 font-semibold">organizationId</code>.
                 </p>
               </div>
             </div>
@@ -160,7 +164,8 @@ export const Sprint0DocViewer: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Structure Complète du Monorepo</h3>
                 <p className="text-xs text-slate-500">
-                  Organisation modulaire : apps Next.js, mobile Android Kotlin, backend NestJS, packages partagés et Prisma DB.
+                  Organisation modulaire : apps Next.js, mobile Android Kotlin, backend NestJS, packages
+                  partagés et Prisma DB.
                 </p>
               </div>
             </div>
@@ -179,9 +184,12 @@ export const Sprint0DocViewer: React.FC = () => {
                 <Workflow className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Diagramme Logique de Flux de Données (Mermaid Architecture)</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Diagramme Logique de Flux de Données (Mermaid Architecture)
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Parcours complet depuis la captation GPS mobile jusqu'au tableau de bord temps réel et au calcul du Driver Safety Score.
+                  Parcours complet depuis la captation GPS mobile jusqu'au tableau de bord temps réel et au
+                  calcul du Driver Safety Score.
                 </p>
               </div>
             </div>
@@ -197,11 +205,26 @@ export const Sprint0DocViewer: React.FC = () => {
               <div className="p-4 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2">
                 <div className="font-bold text-slate-900">Explication des Flux :</div>
                 <ol className="list-decimal list-inside space-y-1 text-slate-600">
-                  <li>L'application mobile Android Kotlin enregistre les coordonnées GPS et l'accéléromètre dans la base Room local SQLite.</li>
-                  <li>Le worker mobile déclenche l'envoi HTTP POST par lot dès la présence d'un réseau 2G/3G/4G.</li>
-                  <li>L'API Gateway valide le token JWT et le filtre d'idempotence Redis via <code className="text-orange-600 font-semibold">X-Batch-Id</code>.</li>
-                  <li>Les points sont poussés dans la file BullMQ <code className="text-orange-600 font-semibold">gps-ingestion-queue</code> pour traitement asynchrone non-bloquant.</li>
-                  <li>Les workers PostGIS enregistrent la télémétrie, vérifient les géofences et calculent le Driver Safety Score sur 100.</li>
+                  <li>
+                    L'application mobile Android Kotlin enregistre les coordonnées GPS et l'accéléromètre dans
+                    la base Room local SQLite.
+                  </li>
+                  <li>
+                    Le worker mobile déclenche l'envoi HTTP POST par lot dès la présence d'un réseau 2G/3G/4G.
+                  </li>
+                  <li>
+                    L'API Gateway valide le token JWT et le filtre d'idempotence Redis via{' '}
+                    <code className="text-orange-600 font-semibold">X-Batch-Id</code>.
+                  </li>
+                  <li>
+                    Les points sont poussés dans la file BullMQ{' '}
+                    <code className="text-orange-600 font-semibold">gps-ingestion-queue</code> pour traitement
+                    asynchrone non-bloquant.
+                  </li>
+                  <li>
+                    Les workers PostGIS enregistrent la télémétrie, vérifient les géofences et calculent le
+                    Driver Safety Score sur 100.
+                  </li>
                 </ol>
               </div>
             </div>
@@ -217,9 +240,12 @@ export const Sprint0DocViewer: React.FC = () => {
                   <Database className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Modèle de Données & Schéma Prisma Initial</h3>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Modèle de Données & Schéma Prisma Initial
+                  </h3>
                   <p className="text-xs text-slate-500">
-                    Schéma PostgreSQL complet gérant les organisations, utilisateurs, véhicules, GPS, scores et maintenance.
+                    Schéma PostgreSQL complet gérant les organisations, utilisateurs, véhicules, GPS, scores
+                    et maintenance.
                   </p>
                 </div>
               </div>
@@ -228,7 +254,11 @@ export const Sprint0DocViewer: React.FC = () => {
                 onClick={handleCopyPrisma}
                 className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-800 font-semibold flex items-center gap-1.5 border border-slate-200 transition cursor-pointer"
               >
-                {copiedPrisma ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                {copiedPrisma ? (
+                  <Check className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Copy className="w-4 h-4 text-slate-500" />
+                )}
                 <span>{copiedPrisma ? 'Copié !' : 'Copier schema.prisma'}</span>
               </button>
             </div>
@@ -249,9 +279,12 @@ export const Sprint0DocViewer: React.FC = () => {
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Matrice Rôles / Permissions (RBAC Multi-Tenant)</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Matrice Rôles / Permissions (RBAC Multi-Tenant)
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Contrôle d'accès strict par rôle et isolation automatique des requêtes filtrées par <code className="text-orange-600 font-semibold">organizationId</code>.
+                  Contrôle d'accès strict par rôle et isolation automatique des requêtes filtrées par{' '}
+                  <code className="text-orange-600 font-semibold">organizationId</code>.
                 </p>
               </div>
             </div>
@@ -260,7 +293,9 @@ export const Sprint0DocViewer: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                    <th className="p-3 font-bold uppercase tracking-wider text-[10px]">Permission / Action Métier</th>
+                    <th className="p-3 font-bold uppercase tracking-wider text-[10px]">
+                      Permission / Action Métier
+                    </th>
                     <th className="p-3 font-bold text-center text-orange-600">SuperAdmin</th>
                     <th className="p-3 font-bold text-center text-green-600">Org Admin</th>
                     <th className="p-3 font-bold text-center text-blue-600">Fleet Mgr</th>
@@ -297,7 +332,8 @@ export const Sprint0DocViewer: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Contrats API Principaux (/api/v1/*)</h3>
                 <p className="text-xs text-slate-500">
-                  Exemples de requêtes et de réponses JSON pour l'authentification, l'ingestion GPS et le Driver Score.
+                  Exemples de requêtes et de réponses JSON pour l'authentification, l'ingestion GPS et le
+                  Driver Score.
                 </p>
               </div>
             </div>
@@ -315,14 +351,18 @@ export const Sprint0DocViewer: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
                     {contract.request && (
                       <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Payload Request (JSON) :</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          Payload Request (JSON) :
+                        </div>
                         <pre className="text-sky-300 overflow-x-auto">
                           {JSON.stringify(contract.request, null, 2)}
                         </pre>
                       </div>
                     )}
                     <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Payload Response (JSON) :</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        Payload Response (JSON) :
+                      </div>
                       <pre className="text-emerald-300 overflow-x-auto">
                         {JSON.stringify(contract.response, null, 2)}
                       </pre>
@@ -342,9 +382,13 @@ export const Sprint0DocViewer: React.FC = () => {
                 <Radio className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Protocole d'Ingestion GPS & Synchronisation Hors Ligne</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Protocole d'Ingestion GPS & Synchronisation Hors Ligne
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Garantie d'idempotence via token <code className="text-orange-600 font-semibold">X-Batch-Id</code>, gestion des zones blanches et backoff exponentiel.
+                  Garantie d'idempotence via token{' '}
+                  <code className="text-orange-600 font-semibold">X-Batch-Id</code>, gestion des zones
+                  blanches et backoff exponentiel.
                 </p>
               </div>
             </div>
@@ -363,9 +407,12 @@ export const Sprint0DocViewer: React.FC = () => {
                 <Layout className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Maquettes Textuelles Détaillées des Écrans</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Maquettes Textuelles Détaillées des Écrans
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Spécification de l'agencement UX/UI pour le Dashboard, la Cartographie Live et l'Assistant IA Fleet Intelligence.
+                  Spécification de l'agencement UX/UI pour le Dashboard, la Cartographie Live et l'Assistant
+                  IA Fleet Intelligence.
                 </p>
               </div>
             </div>
@@ -393,7 +440,8 @@ export const Sprint0DocViewer: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Plan de Tests & Critères d'Acceptation</h3>
                 <p className="text-xs text-slate-500">
-                  Tests unitaires, tests d'isolation multi-tenant pour prévenir les fuites de données et tests de montée en charge.
+                  Tests unitaires, tests d'isolation multi-tenant pour prévenir les fuites de données et tests
+                  de montée en charge.
                 </p>
               </div>
             </div>
@@ -412,27 +460,35 @@ export const Sprint0DocViewer: React.FC = () => {
                 <Calendar className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Plan d'Implémentation par Sprint (Feuille de Route)</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Plan d'Implémentation par Sprint (Feuille de Route)
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Découpage chronologique des Sprints 0 à 5 pour l'industrialisation progressive de FleetGuard Africa.
+                  Découpage chronologique des Sprints 0 à 5 pour l'industrialisation progressive de FleetGuard
+                  Africa.
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
               {SPRINT_0_DOCS.sprintsRoadmap.map((item, idx) => (
-                <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4">
+                <div
+                  key={idx}
+                  className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4"
+                >
                   <div className="flex items-center gap-3">
                     <span className="font-extrabold text-xs text-orange-700 bg-orange-100 px-2.5 py-1 rounded border border-orange-200">
                       {item.sprint}
                     </span>
                     <span className="text-xs font-semibold text-slate-800">{item.focus}</span>
                   </div>
-                  <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold border ${
-                    item.status.includes('Terminé')
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : 'bg-white text-slate-600 border-slate-200'
-                  }`}>
+                  <span
+                    className={`text-[10px] px-2.5 py-1 rounded-full font-bold border ${
+                      item.status.includes('Terminé')
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
                     {item.status}
                   </span>
                 </div>

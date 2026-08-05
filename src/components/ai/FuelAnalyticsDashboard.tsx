@@ -1,37 +1,37 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
 import { FuelAnomalyDetector } from '../alerts/FuelAnomalyDetector';
-import { 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell 
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
-import { 
-  Fuel, 
-  TrendingDown, 
-  AlertTriangle, 
-  Sparkles, 
-  CheckCircle2, 
-  BarChart3, 
-  Zap, 
-  Droplets, 
-  Truck, 
-  ShieldCheck, 
-  DollarSign, 
+import {
+  Fuel,
+  TrendingDown,
+  AlertTriangle,
+  Sparkles,
+  CheckCircle2,
+  BarChart3,
+  Zap,
+  Droplets,
+  Truck,
+  ShieldCheck,
+  DollarSign,
   ArrowDownRight,
-  Info
+  Info,
 } from 'lucide-react';
 
 interface FuelAnalyticsDashboardProps {
@@ -114,9 +114,27 @@ const MONTHLY_FUEL_TRENDS = [
 
 // Share of total fuel by category (for pie chart)
 const CATEGORY_PIE_DATA = [
-  { name: 'Poids Lourds (Tracteurs 6x4/4x2)', value: 12500, color: '#f97316', count: '14 véhicules', avgCons: '38.2 L/100km' },
-  { name: 'Porteurs & Camions Bennes', value: 7100, color: '#2563eb', count: '9 véhicules', avgCons: '28.5 L/100km' },
-  { name: 'Utilitaires & Light Trucks', value: 2950, color: '#10b981', count: '8 véhicules', avgCons: '12.4 L/100km' },
+  {
+    name: 'Poids Lourds (Tracteurs 6x4/4x2)',
+    value: 12500,
+    color: '#f97316',
+    count: '14 véhicules',
+    avgCons: '38.2 L/100km',
+  },
+  {
+    name: 'Porteurs & Camions Bennes',
+    value: 7100,
+    color: '#2563eb',
+    count: '9 véhicules',
+    avgCons: '28.5 L/100km',
+  },
+  {
+    name: 'Utilitaires & Light Trucks',
+    value: 2950,
+    color: '#10b981',
+    count: '8 véhicules',
+    avgCons: '12.4 L/100km',
+  },
   { name: 'Groupes Frigorifiques', value: 1800, color: '#8b5cf6', count: '5 unités', avgCons: '2.8 L/heure' },
 ];
 
@@ -147,7 +165,7 @@ const EFFICIENCY_BENCHMARKS = [
     unit: 'L/100km',
     status: 'EXCELLENT',
     savingPotential: '-0.5%',
-    mainDriver: 'Itinéraires urbains optimisés par l\'IA FleetGuard',
+    mainDriver: "Itinéraires urbains optimisés par l'IA FleetGuard",
   },
   {
     category: 'Groupes Froids Frigorifiques',
@@ -166,9 +184,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7M' | '3M' | 'YTD'>('7M');
 
   // Filtered data based on timeframe
-  const displayData = selectedTimeframe === '3M' 
-    ? MONTHLY_FUEL_TRENDS.slice(-3) 
-    : MONTHLY_FUEL_TRENDS;
+  const displayData = selectedTimeframe === '3M' ? MONTHLY_FUEL_TRENDS.slice(-3) : MONTHLY_FUEL_TRENDS;
 
   const currencySymbol = currentOrg.currency || 'FCFA';
 
@@ -186,7 +202,10 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
   // Custom Tooltip for Chart
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const totalLiters = payload.reduce((sum: number, p: any) => sum + (typeof p.value === 'number' ? p.value : 0), 0);
+      const totalLiters = payload.reduce(
+        (sum: number, p: any) => sum + (typeof p.value === 'number' ? p.value : 0),
+        0,
+      );
 
       return (
         <div className="bg-slate-900 text-white p-3.5 rounded-xl shadow-xl border border-slate-700 text-xs space-y-2">
@@ -196,8 +215,8 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
               {metricType === 'cost'
                 ? `${(payload[0]?.payload?.costXOF ?? 0).toLocaleString()} ${currencySymbol}`
                 : metricType === 'avgL100km'
-                ? `${payload[0]?.payload?.avgL100km ?? '—'} L/100km`
-                : `${totalLiters.toLocaleString()} Litres Total`}
+                  ? `${payload[0]?.payload?.avgL100km ?? '—'} L/100km`
+                  : `${totalLiters.toLocaleString()} Litres Total`}
             </span>
           </div>
 
@@ -217,13 +236,17 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
 
           {metricType === 'cost' && (
             <div className="text-[11px] text-slate-300">
-              Coût total estimé carburant : <strong className="text-emerald-400 font-mono">{payload[0]?.payload?.costXOF.toLocaleString()} {currencySymbol}</strong>
+              Coût total estimé carburant :{' '}
+              <strong className="text-emerald-400 font-mono">
+                {payload[0]?.payload?.costXOF.toLocaleString()} {currencySymbol}
+              </strong>
             </div>
           )}
 
           {metricType === 'avgL100km' && (
             <div className="text-[11px] text-slate-300">
-              Consommation moyenne de la flotte : <strong className="text-orange-400 font-mono">{payload[0]?.payload?.avgL100km} L/100km</strong>
+              Consommation moyenne de la flotte :{' '}
+              <strong className="text-orange-400 font-mono">{payload[0]?.payload?.avgL100km} L/100km</strong>
             </div>
           )}
         </div>
@@ -245,7 +268,8 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             Tableau de Bord des Tendances Mensuelles par Catégorie de Véhicule
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Suivez la consommation globale, l'impact des optimisations d'itinéraires et prévenez les vols de carburant.
+            Suivez la consommation globale, l'impact des optimisations d'itinéraires et prévenez les vols de
+            carburant.
           </p>
         </div>
 
@@ -256,7 +280,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             <button
               onClick={() => setSelectedTimeframe('3M')}
               className={`px-2.5 py-1 rounded-md font-bold transition cursor-pointer ${
-                selectedTimeframe === '3M' ? 'bg-white text-orange-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                selectedTimeframe === '3M'
+                  ? 'bg-white text-orange-600 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               3 Derniers Mois
@@ -264,7 +290,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             <button
               onClick={() => setSelectedTimeframe('7M')}
               className={`px-2.5 py-1 rounded-md font-bold transition cursor-pointer ${
-                selectedTimeframe === '7M' ? 'bg-white text-orange-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                selectedTimeframe === '7M'
+                  ? 'bg-white text-orange-600 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               7 Mois (2026)
@@ -289,7 +317,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         {/* KPI 1 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Consommation Juillet</span>
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+              Consommation Juillet
+            </span>
             <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
               <Droplets className="w-4 h-4" />
             </div>
@@ -323,7 +353,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         {/* KPI 3 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Budget Carburant Mensuel</span>
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+              Budget Carburant Mensuel
+            </span>
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
               <DollarSign className="w-4 h-4" />
             </div>
@@ -340,7 +372,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         {/* KPI 4 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Alertes Anomalies / Vol</span>
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+              Alertes Anomalies / Vol
+            </span>
             <div className="p-2 bg-red-50 text-red-600 rounded-lg">
               <AlertTriangle className="w-4 h-4" />
             </div>
@@ -366,12 +400,13 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             <div>
               <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-orange-500" />
-                {metricType === 'liters' && "Évolution Mensuelle par Catégorie de Véhicule (Litres)"}
-                {metricType === 'cost' && "Évolution du Coût Financier Mensuel Carburant"}
-                {metricType === 'avgL100km' && "Tendance de la Consommation Moyenne (L/100km)"}
+                {metricType === 'liters' && 'Évolution Mensuelle par Catégorie de Véhicule (Litres)'}
+                {metricType === 'cost' && 'Évolution du Coût Financier Mensuel Carburant'}
+                {metricType === 'avgL100km' && 'Tendance de la Consommation Moyenne (L/100km)'}
               </h4>
               <p className="text-[11px] text-slate-500">
-                Visualisation Recharts dynamique comparant Poids Lourds, Porteurs, Utilitaires et Groupes Froids.
+                Visualisation Recharts dynamique comparant Poids Lourds, Porteurs, Utilitaires et Groupes
+                Froids.
               </p>
             </div>
 
@@ -413,14 +448,46 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                 chartType === 'stacked_bar' ? (
                   <BarChart data={displayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} />
-                    <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 12, fill: '#64748b' }}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                    />
+                    <YAxis
+                      tickFormatter={formatYAxis}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                    />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: '10px' }} />
-                    <Bar dataKey="poidsLourds" name="Poids Lourds (Tracteurs)" stackId="a" fill="#f97316" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="porteursBennes" name="Porteurs & Bennes" stackId="a" fill="#2563eb" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="utilitaires" name="Utilitaires / Vans" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="frigorifiques" name="Groupes Frigorifiques" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="poidsLourds"
+                      name="Poids Lourds (Tracteurs)"
+                      stackId="a"
+                      fill="#f97316"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="porteursBennes"
+                      name="Porteurs & Bennes"
+                      stackId="a"
+                      fill="#2563eb"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="utilitaires"
+                      name="Utilitaires / Vans"
+                      stackId="a"
+                      fill="#10b981"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="frigorifiques"
+                      name="Groupes Frigorifiques"
+                      stackId="a"
+                      fill="#8b5cf6"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 ) : chartType === 'line' ? (
                   <LineChart data={displayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -429,10 +496,38 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                     <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#64748b' }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: '10px' }} />
-                    <Line type="monotone" dataKey="poidsLourds" name="Poids Lourds (Tracteurs)" stroke="#f97316" strokeWidth={3} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="porteursBennes" name="Porteurs & Bennes" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="utilitaires" name="Utilitaires / Vans" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="frigorifiques" name="Groupes Frigorifiques" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="poidsLourds"
+                      name="Poids Lourds (Tracteurs)"
+                      stroke="#f97316"
+                      strokeWidth={3}
+                      dot={{ r: 4 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="porteursBennes"
+                      name="Porteurs & Bennes"
+                      stroke="#2563eb"
+                      strokeWidth={2.5}
+                      dot={{ r: 4 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="utilitaires"
+                      name="Utilitaires / Vans"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="frigorifiques"
+                      name="Groupes Frigorifiques"
+                      stroke="#8b5cf6"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
                   </LineChart>
                 ) : (
                   <AreaChart data={displayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -441,10 +536,38 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                     <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#64748b' }} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: '10px' }} />
-                    <Area type="monotone" dataKey="poidsLourds" name="Poids Lourds" stackId="1" stroke="#f97316" fill="#ffedd5" />
-                    <Area type="monotone" dataKey="porteursBennes" name="Porteurs & Bennes" stackId="1" stroke="#2563eb" fill="#dbeafe" />
-                    <Area type="monotone" dataKey="utilitaires" name="Utilitaires" stackId="1" stroke="#10b981" fill="#d1fae5" />
-                    <Area type="monotone" dataKey="frigorifiques" name="Groupes Froids" stackId="1" stroke="#8b5cf6" fill="#ede9fe" />
+                    <Area
+                      type="monotone"
+                      dataKey="poidsLourds"
+                      name="Poids Lourds"
+                      stackId="1"
+                      stroke="#f97316"
+                      fill="#ffedd5"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="porteursBennes"
+                      name="Porteurs & Bennes"
+                      stackId="1"
+                      stroke="#2563eb"
+                      fill="#dbeafe"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="utilitaires"
+                      name="Utilitaires"
+                      stackId="1"
+                      stroke="#10b981"
+                      fill="#d1fae5"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="frigorifiques"
+                      name="Groupes Froids"
+                      stackId="1"
+                      stroke="#8b5cf6"
+                      fill="#ede9fe"
+                    />
                   </AreaChart>
                 )
               ) : metricType === 'cost' ? (
@@ -453,15 +576,31 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} />
                   <YAxis tickFormatter={formatYAxis} tick={{ fontSize: 11, fill: '#64748b' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="costXOF" name={`Coût Total (${currencySymbol})`} fill="#10b981" radius={[6, 6, 0, 0]} />
+                  <Bar
+                    dataKey="costXOF"
+                    name={`Coût Total (${currencySymbol})`}
+                    fill="#10b981"
+                    radius={[6, 6, 0, 0]}
+                  />
                 </BarChart>
               ) : (
                 <LineChart data={displayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <YAxis domain={[30, 40]} tickFormatter={val => `${val} L`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                  <YAxis
+                    domain={[30, 40]}
+                    tickFormatter={val => `${val} L`}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="avgL100km" name="Moyenne Flotte (L/100km)" stroke="#ea580c" strokeWidth={3} dot={{ r: 5, fill: '#ea580c' }} />
+                  <Line
+                    type="monotone"
+                    dataKey="avgL100km"
+                    name="Moyenne Flotte (L/100km)"
+                    stroke="#ea580c"
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: '#ea580c' }}
+                  />
                 </LineChart>
               )}
             </ResponsiveContainer>
@@ -471,9 +610,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         {/* Right Col: Pie Chart Breakdown per Category */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
           <div className="border-b border-slate-100 pb-3">
-            <h4 className="text-sm font-bold text-slate-900">
-              Répartition du Volume (Juillet 2026)
-            </h4>
+            <h4 className="text-sm font-bold text-slate-900">Répartition du Volume (Juillet 2026)</h4>
             <p className="text-[11px] text-slate-500">
               Part relative de chaque catégorie sur les 24,350 L consommés.
             </p>
@@ -495,9 +632,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={value => [`${Number(value).toLocaleString()} Litres`, 'Volume']}
-                />
+                <Tooltip formatter={value => [`${Number(value).toLocaleString()} Litres`, 'Volume']} />
               </PieChart>
             </ResponsiveContainer>
 
@@ -513,12 +648,20 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             {CATEGORY_PIE_DATA.map((item, idx) => {
               const percent = ((item.value / 24350) * 100).toFixed(1);
               return (
-                <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-100"
+                >
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }}></span>
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    ></span>
                     <div>
                       <div className="font-bold text-slate-800 text-[11px]">{item.name}</div>
-                      <div className="text-[10px] text-slate-500">{item.count} • Moy. {item.avgCons}</div>
+                      <div className="text-[10px] text-slate-500">
+                        {item.count} • Moy. {item.avgCons}
+                      </div>
                     </div>
                   </div>
 
@@ -555,9 +698,19 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-900">{item.category}</span>
                   <div className="flex items-center gap-2 font-mono text-xs">
-                    <span className="text-slate-500">Réel: <strong className="text-slate-900">{item.actual} {item.unit}</strong></span>
+                    <span className="text-slate-500">
+                      Réel:{' '}
+                      <strong className="text-slate-900">
+                        {item.actual} {item.unit}
+                      </strong>
+                    </span>
                     <span className="text-slate-400">|</span>
-                    <span className="text-slate-500">Cible: <strong className="text-emerald-600">{item.target} {item.unit}</strong></span>
+                    <span className="text-slate-500">
+                      Cible:{' '}
+                      <strong className="text-emerald-600">
+                        {item.target} {item.unit}
+                      </strong>
+                    </span>
                     <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-bold text-[10px]">
                       Gisement: {item.savingPotential}
                     </span>
@@ -566,13 +719,13 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
 
                 {/* Progress bar visual comparison */}
                 <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden flex">
-                  <div 
-                    className="bg-emerald-500 h-full" 
+                  <div
+                    className="bg-emerald-500 h-full"
                     style={{ width: `${Math.min(100, (item.target / item.actual) * 100)}%` }}
                     title="Cible Optimale"
                   ></div>
-                  <div 
-                    className="bg-orange-500 h-full" 
+                  <div
+                    className="bg-orange-500 h-full"
                     style={{ width: `${Math.max(0, 100 - (item.target / item.actual) * 100)}%` }}
                     title="Surconsommation Réductible"
                   ></div>
@@ -580,7 +733,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
 
                 <div className="text-[11px] text-slate-600 flex items-center gap-1.5 pt-0.5">
                   <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span>Facteur explicatif principal : <strong>{item.mainDriver}</strong></span>
+                  <span>
+                    Facteur explicatif principal : <strong>{item.mainDriver}</strong>
+                  </span>
                 </div>
               </div>
             ))}
@@ -606,7 +761,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                 <span>Régulation du Ralenti à l'Arrêt</span>
               </div>
               <p className="text-purple-800 text-[11px] leading-relaxed">
-                Les camions Poids Lourds cumulent 42 heures de ralenti moteur sur l'axe Cotonou-Parakou. Limiter le ralenti à 5 min économiserait <strong>1,260 Litres (~819 000 {currencySymbol}/mois)</strong>.
+                Les camions Poids Lourds cumulent 42 heures de ralenti moteur sur l'axe Cotonou-Parakou.
+                Limiter le ralenti à 5 min économiserait{' '}
+                <strong>1,260 Litres (~819 000 {currencySymbol}/mois)</strong>.
               </p>
             </div>
 
@@ -616,7 +773,8 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                 <span>Optimisation Groupes Frigorifiques</span>
               </div>
               <p className="text-orange-800 text-[11px] leading-relaxed">
-                Reprogrammez les consignes de température de +2°C à +4°C durant le transport nocturne pour économiser <strong>~180 Litres de diesel de groupe froids</strong>.
+                Reprogrammez les consignes de température de +2°C à +4°C durant le transport nocturne pour
+                économiser <strong>~180 Litres de diesel de groupe froids</strong>.
               </p>
             </div>
 
@@ -626,7 +784,8 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                 <span>Audits des Stations-Services Partenaires</span>
               </div>
               <p className="text-blue-800 text-[11px] leading-relaxed">
-                Les écarts de vol suspects sont concentrés à 80% sur la station "Km 45 Bohicon". Il est recommandé d'imposer le paiement direct par carte carburant FleetGuard.
+                Les écarts de vol suspects sont concentrés à 80% sur la station "Km 45 Bohicon". Il est
+                recommandé d'imposer le paiement direct par carte carburant FleetGuard.
               </p>
             </div>
           </div>

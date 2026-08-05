@@ -1,21 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { Organization, Driver } from '../../types';
 import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
-import { 
-  Trophy, 
-  Award, 
-  ShieldCheck, 
-  Fuel, 
-  Clock, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  Sliders, 
-  Search, 
-  ChevronRight, 
-  Sparkles, 
-  X, 
-  BarChart3
+import {
+  Trophy,
+  Award,
+  ShieldCheck,
+  Fuel,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Sliders,
+  Search,
+  ChevronRight,
+  Sparkles,
+  X,
+  BarChart3,
 } from 'lucide-react';
 
 interface DriverLeaderboardProps {
@@ -52,11 +52,11 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'COMPOSITE' | 'SAFETY' | 'FUEL' | 'PUNCTUALITY'>('COMPOSITE');
   const [timePeriod, setTimePeriod] = useState<'THIS_MONTH' | 'QUARTER' | 'YEAR'>('THIS_MONTH');
-  
+
   // Custom Weights state
   const [showWeightSliders, setShowWeightSliders] = useState<boolean>(false);
   const [weightSafety, setWeightSafety] = useState<number>(50); // 50%
-  const [weightFuel, setWeightFuel] = useState<number>(30);    // 30%
+  const [weightFuel, setWeightFuel] = useState<number>(30); // 30%
   const [weightPunctuality, setWeightPunctuality] = useState<number>(20); // 20%
 
   // Selected driver for detailed comparison modal
@@ -70,22 +70,30 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
   const performanceRecords = useMemo(() => {
     const rawList = orgDrivers.map((driver, index) => {
       const vehicle = MOCK_VEHICLES.find(v => v.id === driver.assignedVehicleId);
-      const vehicleName = vehicle ? `${vehicle.immatriculation} (${vehicle.make} ${vehicle.model})` : 'Véhicule Flotte';
+      const vehicleName = vehicle
+        ? `${vehicle.immatriculation} (${vehicle.make} ${vehicle.model})`
+        : 'Véhicule Flotte';
 
       // Base scores
       const safetyScore = driver.currentSafetyScore || 85;
 
       // Deterministic calculation for demo consistency based on driver id
       const seed = driver.id.charCodeAt(driver.id.length - 1) + driver.fullName.length;
-      
+
       const fuelScore = Math.min(100, Math.max(55, Math.round(safetyScore * 0.92 + (seed % 11) - 4)));
-      const punctualityScore = Math.min(100, Math.max(60, Math.round(safetyScore * 0.95 + ((seed * 3) % 9) - 3)));
+      const punctualityScore = Math.min(
+        100,
+        Math.max(60, Math.round(safetyScore * 0.95 + ((seed * 3) % 9) - 3)),
+      );
 
       // Calculate composite score based on active weights
       const totalWeight = weightSafety + weightFuel + weightPunctuality || 100;
-      const compositeScore = Math.round(
-        ((safetyScore * weightSafety) + (fuelScore * weightFuel) + (punctualityScore * weightPunctuality)) / totalWeight * 10
-      ) / 10;
+      const compositeScore =
+        Math.round(
+          ((safetyScore * weightSafety + fuelScore * weightFuel + punctualityScore * weightPunctuality) /
+            totalWeight) *
+            10,
+        ) / 10;
 
       // Mock previous rank & trend
       const previousRank = ((index + 2) % (orgDrivers.length || 1)) + 1;
@@ -95,7 +103,7 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
       // Derived metrics
       const tripsCompleted = 12 + (seed % 35);
       const onTimePct = Math.min(100, Math.max(70, Math.round(punctualityScore * 0.98)));
-      
+
       const baseLiters = vehicle?.expectedConsumptionL100km || 34.0;
       const fuelEfficiencyFactor = 1 + ((100 - fuelScore) / 100) * 0.25 - 0.08;
       const avgConsumptionL100km = Math.round(baseLiters * fuelEfficiencyFactor * 10) / 10;
@@ -109,16 +117,36 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
       // Badges
       const badges = [];
       if (safetyScore >= 92) {
-        badges.push({ id: 'safety', label: 'As de la Sécurité', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: '🛡️' });
+        badges.push({
+          id: 'safety',
+          label: 'As de la Sécurité',
+          color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+          icon: '🛡️',
+        });
       }
       if (fuelScore >= 90) {
-        badges.push({ id: 'eco', label: 'Éco-Conducteur d\'Or', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: '🌿' });
+        badges.push({
+          id: 'eco',
+          label: "Éco-Conducteur d'Or",
+          color: 'bg-amber-100 text-amber-800 border-amber-300',
+          icon: '🌿',
+        });
       }
       if (punctualityScore >= 94) {
-        badges.push({ id: 'time', label: 'Horloger Suisse', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: '⏱️' });
+        badges.push({
+          id: 'time',
+          label: 'Horloger Suisse',
+          color: 'bg-blue-100 text-blue-800 border-blue-300',
+          icon: '⏱️',
+        });
       }
       if (safetyPenaltiesCount === 0) {
-        badges.push({ id: 'zero', label: 'Zéro Infraction', color: 'bg-purple-100 text-purple-800 border-purple-300', icon: '✨' });
+        badges.push({
+          id: 'zero',
+          label: 'Zéro Infraction',
+          color: 'bg-purple-100 text-purple-800 border-purple-300',
+          icon: '✨',
+        });
       }
 
       return {
@@ -162,10 +190,11 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
   const filteredRecords = useMemo(() => {
     if (!searchTerm.trim()) return performanceRecords;
     const query = searchTerm.toLowerCase();
-    return performanceRecords.filter(r => 
-      r.driver.fullName.toLowerCase().includes(query) ||
-      r.driver.licenseNumber.toLowerCase().includes(query) ||
-      r.assignedVehicleName.toLowerCase().includes(query)
+    return performanceRecords.filter(
+      r =>
+        r.driver.fullName.toLowerCase().includes(query) ||
+        r.driver.licenseNumber.toLowerCase().includes(query) ||
+        r.assignedVehicleName.toLowerCase().includes(query),
     );
   }, [performanceRecords, searchTerm]);
 
@@ -209,11 +238,10 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <Trophy className="w-4 h-4 text-orange-500" />
             <span>Leaderboard Multi-Critères Flotte • {currentOrg.name}</span>
           </div>
-          <h2 className="text-xl font-bold text-slate-900">
-            Classement & Évaluation Performance Chauffeurs
-          </h2>
+          <h2 className="text-xl font-bold text-slate-900">Classement & Évaluation Performance Chauffeurs</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Classement dynamique basé sur la sécurité routière, l'économie de carburant et la ponctualité des livraisons.
+            Classement dynamique basé sur la sécurité routière, l'économie de carburant et la ponctualité des
+            livraisons.
           </p>
         </div>
 
@@ -223,7 +251,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <button
               onClick={() => setTimePeriod('THIS_MONTH')}
               className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                timePeriod === 'THIS_MONTH' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'hover:text-slate-900'
+                timePeriod === 'THIS_MONTH'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'hover:text-slate-900'
               }`}
             >
               Ce Mois-ci
@@ -231,7 +261,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <button
               onClick={() => setTimePeriod('QUARTER')}
               className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                timePeriod === 'QUARTER' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'hover:text-slate-900'
+                timePeriod === 'QUARTER'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'hover:text-slate-900'
               }`}
             >
               Trimestre
@@ -239,7 +271,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <button
               onClick={() => setTimePeriod('YEAR')}
               className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                timePeriod === 'YEAR' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'hover:text-slate-900'
+                timePeriod === 'YEAR'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'hover:text-slate-900'
               }`}
             >
               Année 2026
@@ -255,7 +289,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             }`}
           >
             <Sliders className="w-4 h-4 text-orange-500" />
-            <span>Pondération ({weightSafety}% / {weightFuel}% / {weightPunctuality}%)</span>
+            <span>
+              Pondération ({weightSafety}% / {weightFuel}% / {weightPunctuality}%)
+            </span>
           </button>
         </div>
       </div>
@@ -266,7 +302,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-orange-600" />
-              <h4 className="font-bold text-slate-900 text-sm">Ajustement des Pondérations du Score Global</h4>
+              <h4 className="font-bold text-slate-900 text-sm">
+                Ajustement des Pondérations du Score Global
+              </h4>
             </div>
             <span className="text-[11px] font-mono font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded border border-orange-300">
               Total = {weightSafety + weightFuel + weightPunctuality}%
@@ -343,8 +381,12 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
       {/* Overview Fleet Benchmarks Bar */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs">
-          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Moyenne Flotte Global</div>
-          <div className="text-2xl font-bold font-mono text-slate-900">{fleetAverages.composite} <span className="text-xs font-normal text-slate-400">/100</span></div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">
+            Moyenne Flotte Global
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-900">
+            {fleetAverages.composite} <span className="text-xs font-normal text-slate-400">/100</span>
+          </div>
         </div>
 
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs">
@@ -352,7 +394,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <ShieldCheck className="w-3 h-3" />
             <span>Sécurité Flotte</span>
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-600">{fleetAverages.safety} <span className="text-xs font-normal text-slate-400">/100</span></div>
+          <div className="text-2xl font-bold font-mono text-emerald-600">
+            {fleetAverages.safety} <span className="text-xs font-normal text-slate-400">/100</span>
+          </div>
         </div>
 
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs">
@@ -360,7 +404,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <Fuel className="w-3 h-3" />
             <span>Éco-Conduite</span>
           </div>
-          <div className="text-2xl font-bold font-mono text-amber-600">{fleetAverages.fuel} <span className="text-xs font-normal text-slate-400">/100</span></div>
+          <div className="text-2xl font-bold font-mono text-amber-600">
+            {fleetAverages.fuel} <span className="text-xs font-normal text-slate-400">/100</span>
+          </div>
         </div>
 
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs">
@@ -368,7 +414,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <Clock className="w-3 h-3" />
             <span>Ponctualité</span>
           </div>
-          <div className="text-2xl font-bold font-mono text-blue-600">{fleetAverages.punctuality} <span className="text-xs font-normal text-slate-400">/100</span></div>
+          <div className="text-2xl font-bold font-mono text-blue-600">
+            {fleetAverages.punctuality} <span className="text-xs font-normal text-slate-400">/100</span>
+          </div>
         </div>
 
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs col-span-2 md:col-span-1">
@@ -376,7 +424,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <Award className="w-3 h-3" />
             <span>Éligibilité Primes</span>
           </div>
-          <div className="text-2xl font-bold font-mono text-purple-600">{fleetAverages.bonusRate}% <span className="text-xs font-normal text-slate-400">éligibles</span></div>
+          <div className="text-2xl font-bold font-mono text-purple-600">
+            {fleetAverages.bonusRate}% <span className="text-xs font-normal text-slate-400">éligibles</span>
+          </div>
         </div>
       </div>
 
@@ -398,7 +448,10 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-slate-400 flex items-center justify-center font-bold text-slate-700 text-base shadow-2xs">
-                    {top2.driver.fullName.split(' ').map(n => n[0]).join('')}
+                    {top2.driver.fullName
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-sm leading-tight">{top2.driver.fullName}</h4>
@@ -408,7 +461,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                 <div className="bg-white/80 backdrop-blur-xs p-3 rounded-xl border border-slate-200 my-3 text-center">
                   <div className="text-[10px] uppercase font-bold text-slate-500">Score Global</div>
-                  <div className="text-3xl font-extrabold font-mono text-slate-800">{top2.compositeScore}</div>
+                  <div className="text-3xl font-extrabold font-mono text-slate-800">
+                    {top2.compositeScore}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
@@ -445,11 +500,18 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-14 h-14 rounded-full bg-amber-300 border-2 border-amber-500 flex items-center justify-center font-extrabold text-amber-950 text-lg shadow-xs">
-                    {top1.driver.fullName.split(' ').map(n => n[0]).join('')}
+                    {top1.driver.fullName
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-amber-950 text-base leading-tight">{top1.driver.fullName}</h4>
-                    <p className="text-[11px] text-amber-800/80 font-mono font-bold">{top1.driver.licenseNumber}</p>
+                    <h4 className="font-extrabold text-amber-950 text-base leading-tight">
+                      {top1.driver.fullName}
+                    </h4>
+                    <p className="text-[11px] text-amber-800/80 font-mono font-bold">
+                      {top1.driver.licenseNumber}
+                    </p>
                     <div className="mt-1 inline-flex items-center gap-1 text-[10px] bg-amber-200/80 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
                       <Sparkles className="w-3 h-3 text-amber-700" />
                       <span>Leader Indétrônable</span>
@@ -459,10 +521,13 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                 <div className="bg-white p-3.5 rounded-xl border border-amber-200 my-3 text-center shadow-2xs">
                   <div className="text-[10px] uppercase font-bold text-amber-700">Score Global Combiné</div>
-                  <div className="text-4xl font-extrabold font-mono text-amber-900">{top1.compositeScore}</div>
+                  <div className="text-4xl font-extrabold font-mono text-amber-900">
+                    {top1.compositeScore}
+                  </div>
                   {top1.isBonusEligible && (
                     <div className="text-[11px] text-emerald-700 font-bold mt-1">
-                      🎁 Prime de Conduite : +{top1.bonusAmountXof.toLocaleString('fr-FR')} {currentOrg.currency}
+                      🎁 Prime de Conduite : +{top1.bonusAmountXof.toLocaleString('fr-FR')}{' '}
+                      {currentOrg.currency}
                     </div>
                   )}
                 </div>
@@ -500,7 +565,10 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 rounded-full bg-amber-200 border-2 border-amber-600 flex items-center justify-center font-bold text-amber-900 text-base shadow-2xs">
-                    {top3.driver.fullName.split(' ').map(n => n[0]).join('')}
+                    {top3.driver.fullName
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-sm leading-tight">{top3.driver.fullName}</h4>
@@ -510,7 +578,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                 <div className="bg-white/80 backdrop-blur-xs p-3 rounded-xl border border-slate-200 my-3 text-center">
                   <div className="text-[10px] uppercase font-bold text-slate-500">Score Global</div>
-                  <div className="text-3xl font-extrabold font-mono text-slate-800">{top3.compositeScore}</div>
+                  <div className="text-3xl font-extrabold font-mono text-slate-800">
+                    {top3.compositeScore}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
@@ -605,10 +675,7 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                 </tr>
               ) : (
                 filteredRecords.map(record => (
-                  <tr
-                    key={record.driver.id}
-                    className="hover:bg-slate-50/80 transition group"
-                  >
+                  <tr key={record.driver.id} className="hover:bg-slate-50/80 transition group">
                     {/* Rank Number & Trend */}
                     <td className="py-3.5 px-3 text-center">
                       <div className="flex flex-col items-center justify-center">
@@ -617,10 +684,10 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                             record.rank === 1
                               ? 'bg-amber-400 text-amber-950'
                               : record.rank === 2
-                              ? 'bg-slate-300 text-slate-800'
-                              : record.rank === 3
-                              ? 'bg-amber-700 text-white'
-                              : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                ? 'bg-slate-300 text-slate-800'
+                                : record.rank === 3
+                                  ? 'bg-amber-700 text-white'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
                           }`}
                         >
                           #{record.rank}
@@ -663,7 +730,10 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                         {record.badges.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {record.badges.map(b => (
-                              <span key={b.id} className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${b.color}`}>
+                              <span
+                                key={b.id}
+                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${b.color}`}
+                              >
                                 {b.icon} {b.label}
                               </span>
                             ))}
@@ -687,7 +757,11 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              record.safetyScore >= 85 ? 'bg-emerald-500' : record.safetyScore >= 70 ? 'bg-amber-500' : 'bg-red-500'
+                              record.safetyScore >= 85
+                                ? 'bg-emerald-500'
+                                : record.safetyScore >= 70
+                                  ? 'bg-amber-500'
+                                  : 'bg-red-500'
                             }`}
                             style={{ width: `${record.safetyScore}%` }}
                           ></div>
@@ -705,7 +779,11 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              record.fuelScore >= 85 ? 'bg-amber-500' : record.fuelScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                              record.fuelScore >= 85
+                                ? 'bg-amber-500'
+                                : record.fuelScore >= 70
+                                  ? 'bg-yellow-500'
+                                  : 'bg-red-500'
                             }`}
                             style={{ width: `${record.fuelScore}%` }}
                           ></div>
@@ -726,7 +804,11 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              record.punctualityScore >= 85 ? 'bg-blue-500' : record.punctualityScore >= 70 ? 'bg-indigo-400' : 'bg-red-500'
+                              record.punctualityScore >= 85
+                                ? 'bg-blue-500'
+                                : record.punctualityScore >= 70
+                                  ? 'bg-indigo-400'
+                                  : 'bg-red-500'
                             }`}
                             style={{ width: `${record.punctualityScore}%` }}
                           ></div>
@@ -739,7 +821,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 
                     {/* Composite Score */}
                     <td className="py-3.5 px-3 text-center">
-                      <span className={`px-2.5 py-1 rounded-xl text-xs font-mono font-extrabold border ${getScoreBadgeColor(record.compositeScore)}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-xl text-xs font-mono font-extrabold border ${getScoreBadgeColor(record.compositeScore)}`}
+                      >
                         {record.compositeScore}
                       </span>
                     </td>
@@ -770,17 +854,24 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-700 border-2 border-orange-300 flex items-center justify-center font-extrabold text-base">
-                  {selectedPerformance.driver.fullName.split(' ').map(n => n[0]).join('')}
+                  {selectedPerformance.driver.fullName
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('')}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-slate-900 text-lg">{selectedPerformance.driver.fullName}</h3>
+                    <h3 className="font-extrabold text-slate-900 text-lg">
+                      {selectedPerformance.driver.fullName}
+                    </h3>
                     <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
                       Rang #{selectedPerformance.rank}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 font-mono">
-                    Permis: {selectedPerformance.driver.licenseNumber} ({selectedPerformance.driver.licenseCategory}) • Véhicule: {selectedPerformance.assignedVehicleName}
+                    Permis: {selectedPerformance.driver.licenseNumber} (
+                    {selectedPerformance.driver.licenseCategory}) • Véhicule:{' '}
+                    {selectedPerformance.assignedVehicleName}
                   </p>
                 </div>
               </div>
@@ -807,7 +898,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     <span className="flex items-center gap-1 text-emerald-700">
                       <ShieldCheck className="w-3.5 h-3.5" /> Sécurité
                     </span>
-                    <span className="font-mono text-emerald-700 font-extrabold">{selectedPerformance.safetyScore}/100</span>
+                    <span className="font-mono text-emerald-700 font-extrabold">
+                      {selectedPerformance.safetyScore}/100
+                    </span>
                   </div>
                   <div className="text-[11px] text-slate-500 flex justify-between">
                     <span>Moyenne Flotte:</span>
@@ -815,9 +908,13 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                   </div>
                   <div className="text-[11px] font-bold">
                     {selectedPerformance.safetyScore >= fleetAverages.safety ? (
-                      <span className="text-emerald-600">+{(selectedPerformance.safetyScore - fleetAverages.safety).toFixed(1)} pts au-dessus</span>
+                      <span className="text-emerald-600">
+                        +{(selectedPerformance.safetyScore - fleetAverages.safety).toFixed(1)} pts au-dessus
+                      </span>
                     ) : (
-                      <span className="text-red-500">{(selectedPerformance.safetyScore - fleetAverages.safety).toFixed(1)} pts en-dessous</span>
+                      <span className="text-red-500">
+                        {(selectedPerformance.safetyScore - fleetAverages.safety).toFixed(1)} pts en-dessous
+                      </span>
                     )}
                   </div>
                 </div>
@@ -828,11 +925,15 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     <span className="flex items-center gap-1 text-amber-700">
                       <Fuel className="w-3.5 h-3.5" /> Éco-Carburant
                     </span>
-                    <span className="font-mono text-amber-700 font-extrabold">{selectedPerformance.fuelScore}/100</span>
+                    <span className="font-mono text-amber-700 font-extrabold">
+                      {selectedPerformance.fuelScore}/100
+                    </span>
                   </div>
                   <div className="text-[11px] text-slate-500 flex justify-between">
                     <span>Consommation:</span>
-                    <span className="font-mono font-bold">{selectedPerformance.avgConsumptionL100km} L/100km</span>
+                    <span className="font-mono font-bold">
+                      {selectedPerformance.avgConsumptionL100km} L/100km
+                    </span>
                   </div>
                   <div className="text-[11px] font-bold">
                     {selectedPerformance.fuelScore >= fleetAverages.fuel ? (
@@ -849,7 +950,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     <span className="flex items-center gap-1 text-blue-700">
                       <Clock className="w-3.5 h-3.5" /> Ponctualité
                     </span>
-                    <span className="font-mono text-blue-700 font-extrabold">{selectedPerformance.punctualityScore}/100</span>
+                    <span className="font-mono text-blue-700 font-extrabold">
+                      {selectedPerformance.punctualityScore}/100
+                    </span>
                   </div>
                   <div className="text-[11px] text-slate-500 flex justify-between">
                     <span>Taux Livraisons à l'Heure:</span>
@@ -867,20 +970,27 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
             </div>
 
             {/* Safety Bonus Card */}
-            <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${
-              selectedPerformance.isBonusEligible
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                : 'bg-slate-50 border-slate-200 text-slate-700'
-            }`}>
+            <div
+              className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${
+                selectedPerformance.isBonusEligible
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}
+            >
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl ${selectedPerformance.isBonusEligible ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+                <div
+                  className={`p-2.5 rounded-xl ${selectedPerformance.isBonusEligible ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                >
                   <Award className="w-6 h-6" />
                 </div>
                 <div>
-                  <h5 className="font-bold text-xs uppercase tracking-wider">Statut Prime de Conduite Sécuritaire</h5>
+                  <h5 className="font-bold text-xs uppercase tracking-wider">
+                    Statut Prime de Conduite Sécuritaire
+                  </h5>
                   {selectedPerformance.isBonusEligible ? (
                     <p className="text-xs text-emerald-800 font-medium mt-0.5">
-                      Chauffeur éligible à la prime ce mois-ci pour son score global de {selectedPerformance.compositeScore}/100.
+                      Chauffeur éligible à la prime ce mois-ci pour son score global de{' '}
+                      {selectedPerformance.compositeScore}/100.
                     </p>
                   ) : (
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -906,7 +1016,10 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                 <h5 className="font-bold text-xs text-slate-800">Distinctions & Badges Obtenus :</h5>
                 <div className="flex flex-wrap gap-2">
                   {selectedPerformance.badges.map(b => (
-                    <span key={b.id} className={`px-3 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${b.color}`}>
+                    <span
+                      key={b.id}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${b.color}`}
+                    >
                       <span>{b.icon}</span>
                       <span>{b.label}</span>
                     </span>
@@ -934,13 +1047,7 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
 // Helper Crown Icon
 function CrownIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
-    >
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
     </svg>
   );

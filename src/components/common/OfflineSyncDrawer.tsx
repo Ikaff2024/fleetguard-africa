@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { useOfflineSync } from '../../context/OfflineSyncContext';
-import { 
-  Database, 
-  Wifi, 
-  WifiOff, 
-  RefreshCw, 
-  CheckCircle2, 
-  Trash2, 
-  X, 
-  Plus, 
+import {
+  Database,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  CheckCircle2,
+  Trash2,
+  X,
+  Plus,
   Layers,
   ChevronRight,
   ShieldCheck,
   Fuel,
   Truck,
   MapPin,
-  Wrench
+  Wrench,
 } from 'lucide-react';
 
 interface OfflineSyncDrawerProps {
@@ -42,7 +42,9 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
   const [selectedItemPayload, setSelectedItemPayload] = useState<any | null>(null);
 
   // Simulation form states
-  const [simType, setSimType] = useState<'FUEL_LOG' | 'ODOMETER_UPDATE' | 'GPS_TELEMETRY' | 'MAINTENANCE_RECORD'>('FUEL_LOG');
+  const [simType, setSimType] = useState<
+    'FUEL_LOG' | 'ODOMETER_UPDATE' | 'GPS_TELEMETRY' | 'MAINTENANCE_RECORD'
+  >('FUEL_LOG');
   const [simVehicleReg, setSimVehicleReg] = useState<string>('RB-4592-A');
   const [simValue, setSimValue] = useState<string>('120');
 
@@ -65,7 +67,7 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
       payload = {
         vehicleRegistration: simVehicleReg,
         newOdometerKm: Number(simValue) || 284500,
-        reason: 'Contrôle à l\'arrivée au dépôt Parakou',
+        reason: "Contrôle à l'arrivée au dépôt Parakou",
         recordedAt: new Date().toISOString(),
       };
     } else if (simType === 'GPS_TELEMETRY') {
@@ -92,21 +94,31 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
 
   const getBadgeColor = (type: string) => {
     switch (type) {
-      case 'FUEL_LOG': return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'ODOMETER_UPDATE': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'GPS_TELEMETRY': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'MAINTENANCE_RECORD': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      default: return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'FUEL_LOG':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'ODOMETER_UPDATE':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'GPS_TELEMETRY':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'MAINTENANCE_RECORD':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'FUEL_LOG': return <Fuel className="w-3.5 h-3.5 text-amber-600" />;
-      case 'ODOMETER_UPDATE': return <Truck className="w-3.5 h-3.5 text-blue-600" />;
-      case 'GPS_TELEMETRY': return <MapPin className="w-3.5 h-3.5 text-purple-600" />;
-      case 'MAINTENANCE_RECORD': return <Wrench className="w-3.5 h-3.5 text-emerald-600" />;
-      default: return <Database className="w-3.5 h-3.5 text-slate-600" />;
+      case 'FUEL_LOG':
+        return <Fuel className="w-3.5 h-3.5 text-amber-600" />;
+      case 'ODOMETER_UPDATE':
+        return <Truck className="w-3.5 h-3.5 text-blue-600" />;
+      case 'GPS_TELEMETRY':
+        return <MapPin className="w-3.5 h-3.5 text-purple-600" />;
+      case 'MAINTENANCE_RECORD':
+        return <Wrench className="w-3.5 h-3.5 text-emerald-600" />;
+      default:
+        return <Database className="w-3.5 h-3.5 text-slate-600" />;
     }
   };
 
@@ -143,7 +155,9 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
         {/* Network Status Toggle Switch Bar */}
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}
+            ></span>
             <span className="font-bold text-slate-800">
               État Réseau : {isOnline ? 'Connecté (4G / Online)' : 'Hors-Ligne (Offline Mode)'}
             </span>
@@ -157,7 +171,11 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
             }`}
           >
-            {isOnline ? <WifiOff className="w-3.5 h-3.5 text-red-600" /> : <Wifi className="w-3.5 h-3.5 text-emerald-600" />}
+            {isOnline ? (
+              <WifiOff className="w-3.5 h-3.5 text-red-600" />
+            ) : (
+              <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+            )}
             <span>{isOnline ? 'Simuler Mode Hors-Ligne' : 'Rétablir Connexion (Online)'}</span>
           </button>
         </div>
@@ -210,7 +228,9 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
                   }`}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span>{isSyncing ? 'Synchronisation...' : `Synchroniser avec Backend (${pendingCount})`}</span>
+                  <span>
+                    {isSyncing ? 'Synchronisation...' : `Synchroniser avec Backend (${pendingCount})`}
+                  </span>
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -235,9 +255,12 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
               {queueItems.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl p-6 space-y-3">
                   <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                  <div className="font-bold text-slate-800 text-sm">File IndexedDB Complètement Synchronisée</div>
+                  <div className="font-bold text-slate-800 text-sm">
+                    File IndexedDB Complètement Synchronisée
+                  </div>
                   <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                    Aucune mise à jour locale en attente. Toutes les saisies chauffeurs et télémétries ont été envoyées au serveur.
+                    Aucune mise à jour locale en attente. Toutes les saisies chauffeurs et télémétries ont été
+                    envoyées au serveur.
                   </p>
                 </div>
               ) : (
@@ -245,26 +268,31 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
                   {queueItems.map(item => (
                     <div
                       key={item.id}
-                      onClick={() => setSelectedItemPayload(selectedItemPayload?.id === item.id ? null : item)}
+                      onClick={() =>
+                        setSelectedItemPayload(selectedItemPayload?.id === item.id ? null : item)
+                      }
                       className={`p-3.5 rounded-xl border transition cursor-pointer ${
                         item.status === 'PENDING'
                           ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300'
                           : item.status === 'SYNCED'
-                          ? 'bg-emerald-50/40 border-emerald-200 hover:border-emerald-300'
-                          : item.status === 'SYNCING'
-                          ? 'bg-blue-50/50 border-blue-200 animate-pulse'
-                          : 'bg-red-50/50 border-red-200'
+                            ? 'bg-emerald-50/40 border-emerald-200 hover:border-emerald-300'
+                            : item.status === 'SYNCING'
+                              ? 'bg-blue-50/50 border-blue-200 animate-pulse'
+                              : 'bg-red-50/50 border-red-200'
                       }`}
                     >
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <span className={`p-1.5 rounded-lg border flex items-center justify-center ${getBadgeColor(item.type)}`}>
+                          <span
+                            className={`p-1.5 rounded-lg border flex items-center justify-center ${getBadgeColor(item.type)}`}
+                          >
                             {getIcon(item.type)}
                           </span>
                           <div>
                             <div className="font-bold text-slate-900">{item.type}</div>
                             <div className="text-[10px] text-slate-500 font-mono">
-                              {new Date(item.timestamp).toLocaleTimeString('fr-FR')} • ID: {item.id.substr(0, 16)}...
+                              {new Date(item.timestamp).toLocaleTimeString('fr-FR')} • ID:{' '}
+                              {item.id.substr(0, 16)}...
                             </div>
                           </div>
                         </div>
@@ -275,22 +303,26 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
                               item.status === 'PENDING'
                                 ? 'bg-amber-100 text-amber-800 border-amber-300'
                                 : item.status === 'SYNCED'
-                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                : item.status === 'SYNCING'
-                                ? 'bg-blue-100 text-blue-800 border-blue-300'
-                                : 'bg-red-100 text-red-800 border-red-300'
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                  : item.status === 'SYNCING'
+                                    ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                    : 'bg-red-100 text-red-800 border-red-300'
                             }`}
                           >
                             {item.status}
                           </span>
-                          <ChevronRight className={`w-4 h-4 text-slate-400 transition ${selectedItemPayload?.id === item.id ? 'rotate-90' : ''}`} />
+                          <ChevronRight
+                            className={`w-4 h-4 text-slate-400 transition ${selectedItemPayload?.id === item.id ? 'rotate-90' : ''}`}
+                          />
                         </div>
                       </div>
 
                       {/* Payload Expanded View */}
                       {selectedItemPayload?.id === item.id && (
                         <div className="mt-3 pt-3 border-t border-slate-200 space-y-2 text-xs animate-fade-in">
-                          <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">Données Chargement (Payload JSON) :</div>
+                          <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                            Données Chargement (Payload JSON) :
+                          </div>
                           <pre className="bg-slate-900 text-emerald-400 p-3 rounded-lg font-mono text-[11px] overflow-x-auto max-h-40">
                             {JSON.stringify(item.payload, null, 2)}
                           </pre>
@@ -314,7 +346,8 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
                   Simulateur de Saisie Chauffeur / Télémétrie Hors-Ligne
                 </h4>
                 <p className="text-slate-500">
-                  Insère directement un événement dans la base local IndexedDB pour vérifier la mise en attente et la reprise de réseau.
+                  Insère directement un événement dans la base local IndexedDB pour vérifier la mise en
+                  attente et la reprise de réseau.
                 </p>
               </div>
 
@@ -345,7 +378,12 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    {simType === 'FUEL_LOG' ? 'Litres Ajoutés (L)' : simType === 'ODOMETER_UPDATE' ? 'Nouveau Km Odomètre' : 'Valeur indicative'} :
+                    {simType === 'FUEL_LOG'
+                      ? 'Litres Ajoutés (L)'
+                      : simType === 'ODOMETER_UPDATE'
+                        ? 'Nouveau Km Odomètre'
+                        : 'Valeur indicative'}{' '}
+                    :
                   </label>
                   <input
                     type="number"

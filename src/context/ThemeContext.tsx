@@ -36,7 +36,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Remove previous theme attributes and classes
     root.classList.remove('dark', 'night-dispatcher');
     root.removeAttribute('data-theme');

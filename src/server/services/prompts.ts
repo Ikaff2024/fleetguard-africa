@@ -90,7 +90,9 @@ ${
 Ravitaillements récents :
 ${
   fuelLogs.length > 0
-    ? fuelLogs.map(f => `- ${f.stationName} : ${f.litersAdded} L, ${f.calculatedL100km ?? 'N/A'} L/100km`).join('\n')
+    ? fuelLogs
+        .map(f => `- ${f.stationName} : ${f.litersAdded} L, ${f.calculatedL100km ?? 'N/A'} L/100km`)
+        .join('\n')
     : '- Consommation nominale.'
 }
 
@@ -155,7 +157,7 @@ export function demoSafetyCoaching(driver: Driver): SafetyCoaching {
       {
         title: 'Régularité en milieu urbain',
         severity: 'MEDIUM',
-        description: 'Freinages appuyés à l\'approche des carrefours et des postes de péage.',
+        description: "Freinages appuyés à l'approche des carrefours et des postes de péage.",
       },
       {
         title: 'Fatigue et horaires tardifs',
@@ -169,7 +171,7 @@ export function demoSafetyCoaching(driver: Driver): SafetyCoaching {
         title: 'Anticipation aux entrées de villes',
         recommendation:
           'Réduire progressivement la vitesse 300 mètres avant les agglomérations pour éviter les freinages brusques.',
-        expectedImpact: 'Moins de freinages d\'urgence, garnitures préservées',
+        expectedImpact: "Moins de freinages d'urgence, garnitures préservées",
       },
       {
         category: 'Éco-Conduite & Carburant',

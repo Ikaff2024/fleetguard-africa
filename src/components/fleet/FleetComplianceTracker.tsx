@@ -1,15 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { Organization, ComplianceDoc } from '../../types';
 import { MOCK_VEHICLES, MOCK_COMPLIANCE_DOCS } from '../../data/mock-data';
-import { ShieldCheck, AlertTriangle, FileText, Calendar, Plus, Search, Bell, Clock, FileWarning, CheckCircle2 } from 'lucide-react';
+import {
+  ShieldCheck,
+  AlertTriangle,
+  FileText,
+  Calendar,
+  Plus,
+  Search,
+  Bell,
+  Clock,
+  FileWarning,
+  CheckCircle2,
+} from 'lucide-react';
 
 interface FleetComplianceTrackerProps {
   currentOrg: Organization;
 }
 
 export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ currentOrg }) => {
-  const vehicles = useMemo(() => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id), [currentOrg.id]);
-  const initialDocs = useMemo(() => MOCK_COMPLIANCE_DOCS.filter(d => d.organizationId === currentOrg.id), [currentOrg.id]);
+  const vehicles = useMemo(
+    () => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id),
+    [currentOrg.id],
+  );
+  const initialDocs = useMemo(
+    () => MOCK_COMPLIANCE_DOCS.filter(d => d.organizationId === currentOrg.id),
+    [currentOrg.id],
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('ALL');
@@ -20,11 +37,12 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
   const filteredDocs = useMemo(() => {
     return initialDocs.filter(doc => {
       const vehicle = vehicles.find(v => v.id === doc.vehicleId);
-      const matchesSearch = !searchQuery || 
+      const matchesSearch =
+        !searchQuery ||
         doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         doc.docNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (vehicle && vehicle.immatriculation.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+
       const matchesVehicle = selectedVehicle === 'ALL' || doc.vehicleId === selectedVehicle;
       const matchesStatus = selectedStatus === 'ALL' || doc.status === selectedStatus;
       const matchesType = selectedType === 'ALL' || doc.docType === selectedType;
@@ -65,15 +83,31 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
       case 'INSURANCE':
         return <span className={`${badgeClass} text-blue-600 bg-blue-50 border-blue-200`}>Assurance</span>;
       case 'TECHNICAL_INSPECTION':
-        return <span className={`${badgeClass} text-purple-600 bg-purple-50 border-purple-200`}>Visite Technique</span>;
+        return (
+          <span className={`${badgeClass} text-purple-600 bg-purple-50 border-purple-200`}>
+            Visite Technique
+          </span>
+        );
       case 'CEDEAO_BROWN_CARD':
-        return <span className={`${badgeClass} text-amber-600 bg-amber-50 border-amber-200`}>Carte Brune CEDEAO</span>;
+        return (
+          <span className={`${badgeClass} text-amber-600 bg-amber-50 border-amber-200`}>
+            Carte Brune CEDEAO
+          </span>
+        );
       case 'AXLE_LOAD_CERTIFICATE':
-        return <span className={`${badgeClass} text-teal-600 bg-teal-50 border-teal-200`}>Charge à l'Essieu</span>;
+        return (
+          <span className={`${badgeClass} text-teal-600 bg-teal-50 border-teal-200`}>Charge à l'Essieu</span>
+        );
       case 'DRIVER_LICENSE':
-        return <span className={`${badgeClass} text-indigo-600 bg-indigo-50 border-indigo-200`}>Permis de Conduire</span>;
+        return (
+          <span className={`${badgeClass} text-indigo-600 bg-indigo-50 border-indigo-200`}>
+            Permis de Conduire
+          </span>
+        );
       case 'HAZMAT_PERMIT':
-        return <span className={`${badgeClass} text-red-600 bg-red-50 border-red-200`}>Matières Dangereuses</span>;
+        return (
+          <span className={`${badgeClass} text-red-600 bg-red-50 border-red-200`}>Matières Dangereuses</span>
+        );
       default:
         return <span className={`${badgeClass} text-slate-600 bg-slate-50 border-slate-200`}>Document</span>;
     }
@@ -84,7 +118,7 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
     const expiry = new Date(d.expiryDate);
     return d.status === 'EXPIRED' || expiry < today;
   }).length;
-  
+
   const expiringSoonCount = initialDocs.filter(d => {
     const today = new Date();
     const expiry = new Date(d.expiryDate);
@@ -101,11 +135,10 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
               <ShieldCheck className="w-4 h-4 text-indigo-500" />
               <span>Conformité Réglementaire & Sécurité</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Suivi des Documents de la Flotte
-            </h2>
+            <h2 className="text-xl font-bold text-slate-900">Suivi des Documents de la Flotte</h2>
             <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-              Gérez les assurances, visites techniques, et autorisations de transport. Recevez des alertes automatiques avant expiration.
+              Gérez les assurances, visites techniques, et autorisations de transport. Recevez des alertes
+              automatiques avant expiration.
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -128,27 +161,33 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
           </div>
           <div>
             <div className="text-2xl font-extrabold text-slate-900 font-mono">{initialDocs.length}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Documents Gérés</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Documents Gérés
+            </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-4">
           <div className="p-3 bg-orange-50 text-orange-600 rounded-lg border border-orange-100">
             <Clock className="w-6 h-6" />
           </div>
           <div>
             <div className="text-2xl font-extrabold text-orange-600 font-mono">{expiringSoonCount}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">À Renouveler (≤ 30j)</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              À Renouveler (≤ 30j)
+            </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-4">
           <div className="p-3 bg-red-50 text-red-600 rounded-lg border border-red-100">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
             <div className="text-2xl font-extrabold text-red-600 font-mono">{expiredCount}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Documents Expirés</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Documents Expirés
+            </div>
           </div>
         </div>
       </div>
@@ -157,18 +196,18 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Rechercher par n° document, immatriculation, titre..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          
-          <select 
+
+          <select
             value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
+            onChange={e => setSelectedType(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500"
           >
             <option value="ALL">Tous les Types</option>
@@ -179,10 +218,10 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
             <option value="DRIVER_LICENSE">Permis de Conduire</option>
             <option value="HAZMAT_PERMIT">Matières Dangereuses</option>
           </select>
-          
-          <select 
+
+          <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={e => setSelectedStatus(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500"
           >
             <option value="ALL">Tous les Statuts</option>
@@ -190,15 +229,17 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
             <option value="EXPIRING_SOON">Expire Bientôt</option>
             <option value="EXPIRED">Expiré</option>
           </select>
-          
-          <select 
+
+          <select
             value={selectedVehicle}
-            onChange={(e) => setSelectedVehicle(e.target.value)}
+            onChange={e => setSelectedVehicle(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 max-w-[200px]"
           >
             <option value="ALL">Tous les Véhicules</option>
             {vehicles.map(v => (
-              <option key={v.id} value={v.id}>{v.immatriculation}</option>
+              <option key={v.id} value={v.id}>
+                {v.immatriculation}
+              </option>
             ))}
           </select>
         </div>
@@ -206,7 +247,7 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
 
       <div className="space-y-4">
         {filteredDocs.length === 0 ? (
-           <div className="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500 shadow-xs">
             <ShieldCheck className="w-8 h-8 mx-auto text-slate-300 mb-2" />
             <p className="font-bold text-sm">Aucun document ne correspond à votre recherche.</p>
           </div>
@@ -214,7 +255,10 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
           filteredDocs.map(doc => {
             const vehicle = vehicles.find(v => v.id === doc.vehicleId);
             return (
-              <div key={doc.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:border-indigo-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div
+                key={doc.id}
+                className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:border-indigo-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
                 <div className="flex items-start gap-4 flex-1">
                   <div className="p-3 bg-slate-50 text-slate-500 rounded-xl border border-slate-200">
                     <FileText className="w-5 h-5" />
@@ -229,18 +273,27 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
                     </div>
                     {vehicle && (
                       <div className="text-[11px] text-slate-500 pt-1 flex items-center gap-1.5">
-                        <span className="font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">{vehicle.immatriculation}</span>
-                        <span>{vehicle.make} {vehicle.model}</span>
+                        <span className="font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                          {vehicle.immatriculation}
+                        </span>
+                        <span>
+                          {vehicle.make} {vehicle.model}
+                        </span>
                       </div>
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   {getStatusBadge(doc.status, doc.expiryDate)}
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>Expire le: <strong className="text-slate-800">{new Date(doc.expiryDate).toLocaleDateString('fr-FR')}</strong></span>
+                    <span>
+                      Expire le:{' '}
+                      <strong className="text-slate-800">
+                        {new Date(doc.expiryDate).toLocaleDateString('fr-FR')}
+                      </strong>
+                    </span>
                   </div>
                 </div>
               </div>

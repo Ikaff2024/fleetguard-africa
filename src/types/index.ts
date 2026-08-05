@@ -4,15 +4,11 @@
  */
 
 export type CurrencyCode = 'XOF' | 'XAF' | 'KES' | 'NGN' | 'GHS' | 'USD' | 'EUR';
-export type TimeZone = 'Africa/Abidjan' | 'Africa/Lagos' | 'Africa/Douala' | 'Africa/Nairobi' | 'Africa/Dakar' | 'UTC';
+export type TimeZone =
+  'Africa/Abidjan' | 'Africa/Lagos' | 'Africa/Douala' | 'Africa/Nairobi' | 'Africa/Dakar' | 'UTC';
 
-export type UserRole = 
-  | 'SUPER_ADMIN' 
-  | 'ORGANIZATION_ADMIN' 
-  | 'FLEET_MANAGER' 
-  | 'SAFETY_OFFICER' 
-  | 'MAINTENANCE_TECH' 
-  | 'DRIVER';
+export type UserRole =
+  'SUPER_ADMIN' | 'ORGANIZATION_ADMIN' | 'FLEET_MANAGER' | 'SAFETY_OFFICER' | 'MAINTENANCE_TECH' | 'DRIVER';
 
 export interface User {
   id: string;
@@ -130,7 +126,13 @@ export interface Geofence {
   severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
-export type SafetyEventType = 'OVER_SPEED' | 'HARSH_BRAKING' | 'RAPID_ACCELERATION' | 'FATIGUE_NIGHT_DRIVING' | 'GEOFENCE_BREACH' | 'IDLING_EXCESS';
+export type SafetyEventType =
+  | 'OVER_SPEED'
+  | 'HARSH_BRAKING'
+  | 'RAPID_ACCELERATION'
+  | 'FATIGUE_NIGHT_DRIVING'
+  | 'GEOFENCE_BREACH'
+  | 'IDLING_EXCESS';
 
 export interface SafetyEvent {
   id: string;
@@ -229,7 +231,13 @@ export interface ComplianceDoc {
   vehicleId?: string;
   driverId?: string;
   title: string;
-  docType: 'INSURANCE' | 'TECHNICAL_INSPECTION' | 'CEDEAO_BROWN_CARD' | 'AXLE_LOAD_CERTIFICATE' | 'DRIVER_LICENSE' | 'HAZMAT_PERMIT';
+  docType:
+    | 'INSURANCE'
+    | 'TECHNICAL_INSPECTION'
+    | 'CEDEAO_BROWN_CARD'
+    | 'AXLE_LOAD_CERTIFICATE'
+    | 'DRIVER_LICENSE'
+    | 'HAZMAT_PERMIT';
   docNumber: string;
   issuedDate: string;
   expiryDate: string;
@@ -307,7 +315,7 @@ export interface DriverFatigueMetrics {
   fatigueScore: number; // 0 - 100% (Higher = More fatigued)
   fatigueLevel: FatigueRiskLevel;
   burnoutRisk: BurnoutRiskCategory;
-  
+
   // Driving Hours Tracker
   hoursDrivenToday: number; // Max e.g. 9.0h
   hoursDrivenThisWeek: number; // Max e.g. 56.0h
@@ -315,14 +323,14 @@ export interface DriverFatigueMetrics {
   consecutiveDaysWorked: number; // Days without 24h rest
   lastRestDurationHours: number; // Hours elapsed since last shift ended
   hoursSinceLastBreak: number; // Continuous hours driving on current trip
-  
+
   // Legal Compliance & Limits
   breakComplianceStatus: 'COMPLIANT' | 'WARNING' | 'BREACH';
   maxDailyHoursLimit: number; // e.g. 9.0h (or 10h 2x/week under UEMOA)
   maxWeeklyHoursLimit: number; // e.g. 56.0h
   remainingDailyHours: number;
   remainingWeeklyHours: number;
-  
+
   // Alerts & Recommendations
   isMandatoryRestEnforced: boolean;
   recommendedNextShiftStart?: string;
@@ -426,7 +434,7 @@ export interface DriverRewardProfile {
   currentSafetyScore: number;
   scoreTrend30d: number; // e.g. +8.5 or -2.0
   ecoScore: number; // 0 - 100
-  
+
   // Fuel Efficiency & Bonus Metrics
   fuelEfficiencySavingsL100km: number; // e.g. -4.2 L/100km below benchmark
   estimatedFuelSavedLiters: number; // e.g. 185 L
@@ -434,13 +442,13 @@ export interface DriverRewardProfile {
   payoutStatus: PayoutStatus;
   payoutMethod: 'ORANGE_MONEY' | 'MTN_MOMO' | 'WAVE' | 'FUEL_VOUCHER';
   lastPayoutDate?: string;
-  
+
   // Gamification Metrics
   totalPoints: number;
   rankInCompany: number;
   unlockedBadges: DriverUnlockedBadge[];
   badgeProgress: DriverBadgeProgress[];
-  
+
   // Performance Trend Indicators
   trendHighlights: {
     metric: string;
@@ -458,6 +466,3 @@ export interface FuelBonusRuleConfig {
   maxMonthlyBonusCapXOF: number; // e.g. 150,000 XOF
   baseTierBonusXOF: number; // Minimum bonus for score >= 90
 }
-
-
-

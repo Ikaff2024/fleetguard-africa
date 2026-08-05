@@ -12,7 +12,7 @@ import {
   Truck,
   CheckCircle2,
   AlertCircle,
-  Check
+  Check,
 } from 'lucide-react';
 
 interface DriverMessagingModuleProps {
@@ -21,11 +21,7 @@ interface DriverMessagingModuleProps {
 }
 
 export type MessageCategory =
-  | 'SAFETY_REMINDER'
-  | 'MISSION_UPDATE'
-  | 'FUEL_INSTRUCTION'
-  | 'MAINTENANCE_NOTICE'
-  | 'GENERAL';
+  'SAFETY_REMINDER' | 'MISSION_UPDATE' | 'FUEL_INSTRUCTION' | 'MAINTENANCE_NOTICE' | 'GENERAL';
 
 export type MessagePriority = 'NORMAL' | 'URGENT' | 'CRITICAL';
 
@@ -49,22 +45,20 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
   defaultDriverId,
 }) => {
   const orgDrivers = useMemo(() => {
-    return MOCK_DRIVERS.filter((d) => d.organizationId === currentOrg.id);
+    return MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
   }, [currentOrg.id]);
 
   const [selectedDriverId, setSelectedDriverId] = useState<string>(
-    defaultDriverId || orgDrivers[0]?.id || 'drv_moussa_01'
+    defaultDriverId || orgDrivers[0]?.id || 'drv_moussa_01',
   );
 
   const selectedDriver = useMemo(() => {
-    return orgDrivers.find((d) => d.id === selectedDriverId) || orgDrivers[0];
+    return orgDrivers.find(d => d.id === selectedDriverId) || orgDrivers[0];
   }, [orgDrivers, selectedDriverId]);
 
   const assignedVehicle = useMemo(() => {
     return MOCK_VEHICLES.find(
-      (v) =>
-        v.id === selectedDriver?.assignedVehicleId ||
-        v.currentDriverId === selectedDriver?.id
+      v => v.id === selectedDriver?.assignedVehicleId || v.currentDriverId === selectedDriver?.id,
     );
   }, [selectedDriver]);
 
@@ -75,7 +69,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
         id: 'msg_101',
         driverId: 'drv_moussa_01',
         sender: 'MANAGER',
-        senderName: 'Directeur d\'Exploitation',
+        senderName: "Directeur d'Exploitation",
         category: 'SAFETY_REMINDER',
         priority: 'URGENT',
         text: 'Bonjour Moussa. Rappel de sécurité: Votre vitesse a dépassé 90 km/h sur le tronçon Savè-Parakou. Merci de maintenir le régulateur sous 80 km/h sur cet axe non éclairé.',
@@ -92,7 +86,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
         senderName: 'Moussa Diop (Terminal Mobile)',
         category: 'SAFETY_REMINDER',
         priority: 'NORMAL',
-        text: 'Bien reçu Chef. Je viens de réduire à 75 km/h et d\'activer les feux de brouillard. Route dégagée vers Parakou.',
+        text: "Bien reçu Chef. Je viens de réduire à 75 km/h et d'activer les feux de brouillard. Route dégagée vers Parakou.",
         sentAt: '2026-08-04 02:16:40',
         deliveredAt: '2026-08-04 02:16:41',
         readAt: '2026-08-04 02:17:00',
@@ -102,7 +96,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
         id: 'msg_103',
         driverId: 'drv_moussa_01',
         sender: 'MANAGER',
-        senderName: 'Directeur d\'Exploitation',
+        senderName: "Directeur d'Exploitation",
         category: 'FUEL_INSTRUCTION',
         priority: 'NORMAL',
         text: 'Consigne carburant: Effectuez votre plein intermédiaire à la station partenaire TotalEnergies Parakou (Pistolet N°3 avec badge Flotte).',
@@ -145,7 +139,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
 
   const activeDriverMessages = useMemo(() => {
     const list = messagesMap[selectedDriverId] || [];
-    return list.filter((m) => {
+    return list.filter(m => {
       const matchCat = categoryFilter === 'ALL' || m.category === categoryFilter;
       const matchSearch =
         !searchFilter ||
@@ -167,7 +161,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
       id: `msg_${Date.now()}`,
       driverId: selectedDriverId,
       sender: 'MANAGER',
-      senderName: 'Directeur d\'Exploitation',
+      senderName: "Directeur d'Exploitation",
       category: selectedCategory,
       priority: selectedPriority,
       text: inputText.trim(),
@@ -177,7 +171,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
       ackReceived: false,
     };
 
-    setMessagesMap((prev) => ({
+    setMessagesMap(prev => ({
       ...prev,
       [selectedDriverId]: [...(prev[selectedDriverId] || []), newMessage],
     }));
@@ -188,9 +182,9 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
 
     // Simulate auto-receipt / driver acknowledgement after 3 seconds
     setTimeout(() => {
-      setMessagesMap((prev) => {
+      setMessagesMap(prev => {
         const currentList = prev[selectedDriverId] || [];
-        const updatedList = currentList.map((msg) => {
+        const updatedList = currentList.map(msg => {
           if (msg.id === newMessage.id) {
             return {
               ...msg,
@@ -210,7 +204,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
     category: MessageCategory,
     priority: MessagePriority,
     text: string,
-    ack: boolean = false
+    ack: boolean = false,
   ) => {
     setSelectedCategory(category);
     setSelectedPriority(priority);
@@ -234,7 +228,8 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
             </span>
           </h3>
           <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-            Transmission instantanée de consignes de conduite, rappels de sécurité, alertes carburant et mises à jour de mission directement vers le terminal embarqué ou l'application mobile du chauffeur.
+            Transmission instantanée de consignes de conduite, rappels de sécurité, alertes carburant et mises
+            à jour de mission directement vers le terminal embarqué ou l'application mobile du chauffeur.
           </p>
         </div>
 
@@ -259,9 +254,9 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
           </div>
 
           <div className="space-y-2">
-            {orgDrivers.map((drv) => {
+            {orgDrivers.map(drv => {
               const veh = MOCK_VEHICLES.find(
-                (v) => v.id === drv.assignedVehicleId || v.currentDriverId === drv.id
+                v => v.id === drv.assignedVehicleId || v.currentDriverId === drv.id,
               );
               const isSelected = drv.id === selectedDriverId;
               const msgCount = (messagesMap[drv.id] || []).length;
@@ -283,21 +278,25 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                         isSelected
                           ? 'bg-white/20 text-white'
                           : drv.currentSafetyScore >= 85
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
                       }`}
                     >
                       {drv.currentSafetyScore} / 100
                     </span>
                   </div>
 
-                  <div className={`text-[11px] mt-1 flex items-center gap-1 ${isSelected ? 'text-white/90' : 'text-slate-500'}`}>
+                  <div
+                    className={`text-[11px] mt-1 flex items-center gap-1 ${isSelected ? 'text-white/90' : 'text-slate-500'}`}
+                  >
                     <Truck className="w-3 h-3 shrink-0" />
                     <span className="truncate">{veh ? `${veh.immatriculation}` : 'Véhicule Flotte'}</span>
                   </div>
 
                   <div className="mt-2 flex items-center justify-between text-[10px]">
-                    <span className={`flex items-center gap-1 ${isSelected ? 'text-white/80' : 'text-emerald-600'}`}>
+                    <span
+                      className={`flex items-center gap-1 ${isSelected ? 'text-white/80' : 'text-emerald-600'}`}
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                       <span>App Mobile v2.4</span>
                     </span>
@@ -323,18 +322,27 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
 
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-slate-900">
-                    {selectedDriver?.fullName}
-                  </h4>
+                  <h4 className="text-sm font-bold text-slate-900">{selectedDriver?.fullName}</h4>
                   <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
                     Terminal Actif • ID: MOB-{selectedDriver?.id.substring(0, 8)}
                   </span>
                 </div>
 
                 <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3 font-medium">
-                  <span>Permis: <strong>{selectedDriver?.licenseNumber || 'Catégorie C/E'}</strong></span>
-                  <span>Téléphone: <strong>{selectedDriver?.phone || 'Non renseigné'}</strong></span>
-                  <span>Véhicule: <strong>{assignedVehicle ? `${assignedVehicle.immatriculation} (${assignedVehicle.make})` : 'Camion Flotte'}</strong></span>
+                  <span>
+                    Permis: <strong>{selectedDriver?.licenseNumber || 'Catégorie C/E'}</strong>
+                  </span>
+                  <span>
+                    Téléphone: <strong>{selectedDriver?.phone || 'Non renseigné'}</strong>
+                  </span>
+                  <span>
+                    Véhicule:{' '}
+                    <strong>
+                      {assignedVehicle
+                        ? `${assignedVehicle.immatriculation} (${assignedVehicle.make})`
+                        : 'Camion Flotte'}
+                    </strong>
+                  </span>
                 </div>
               </div>
             </div>
@@ -363,7 +371,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                     'SAFETY_REMINDER',
                     'URGENT',
                     `Rappel de sécurité: Merci de respecter la limitation de 80 km/h sur le corridor RNIE 2.`,
-                    true
+                    true,
                   )
                 }
                 className="bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer"
@@ -378,7 +386,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                     'SAFETY_REMINDER',
                     'NORMAL',
                     `Conseil fatigue: Vous avez conduit plus de 3h en continu. Pause obligatoire de 20 min préconisée sur la prochaine aire de repos.`,
-                    false
+                    false,
                   )
                 }
                 className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer"
@@ -393,7 +401,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                     'FUEL_INSTRUCTION',
                     'NORMAL',
                     `Consigne gazole: Effectuez votre complément de plein à la station partenaire TotalEnergies Parakou (Pistolet N°3).`,
-                    false
+                    false,
                   )
                 }
                 className="bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer"
@@ -408,7 +416,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                     'MISSION_UPDATE',
                     'NORMAL',
                     `Mise à jour de mission: Créneau de livraison recalé à 14h30 au Port de Cotonou (Quai N°4).`,
-                    true
+                    true,
                   )
                 }
                 className="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer"
@@ -423,7 +431,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                     'SAFETY_REMINDER',
                     'CRITICAL',
                     `Alerte météo: Fortes pluies et visibilité réduite sur la traversée. Allumez les feux de détresses et réduisez à 60 km/h.`,
-                    true
+                    true,
                   )
                 }
                 className="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 cursor-pointer"
@@ -449,10 +457,11 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
           <div className="bg-slate-900 rounded-xl p-4 space-y-3 min-h-[260px] max-h-[360px] overflow-y-auto border border-slate-800">
             {activeDriverMessages.length === 0 ? (
               <div className="text-center py-12 text-slate-500 text-xs italic">
-                Aucun message échangé pour le moment. Rédigez une consigne ci-dessous ou sélectionnez un modèle rapide.
+                Aucun message échangé pour le moment. Rédigez une consigne ci-dessous ou sélectionnez un
+                modèle rapide.
               </div>
             ) : (
-              activeDriverMessages.map((msg) => {
+              activeDriverMessages.map(msg => {
                 const isManager = msg.sender === 'MANAGER';
 
                 return (
@@ -519,7 +528,10 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
           </div>
 
           {/* Composition Box Form */}
-          <form onSubmit={handleSendMessage} className="space-y-3 bg-slate-50 border border-slate-200 p-4 rounded-xl">
+          <form
+            onSubmit={handleSendMessage}
+            className="space-y-3 bg-slate-50 border border-slate-200 p-4 rounded-xl"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3">
                 <div>
@@ -528,7 +540,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                   </label>
                   <select
                     value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value as any)}
+                    onChange={e => setSelectedCategory(e.target.value as any)}
                     className="bg-white border border-slate-300 text-slate-800 text-xs font-semibold rounded-lg p-1.5 focus:ring-2 focus:ring-orange-500/20"
                   >
                     <option value="SAFETY_REMINDER">🛡️ Rappel Sécurité</option>
@@ -545,7 +557,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                   </label>
                   <select
                     value={selectedPriority}
-                    onChange={(e) => setSelectedPriority(e.target.value as any)}
+                    onChange={e => setSelectedPriority(e.target.value as any)}
                     className="bg-white border border-slate-300 text-slate-800 text-xs font-semibold rounded-lg p-1.5 focus:ring-2 focus:ring-orange-500/20"
                   >
                     <option value="NORMAL">🟢 Normale</option>
@@ -559,7 +571,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
                 <input
                   type="checkbox"
                   checked={requireAck}
-                  onChange={(e) => setRequireAck(e.target.checked)}
+                  onChange={e => setRequireAck(e.target.checked)}
                   className="accent-orange-500 w-4 h-4 cursor-pointer"
                 />
                 <span>Exiger Accusé de Réception (Signature Chauffeur)</span>
@@ -570,7 +582,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
               <input
                 type="text"
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={e => setInputText(e.target.value)}
                 placeholder={`Rédiger une consigne directe pour ${selectedDriver?.fullName}...`}
                 className="flex-1 bg-white text-slate-900 border border-slate-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
               />

@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Organization } from '../../types';
-import { 
-  MapPin, 
-  Truck, 
-  Sparkles, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Plus, 
-  Trash2, 
-  TrendingDown, 
-  Zap, 
-  Send, 
-  RotateCcw, 
-  ShieldCheck, 
-  Compass
+import {
+  MapPin,
+  Truck,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  Plus,
+  Trash2,
+  TrendingDown,
+  Zap,
+  Send,
+  RotateCcw,
+  ShieldCheck,
+  Compass,
 } from 'lucide-react';
 
 interface RouteOptimizationToolProps {
@@ -39,28 +39,116 @@ const PRESET_ROUTES: { [key: string]: { name: string; origin: string; stops: Del
     name: 'Corridor Cotonou - Parakou - Malanville (Bénin)',
     origin: 'Terminal Conteneurs Port Autonome de Cotonou (6.356, 2.435)',
     stops: [
-      { id: 's1', name: 'Dépôt Bohicon Centre', address: 'Bohicon RNIE2 Km 125', cargoWeightTons: 12, timeWindowStart: '08:30', timeWindowEnd: '10:00', lat: 7.178, lng: 2.066, trafficRisk: 'HIGH', priority: 'HIGH' },
-      { id: 's2', name: 'Hub Logistique Parakou', address: 'Gare Routière Parakou Sud', cargoWeightTons: 18, timeWindowStart: '13:00', timeWindowEnd: '15:00', lat: 9.337, lng: 2.630, trafficRisk: 'MEDIUM', priority: 'NORMAL' },
-      { id: 's3', name: 'Poste Douanier Malanville', address: 'Frontière Bénin-Niger', cargoWeightTons: 25, timeWindowStart: '17:30', timeWindowEnd: '19:30', lat: 11.868, lng: 3.383, trafficRisk: 'HIGH', priority: 'HIGH' }
-    ]
+      {
+        id: 's1',
+        name: 'Dépôt Bohicon Centre',
+        address: 'Bohicon RNIE2 Km 125',
+        cargoWeightTons: 12,
+        timeWindowStart: '08:30',
+        timeWindowEnd: '10:00',
+        lat: 7.178,
+        lng: 2.066,
+        trafficRisk: 'HIGH',
+        priority: 'HIGH',
+      },
+      {
+        id: 's2',
+        name: 'Hub Logistique Parakou',
+        address: 'Gare Routière Parakou Sud',
+        cargoWeightTons: 18,
+        timeWindowStart: '13:00',
+        timeWindowEnd: '15:00',
+        lat: 9.337,
+        lng: 2.63,
+        trafficRisk: 'MEDIUM',
+        priority: 'NORMAL',
+      },
+      {
+        id: 's3',
+        name: 'Poste Douanier Malanville',
+        address: 'Frontière Bénin-Niger',
+        cargoWeightTons: 25,
+        timeWindowStart: '17:30',
+        timeWindowEnd: '19:30',
+        lat: 11.868,
+        lng: 3.383,
+        trafficRisk: 'HIGH',
+        priority: 'HIGH',
+      },
+    ],
   },
   SENEGAL_MBOUR: {
     name: 'Corridor Dakar - Thiès - Touba (Sénégal)',
     origin: 'Môle 2 Port Autonome de Dakar (14.685, -17.432)',
     stops: [
-      { id: 's1', name: 'Plateforme Rufisque Est', address: 'Zone Industrielle Rufisque', cargoWeightTons: 10, timeWindowStart: '07:30', timeWindowEnd: '09:00', lat: 14.716, lng: -17.272, trafficRisk: 'HIGH', priority: 'HIGH' },
-      { id: 's2', name: 'Entrepôt Thiès Nord', address: 'RN2 Sortie Thiès', cargoWeightTons: 15, timeWindowStart: '10:30', timeWindowEnd: '12:00', lat: 14.790, lng: -16.926, trafficRisk: 'LOW', priority: 'NORMAL' },
-      { id: 's3', name: 'Marché Central Touba', address: 'Grande Mosquée Touba', cargoWeightTons: 22, timeWindowStart: '14:30', timeWindowEnd: '16:30', lat: 14.864, lng: -15.882, trafficRisk: 'MEDIUM', priority: 'HIGH' }
-    ]
+      {
+        id: 's1',
+        name: 'Plateforme Rufisque Est',
+        address: 'Zone Industrielle Rufisque',
+        cargoWeightTons: 10,
+        timeWindowStart: '07:30',
+        timeWindowEnd: '09:00',
+        lat: 14.716,
+        lng: -17.272,
+        trafficRisk: 'HIGH',
+        priority: 'HIGH',
+      },
+      {
+        id: 's2',
+        name: 'Entrepôt Thiès Nord',
+        address: 'RN2 Sortie Thiès',
+        cargoWeightTons: 15,
+        timeWindowStart: '10:30',
+        timeWindowEnd: '12:00',
+        lat: 14.79,
+        lng: -16.926,
+        trafficRisk: 'LOW',
+        priority: 'NORMAL',
+      },
+      {
+        id: 's3',
+        name: 'Marché Central Touba',
+        address: 'Grande Mosquée Touba',
+        cargoWeightTons: 22,
+        timeWindowStart: '14:30',
+        timeWindowEnd: '16:30',
+        lat: 14.864,
+        lng: -15.882,
+        trafficRisk: 'MEDIUM',
+        priority: 'HIGH',
+      },
+    ],
   },
   KENYA_MOMBASA: {
     name: 'Northern Corridor Nairobi - Nakuru (Kenya)',
     origin: 'Embakasi Inland Container Depot Nairobi (-1.319, 36.885)',
     stops: [
-      { id: 's1', name: 'Naivasha Dry Port Depot', address: 'Mai Mahiu Naivasha Road', cargoWeightTons: 16, timeWindowStart: '09:00', timeWindowEnd: '10:30', lat: -0.717, lng: 36.431, trafficRisk: 'HIGH', priority: 'HIGH' },
-      { id: 's2', name: 'Nakuru Industrial Zone', address: 'Nakuru-Eldoret Highway', cargoWeightTons: 20, timeWindowStart: '12:30', timeWindowEnd: '14:00', lat: -0.283, lng: 36.066, trafficRisk: 'MEDIUM', priority: 'NORMAL' }
-    ]
-  }
+      {
+        id: 's1',
+        name: 'Naivasha Dry Port Depot',
+        address: 'Mai Mahiu Naivasha Road',
+        cargoWeightTons: 16,
+        timeWindowStart: '09:00',
+        timeWindowEnd: '10:30',
+        lat: -0.717,
+        lng: 36.431,
+        trafficRisk: 'HIGH',
+        priority: 'HIGH',
+      },
+      {
+        id: 's2',
+        name: 'Nakuru Industrial Zone',
+        address: 'Nakuru-Eldoret Highway',
+        cargoWeightTons: 20,
+        timeWindowStart: '12:30',
+        timeWindowEnd: '14:00',
+        lat: -0.283,
+        lng: 36.066,
+        trafficRisk: 'MEDIUM',
+        priority: 'NORMAL',
+      },
+    ],
+  },
 };
 
 export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ currentOrg }) => {
@@ -68,19 +156,28 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
   const mapInstanceRef = useRef<any>(null);
 
   // Default Corridor preset according to tenant country
-  const defaultPreset = currentOrg.country === 'Sénégal' 
-    ? PRESET_ROUTES.SENEGAL_MBOUR 
-    : currentOrg.country.includes('Kenya') 
-    ? PRESET_ROUTES.KENYA_MOMBASA 
-    : PRESET_ROUTES.BENIN_NORTH;
+  const defaultPreset =
+    currentOrg.country === 'Sénégal'
+      ? PRESET_ROUTES.SENEGAL_MBOUR
+      : currentOrg.country.includes('Kenya')
+        ? PRESET_ROUTES.KENYA_MOMBASA
+        : PRESET_ROUTES.BENIN_NORTH;
 
   // Form State
   const [selectedCorridorKey, setSelectedCorridorKey] = useState<string>(
-    currentOrg.country === 'Sénégal' ? 'SENEGAL_MBOUR' : currentOrg.country.includes('Kenya') ? 'KENYA_MOMBASA' : 'BENIN_NORTH'
+    currentOrg.country === 'Sénégal'
+      ? 'SENEGAL_MBOUR'
+      : currentOrg.country.includes('Kenya')
+        ? 'KENYA_MOMBASA'
+        : 'BENIN_NORTH',
   );
-  const [vehicleProfile, setVehicleProfile] = useState<'HEAVY_6X4' | 'RIGID_26T' | 'FRIGO_VAN' | 'LIGHT_PICKUP'>('HEAVY_6X4');
+  const [vehicleProfile, setVehicleProfile] = useState<
+    'HEAVY_6X4' | 'RIGID_26T' | 'FRIGO_VAN' | 'LIGHT_PICKUP'
+  >('HEAVY_6X4');
   const [cargoLoadTons, setCargoLoadTons] = useState<number>(35);
-  const [departureTime, setDepartureTime] = useState<'MORNING_PEAK' | 'NORMAL_FLOW' | 'EVENING_PEAK' | 'NIGHT_HAUL'>('MORNING_PEAK');
+  const [departureTime, setDepartureTime] = useState<
+    'MORNING_PEAK' | 'NORMAL_FLOW' | 'EVENING_PEAK' | 'NIGHT_HAUL'
+  >('MORNING_PEAK');
   const [avoidTolls, setAvoidTolls] = useState<boolean>(false);
   const [avoidUrbanChokepoints, setAvoidUrbanChokepoints] = useState<boolean>(true);
 
@@ -90,7 +187,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
   const [newStopAddress, setNewStopAddress] = useState<string>('');
 
   // Active Route Calculation Results
-  const [selectedRouteType, setSelectedRouteType] = useState<'ECO_FUEL' | 'STANDARD_FASTEST' | 'BYPASS'>('ECO_FUEL');
+  const [selectedRouteType, setSelectedRouteType] = useState<'ECO_FUEL' | 'STANDARD_FASTEST' | 'BYPASS'>(
+    'ECO_FUEL',
+  );
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [dispatchSuccessMessage, setDispatchSuccessMessage] = useState<string | null>(null);
 
@@ -99,21 +198,34 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
   // Calculations based on inputs & vehicle profile
   const getConsumptionFactor = () => {
     switch (vehicleProfile) {
-      case 'HEAVY_6X4': return 38.0;
-      case 'RIGID_26T': return 28.5;
-      case 'FRIGO_VAN': return 22.0;
-      case 'LIGHT_PICKUP': return 12.5;
+      case 'HEAVY_6X4':
+        return 38.0;
+      case 'RIGID_26T':
+        return 28.5;
+      case 'FRIGO_VAN':
+        return 22.0;
+      case 'LIGHT_PICKUP':
+        return 12.5;
     }
   };
 
   const baseL100km = getConsumptionFactor();
-  const trafficMultiplier = departureTime === 'MORNING_PEAK' ? 1.22 : departureTime === 'EVENING_PEAK' ? 1.18 : departureTime === 'NIGHT_HAUL' ? 0.91 : 1.05;
+  const trafficMultiplier =
+    departureTime === 'MORNING_PEAK'
+      ? 1.22
+      : departureTime === 'EVENING_PEAK'
+        ? 1.18
+        : departureTime === 'NIGHT_HAUL'
+          ? 0.91
+          : 1.05;
   const loadPenalty = (cargoLoadTons / 40) * 4.5;
 
   // Eco Route Metrics
   const ecoDistanceKm = 482;
   const ecoDurationHours = 7.2;
-  const ecoAvgL100km = parseFloat((baseL100km * (avoidUrbanChokepoints ? 0.90 : 1.0) + loadPenalty).toFixed(1));
+  const ecoAvgL100km = parseFloat(
+    (baseL100km * (avoidUrbanChokepoints ? 0.9 : 1.0) + loadPenalty).toFixed(1),
+  );
   const ecoTotalLiters = Math.round((ecoDistanceKm * ecoAvgL100km) / 100);
   const ecoFuelCost = ecoTotalLiters * 650; // ~650 FCFA per liter
 
@@ -151,7 +263,7 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
       lat: 8.5 + (Math.random() - 0.5) * 1.5,
       lng: 2.3 + (Math.random() - 0.5) * 1.5,
       trafficRisk: 'MEDIUM',
-      priority: 'NORMAL'
+      priority: 'NORMAL',
     };
 
     setStops(prev => [...prev, newStop]);
@@ -175,7 +287,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
   // Dispatch to driver
   const handleDispatchToDriver = () => {
-    setDispatchSuccessMessage(`Itinéraire Éco-Optimisé transmis avec succès sur l'application FleetGuard Driver du chauffeur Moussa Diop (Camion RB-4592-A).`);
+    setDispatchSuccessMessage(
+      `Itinéraire Éco-Optimisé transmis avec succès sur l'application FleetGuard Driver du chauffeur Moussa Diop (Camion RB-4592-A).`,
+    );
     setTimeout(() => {
       setDispatchSuccessMessage(null);
     }, 6000);
@@ -197,8 +311,18 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
       }
 
       // Center map according to selected corridor
-      const originLat = selectedCorridorKey === 'SENEGAL_MBOUR' ? 14.685 : selectedCorridorKey === 'KENYA_MOMBASA' ? -1.319 : 6.356;
-      const originLng = selectedCorridorKey === 'SENEGAL_MBOUR' ? -17.432 : selectedCorridorKey === 'KENYA_MOMBASA' ? 36.885 : 2.435;
+      const originLat =
+        selectedCorridorKey === 'SENEGAL_MBOUR'
+          ? 14.685
+          : selectedCorridorKey === 'KENYA_MOMBASA'
+            ? -1.319
+            : 6.356;
+      const originLng =
+        selectedCorridorKey === 'SENEGAL_MBOUR'
+          ? -17.432
+          : selectedCorridorKey === 'KENYA_MOMBASA'
+            ? 36.885
+            : 2.435;
 
       const map = L.map(mapContainerRef.current).setView([originLat, originLng], 7);
       mapInstanceRef.current = map;
@@ -218,7 +342,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
       L.marker([originLat, originLng], { icon: originIcon })
         .addTo(map)
-        .bindPopup(`<b>Départ : Hub Principal / Port</b><br/>${PRESET_ROUTES[selectedCorridorKey]?.origin || 'Origine Flotte'}`);
+        .bindPopup(
+          `<b>Départ : Hub Principal / Port</b><br/>${PRESET_ROUTES[selectedCorridorKey]?.origin || 'Origine Flotte'}`,
+        );
 
       // Plot Stops
       const routeCoordinates: [number, number][] = [[originLat, originLng]];
@@ -235,9 +361,7 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
           iconAnchor: [12, 12],
         });
 
-        L.marker([stop.lat, stop.lng], { icon: stopIcon })
-          .addTo(map)
-          .bindPopup(`
+        L.marker([stop.lat, stop.lng], { icon: stopIcon }).addTo(map).bindPopup(`
             <div style="font-family: sans-serif; font-size: 11px;">
               <b>Etape ${index + 1}: ${stop.name}</b><br/>
               Adresse: ${stop.address}<br/>
@@ -250,8 +374,13 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
       // Draw Route Polyline with traffic color accents
       if (routeCoordinates.length > 1) {
-        const polylineColor = selectedRouteType === 'ECO_FUEL' ? '#10b981' : selectedRouteType === 'BYPASS' ? '#8b5cf6' : '#ea580c';
-        
+        const polylineColor =
+          selectedRouteType === 'ECO_FUEL'
+            ? '#10b981'
+            : selectedRouteType === 'BYPASS'
+              ? '#8b5cf6'
+              : '#ea580c';
+
         const polyline = L.polyline(routeCoordinates, {
           color: polylineColor,
           weight: 5,
@@ -292,7 +421,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
             Optimisateur de Trajets Multi-Destinations & Prédiction Trafic
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Calcule le parcours le plus économe en carburant pour vos livraisons multi-étapes en contournant les goulots de trafic urbains et les gares de péage.
+            Calcule le parcours le plus économe en carburant pour vos livraisons multi-étapes en contournant
+            les goulots de trafic urbains et les gares de péage.
           </p>
         </div>
 
@@ -357,7 +487,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
             {/* Departure Scenario */}
             <div className="text-xs space-y-1">
-              <label className="block text-slate-700 font-bold mb-1">Heure de Départ & Trafic Attendu :</label>
+              <label className="block text-slate-700 font-bold mb-1">
+                Heure de Départ & Trafic Attendu :
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setDepartureTime('MORNING_PEAK')}
@@ -371,7 +503,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
                     <span>Pointe Matin (07h-09h)</span>
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                   </div>
-                  <div className="text-[10px] text-slate-500 font-normal">Trafic urbain dense (+22% cons.)</div>
+                  <div className="text-[10px] text-slate-500 font-normal">
+                    Trafic urbain dense (+22% cons.)
+                  </div>
                 </button>
 
                 <button
@@ -393,7 +527,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
             {/* Avoidance Toggles */}
             <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
-              <span className="text-slate-500 font-bold uppercase text-[10px]">Contraintes & Contournements</span>
+              <span className="text-slate-500 font-bold uppercase text-[10px]">
+                Contraintes & Contournements
+              </span>
               <div className="flex flex-wrap items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
                   <input
@@ -442,23 +578,32 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
                 </div>
                 <div>
                   <div className="font-bold">Départ : Hub Logistique / Port</div>
-                  <div className="text-[10px] text-slate-300 truncate max-w-[260px]">{PRESET_ROUTES[selectedCorridorKey]?.origin}</div>
+                  <div className="text-[10px] text-slate-300 truncate max-w-[260px]">
+                    {PRESET_ROUTES[selectedCorridorKey]?.origin}
+                  </div>
                 </div>
               </div>
-              <span className="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">Charge: {cargoLoadTons}T</span>
+              <span className="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">
+                Charge: {cargoLoadTons}T
+              </span>
             </div>
 
             {/* Stops List */}
             <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
               {stops.map((stop, idx) => (
-                <div key={stop.id} className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <div
+                  key={stop.id}
+                  className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs"
+                >
                   <div className="flex items-center gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-orange-500 text-white font-extrabold text-[10px] flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
                     <div>
                       <div className="font-bold text-slate-900">{stop.name}</div>
-                      <div className="text-[10px] text-slate-500">{stop.address} • Fenêtre: {stop.timeWindowStart}-{stop.timeWindowEnd}</div>
+                      <div className="text-[10px] text-slate-500">
+                        {stop.address} • Fenêtre: {stop.timeWindowStart}-{stop.timeWindowEnd}
+                      </div>
                     </div>
                   </div>
 
@@ -507,7 +652,10 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{dispatchSuccessMessage}</span>
               </div>
-              <button onClick={() => setDispatchSuccessMessage(null)} className="text-emerald-600 font-bold hover:underline cursor-pointer">
+              <button
+                onClick={() => setDispatchSuccessMessage(null)}
+                className="text-emerald-600 font-bold hover:underline cursor-pointer"
+              >
                 Fermer
               </button>
             </div>
@@ -532,7 +680,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
               </div>
 
               <div className="text-lg font-extrabold text-slate-900 font-mono">
-                {ecoTotalLiters} <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
+                {ecoTotalLiters}{' '}
+                <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
               </div>
 
               <div className="text-xs text-slate-600 mt-1 space-y-1">
@@ -548,7 +697,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
               <div className="mt-3 pt-2 border-t border-emerald-200 text-[10px] text-emerald-800 font-bold flex items-center gap-1">
                 <TrendingDown className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Économise {fuelLitersSaved} L (~{(financialCostSaved).toLocaleString()} {currencySymbol})</span>
+                <span>
+                  Économise {fuelLitersSaved} L (~{financialCostSaved.toLocaleString()} {currencySymbol})
+                </span>
               </div>
             </div>
 
@@ -569,7 +720,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
               </div>
 
               <div className="text-lg font-extrabold text-slate-900 font-mono">
-                {stdTotalLiters} <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
+                {stdTotalLiters}{' '}
+                <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
               </div>
 
               <div className="text-xs text-slate-600 mt-1 space-y-1">
@@ -606,7 +758,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
               </div>
 
               <div className="text-lg font-extrabold text-slate-900 font-mono">
-                {ecoTotalLiters + 12} <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
+                {ecoTotalLiters + 12}{' '}
+                <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
               </div>
 
               <div className="text-xs text-slate-600 mt-1 space-y-1">

@@ -1,8 +1,25 @@
 import React, { useState } from 'react';
 import { MOCK_DRIVERS, MOCK_SCORE_CONFIG } from '../../data/mock-data';
-import { calculateDriverSafetyScore, calculateVehicleHealthScore, calculateFuelEfficiencyScore } from '../../data/scoring-engine';
+import {
+  calculateDriverSafetyScore,
+  calculateVehicleHealthScore,
+  calculateFuelEfficiencyScore,
+} from '../../data/scoring-engine';
 import { Organization, DriverScoreConfig } from '../../types';
-import { Award, Sliders, Info, CheckCircle2, AlertTriangle, Gauge, Zap, Trophy, Calculator, Sparkles, MessageSquare, Gift } from 'lucide-react';
+import {
+  Award,
+  Sliders,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Gauge,
+  Zap,
+  Trophy,
+  Calculator,
+  Sparkles,
+  MessageSquare,
+  Gift,
+} from 'lucide-react';
 import { DriverLeaderboard } from './DriverLeaderboard';
 import { ProactiveSafetyTips } from './ProactiveSafetyTips';
 import { DriverMessagingModule } from './DriverMessagingModule';
@@ -13,10 +30,14 @@ interface DriverScoreCalculatorProps {
 }
 
 export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ currentOrg }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'leaderboard' | 'rewards' | 'messaging' | 'safetyTips' | 'calculator'>('leaderboard');
+  const [activeSubTab, setActiveSubTab] = useState<
+    'leaderboard' | 'rewards' | 'messaging' | 'safetyTips' | 'calculator'
+  >('leaderboard');
 
   const drivers = MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  const [selectedDriverId, setSelectedDriverId] = useState<string>(drivers[0]?.id || MOCK_DRIVERS[0]?.id || '');
+  const [selectedDriverId, setSelectedDriverId] = useState<string>(
+    drivers[0]?.id || MOCK_DRIVERS[0]?.id || '',
+  );
   const selectedDriver = drivers.find(d => d.id === selectedDriverId) || drivers[0];
 
   // Config weights
@@ -40,7 +61,7 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
       nightHoursDriven: nightHours,
       geofenceBreachesCount: geofenceBreaches,
     },
-    scoreConfig
+    scoreConfig,
   );
 
   // Other scores
@@ -119,27 +140,18 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
       </div>
 
       {/* Render Leaderboard Subtab */}
-      {activeSubTab === 'leaderboard' && (
-        <DriverLeaderboard currentOrg={currentOrg} />
-      )}
+      {activeSubTab === 'leaderboard' && <DriverLeaderboard currentOrg={currentOrg} />}
 
       {/* Render Rewards Subtab */}
       {activeSubTab === 'rewards' && (
-        <RewardsModule
-          currentOrg={currentOrg}
-          onNavigateToMessaging={() => setActiveSubTab('messaging')}
-        />
+        <RewardsModule currentOrg={currentOrg} onNavigateToMessaging={() => setActiveSubTab('messaging')} />
       )}
 
       {/* Render Messaging Subtab */}
-      {activeSubTab === 'messaging' && (
-        <DriverMessagingModule currentOrg={currentOrg} />
-      )}
+      {activeSubTab === 'messaging' && <DriverMessagingModule currentOrg={currentOrg} />}
 
       {/* Render Proactive Safety Tips Subtab */}
-      {activeSubTab === 'safetyTips' && (
-        <ProactiveSafetyTips currentOrg={currentOrg} />
-      )}
+      {activeSubTab === 'safetyTips' && <ProactiveSafetyTips currentOrg={currentOrg} />}
 
       {/* Render Calculator Subtab */}
       {activeSubTab === 'calculator' && (
@@ -155,7 +167,8 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                 Score de Sécurité Chauffeur & Analyse des Pénalités
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Score normalisé sur 100 avec pondérations configurables et explications exhaustives de chaque déduction.
+                Score normalisé sur 100 avec pondérations configurables et explications exhaustives de chaque
+                déduction.
               </p>
             </div>
 
@@ -174,7 +187,9 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                 <span className="text-xs font-bold uppercase tracking-wider">Driver Safety Score</span>
                 <Award className="w-5 h-5" />
               </div>
-              <div className="text-4xl font-extrabold font-mono my-2">{scoreResult.score} <span className="text-sm font-normal opacity-70">/ 100</span></div>
+              <div className="text-4xl font-extrabold font-mono my-2">
+                {scoreResult.score} <span className="text-sm font-normal opacity-70">/ 100</span>
+              </div>
               <p className="text-xs opacity-90 font-medium">
                 Chauffeur: <strong>{selectedDriver?.fullName}</strong> ({distanceKm} km parcourus)
               </p>
@@ -185,7 +200,9 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                 <span className="text-xs font-bold uppercase tracking-wider">Vehicle Health Score</span>
                 <Gauge className="w-5 h-5" />
               </div>
-              <div className="text-4xl font-extrabold font-mono my-2 text-slate-900">{vehicleHealthScore} <span className="text-sm text-slate-400 font-normal">/ 100</span></div>
+              <div className="text-4xl font-extrabold font-mono my-2 text-slate-900">
+                {vehicleHealthScore} <span className="text-sm text-slate-400 font-normal">/ 100</span>
+              </div>
               <p className="text-xs text-slate-500 font-medium">
                 Prochaine vidange dans <strong className="text-green-600 font-bold">6,500 km</strong>
               </p>
@@ -196,9 +213,16 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                 <span className="text-xs font-bold uppercase tracking-wider">Fuel Efficiency Score</span>
                 <Zap className="w-5 h-5" />
               </div>
-              <div className="text-4xl font-extrabold font-mono my-2 text-orange-600">{fuelEffResult.score} <span className="text-sm text-slate-400 font-normal">/ 100</span></div>
+              <div className="text-4xl font-extrabold font-mono my-2 text-orange-600">
+                {fuelEffResult.score} <span className="text-sm text-slate-400 font-normal">/ 100</span>
+              </div>
               <p className="text-xs text-red-600 font-semibold">
-                Statut: <strong>{fuelEffResult.status === 'SUSPECTED_THEFT' ? 'Anomalie / Vol Suspecté (48.5L/100km)' : 'Normal'}</strong>
+                Statut:{' '}
+                <strong>
+                  {fuelEffResult.status === 'SUSPECTED_THEFT'
+                    ? 'Anomalie / Vol Suspecté (48.5L/100km)'
+                    : 'Normal'}
+                </strong>
               </p>
             </div>
           </div>
@@ -217,7 +241,9 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                   className="bg-slate-50 text-xs text-slate-800 border border-slate-200 rounded-lg px-2 py-1 font-bold cursor-pointer"
                 >
                   {drivers.map(d => (
-                    <option key={d.id} value={d.id}>{d.fullName}</option>
+                    <option key={d.id} value={d.id}>
+                      {d.fullName}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -338,7 +364,10 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
 
                 <div className="space-y-3">
                   {scoreResult.explanations.map((exp, idx) => (
-                    <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-3">
+                    <div
+                      key={idx}
+                      className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-3"
+                    >
                       {exp.pointsLost > 0 ? (
                         <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                       ) : (
@@ -353,9 +382,7 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                          {exp.reason}
-                        </p>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">{exp.reason}</p>
                       </div>
                     </div>
                   ))}
@@ -388,7 +415,9 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
                   </div>
                   <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                     <div className="text-[10px] text-slate-500 font-sans font-medium">Géofence</div>
-                    <div className="font-bold text-indigo-600">{scoreConfig.weights.geofenceBreachWeight}%</div>
+                    <div className="font-bold text-indigo-600">
+                      {scoreConfig.weights.geofenceBreachWeight}%
+                    </div>
                   </div>
                 </div>
               </div>

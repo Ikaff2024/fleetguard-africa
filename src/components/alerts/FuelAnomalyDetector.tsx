@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Organization } from '../../types';
 import { UnifiedAlert } from './AlertsCenter';
-import {
-  MOCK_VEHICLES,
-  MOCK_DRIVERS,
-} from '../../data/mock-data';
+import { MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import {
   ShieldAlert,
   Play,
@@ -16,7 +13,7 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 
 interface FuelAnomalyDetectorProps {
@@ -40,19 +37,17 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
   onAlertTriggered,
   onNavigateToAlerts,
 }) => {
-  const orgVehicles = MOCK_VEHICLES.filter((v) => v.organizationId === currentOrg.id);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    orgVehicles[0]?.id || 'veh_actros_01'
-  );
+  const orgVehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(orgVehicles[0]?.id || 'veh_actros_01');
 
-  const activeVehicle = orgVehicles.find((v) => v.id === selectedVehicleId) || orgVehicles[0];
+  const activeVehicle = orgVehicles.find(v => v.id === selectedVehicleId) || orgVehicles[0];
   const assignedDriver = MOCK_DRIVERS.find(
-    (d) => d.assignedVehicleId === activeVehicle?.id || d.id === activeVehicle?.currentDriverId
+    d => d.assignedVehicleId === activeVehicle?.id || d.id === activeVehicle?.currentDriverId,
   );
 
   // Simulation Parameters
   const [selectedScenario, setSelectedScenario] = useState<'THEFT_OFF' | 'THEFT_IDLE' | 'REFUEL' | 'NORMAL'>(
-    'THEFT_OFF'
+    'THEFT_OFF',
   );
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -64,7 +59,8 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
   const scenariosData = {
     THEFT_OFF: {
       name: 'Siphonnage Nocturne (Moteur ÉTEINT)',
-      description: 'Chute brutale de gazole (-70L en 3 min) alors que le contact est coupé (Ignition: OFF) sur un parking non sécurisé.',
+      description:
+        'Chute brutale de gazole (-70L en 3 min) alors que le contact est coupé (Ignition: OFF) sur un parking non sécurisé.',
       initialLiters: 380,
       capacityLiters: 400,
       ignition: 'OFF' as const,
@@ -78,7 +74,8 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
     },
     THEFT_IDLE: {
       name: 'Siphonnage au Ralenti Suspect (Moteur ALLUMÉ)',
-      description: 'Consommation anormale (-45L en 3 min) au ralenti à vitesse nulle (0 km/h) en stationnement prolonged.',
+      description:
+        'Consommation anormale (-45L en 3 min) au ralenti à vitesse nulle (0 km/h) en stationnement prolonged.',
       initialLiters: 290,
       capacityLiters: 350,
       ignition: 'ON' as const,
@@ -92,7 +89,7 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
     },
     REFUEL: {
       name: 'Ravitaillement Légal en Station',
-      description: 'Hausse normale du niveau de carburant (+180L) lors d\'un plein régulier.',
+      description: "Hausse normale du niveau de carburant (+180L) lors d'un plein régulier.",
       initialLiters: 80,
       capacityLiters: 400,
       ignition: 'OFF' as const,
@@ -139,7 +136,9 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
           const tickData = activeScenario.ticks[currentStep];
           const initialLiters = activeScenario.initialLiters;
           const deltaLiters = parseFloat((tickData.liters - initialLiters).toFixed(1));
-          const fuelPercent = parseFloat(((tickData.liters / activeScenario.capacityLiters) * 100).toFixed(1));
+          const fuelPercent = parseFloat(
+            ((tickData.liters / activeScenario.capacityLiters) * 100).toFixed(1),
+          );
 
           // Anomaly Detection Rule:
           // Rule 1: Ignition is OFF and Delta <= -15 Liters
@@ -158,7 +157,7 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
             isAnomaly: isAnomalyTriggered,
           };
 
-          setTelemetryLogs((prev) => [...prev, newLog]);
+          setTelemetryLogs(prev => [...prev, newLog]);
 
           // Trigger Alert if anomaly detected for the first time
           if (isAnomalyTriggered && !detectedAnomaly) {
@@ -169,15 +168,16 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
               severity: 'CRITICAL',
               status: 'UNHANDLED',
               recordedAt: new Date().toISOString(),
-              title: tickData.ignition === 'OFF' 
-                ? '🚨 Vol de Carburant Suspecté (Contact ÉTEINT)' 
-                : '⚠️ Siphonnage en Stationnement (Moteur au Ralenti)',
-              description: `Détecteur Télémétrique FleetGuard: Perte abrupte de ${Math.abs(deltaLiters)}L (${((Math.abs(deltaLiters)/activeScenario.capacityLiters)*100).toFixed(1)}%) en ${currentStep + 1} minutes sur ${activeVehicle.make} ${activeVehicle.model} (${activeVehicle.immatriculation}) à ${activeScenario.location}. État Moteur: ${tickData.ignition === 'OFF' ? 'COUPE' : 'ALLUME (0 km/h)'}.`,
+              title:
+                tickData.ignition === 'OFF'
+                  ? '🚨 Vol de Carburant Suspecté (Contact ÉTEINT)'
+                  : '⚠️ Siphonnage en Stationnement (Moteur au Ralenti)',
+              description: `Détecteur Télémétrique FleetGuard: Perte abrupte de ${Math.abs(deltaLiters)}L (${((Math.abs(deltaLiters) / activeScenario.capacityLiters) * 100).toFixed(1)}%) en ${currentStep + 1} minutes sur ${activeVehicle.make} ${activeVehicle.model} (${activeVehicle.immatriculation}) à ${activeScenario.location}. État Moteur: ${tickData.ignition === 'OFF' ? 'COUPE' : 'ALLUME (0 km/h)'}.`,
               vehicleId: activeVehicle.id,
               driverId: assignedDriver?.id,
               locationName: activeScenario.location,
               latitude: 9.337,
-              longitude: 2.630,
+              longitude: 2.63,
               metricValue: `-${Math.abs(deltaLiters)} Litres (Contact ${tickData.ignition})`,
               metricLabel: 'Alerte Siphonnage',
               actionsTaken: ['Analyse Télémétrique Automatique'],
@@ -207,7 +207,7 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
             }
           }
 
-          setCurrentStep((prev) => prev + 1);
+          setCurrentStep(prev => prev + 1);
         }, 1200);
       } else {
         setIsRunning(false);
@@ -216,7 +216,17 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isRunning, currentStep, activeScenario, activeVehicle, assignedDriver, detectedAnomaly, currentOrg.id, onAlertTriggered, soundEnabled]);
+  }, [
+    isRunning,
+    currentStep,
+    activeScenario,
+    activeVehicle,
+    assignedDriver,
+    detectedAnomaly,
+    currentOrg.id,
+    onAlertTriggered,
+    soundEnabled,
+  ]);
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden space-y-0">
@@ -234,7 +244,8 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
             </span>
           </h3>
           <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-            Surveillance continue du niveau des réservoirs gazole via jauge capacitive. Déclenchement instantané d'une alerte critique dès détection d'une baisse anormale à moteur coupé.
+            Surveillance continue du niveau des réservoirs gazole via jauge capacitive. Déclenchement
+            instantané d'une alerte critique dès détection d'une baisse anormale à moteur coupé.
           </p>
         </div>
 
@@ -264,13 +275,13 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
             </label>
             <select
               value={selectedVehicleId}
-              onChange={(e) => {
+              onChange={e => {
                 setSelectedVehicleId(e.target.value);
                 handleReset();
               }}
               className="w-full bg-white text-xs font-bold text-slate-800 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 cursor-pointer"
             >
-              {orgVehicles.map((v) => (
+              {orgVehicles.map(v => (
                 <option key={v.id} value={v.id}>
                   {v.immatriculation} - {v.make} {v.model} ({v.type})
                 </option>
@@ -285,7 +296,7 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
             </label>
             <select
               value={selectedScenario}
-              onChange={(e) => {
+              onChange={e => {
                 setSelectedScenario(e.target.value as any);
                 handleReset();
               }}
@@ -360,15 +371,19 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
               </span>
             </div>
 
-            <p className="text-xs text-red-50 leading-relaxed font-medium">
-              {detectedAnomaly.description}
-            </p>
+            <p className="text-xs text-red-50 leading-relaxed font-medium">{detectedAnomaly.description}</p>
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1">
               <div className="flex items-center gap-4 text-red-100 font-mono text-[11px]">
-                <span>Véhicule: <strong>{activeVehicle?.immatriculation}</strong></span>
-                <span>Chauffeur: <strong>{assignedDriver?.fullName || 'Inconnu'}</strong></span>
-                <span>Anomalie: <strong className="text-yellow-300">{detectedAnomaly.metricValue}</strong></span>
+                <span>
+                  Véhicule: <strong>{activeVehicle?.immatriculation}</strong>
+                </span>
+                <span>
+                  Chauffeur: <strong>{assignedDriver?.fullName || 'Inconnu'}</strong>
+                </span>
+                <span>
+                  Anomalie: <strong className="text-yellow-300">{detectedAnomaly.metricValue}</strong>
+                </span>
               </div>
 
               {onNavigateToAlerts && (
@@ -399,7 +414,8 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
           <div className="bg-slate-950 text-slate-100 font-mono text-xs rounded-xl p-4 space-y-2 max-h-56 overflow-y-auto border border-slate-800">
             {telemetryLogs.length === 0 ? (
               <div className="text-slate-500 text-center py-6 italic">
-                Cliquez sur "Lancer Détection Télémétrique" pour simuler l'arrivée des données de la jauge gazole...
+                Cliquez sur "Lancer Détection Télémétrique" pour simuler l'arrivée des données de la jauge
+                gazole...
               </div>
             ) : (
               telemetryLogs.map((log, idx) => (
@@ -435,8 +451,8 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
                         log.deltaLiters < 0
                           ? 'text-red-400'
                           : log.deltaLiters > 0
-                          ? 'text-emerald-400'
-                          : 'text-slate-400'
+                            ? 'text-emerald-400'
+                            : 'text-slate-400'
                       }`}
                     >
                       {log.deltaLiters > 0 ? `+${log.deltaLiters}` : log.deltaLiters} L

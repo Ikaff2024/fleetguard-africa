@@ -9,7 +9,7 @@ interface FuelAnomalyDetectionProps {
 
 export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ currentOrg }) => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  
+
   const anomalies = [
     {
       id: 'anom_001',
@@ -18,7 +18,8 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
       type: 'FUEL_THEFT_SUSPICION',
       severity: 'CRITICAL',
       location: 'RNIE2, Parakou',
-      description: 'Rapid fuel level drop (-45L in 10 mins) while vehicle is stationary at an unauthorized stop.',
+      description:
+        'Rapid fuel level drop (-45L in 10 mins) while vehicle is stationary at an unauthorized stop.',
       gpsCoordinates: '9.3456° N, 2.6189° E',
       status: 'INVESTIGATING',
       estimatedLoss: 45, // Liters
@@ -30,7 +31,8 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
       type: 'INEFFICIENT_ROUTE',
       severity: 'MODERATE',
       location: 'Abomey-Calavi to Ouidah',
-      description: 'Vehicle deviated from optimized route by 15km, resulting in an additional 8L of fuel consumption.',
+      description:
+        'Vehicle deviated from optimized route by 15km, resulting in an additional 8L of fuel consumption.',
       gpsCoordinates: '6.4468° N, 2.3480° E',
       status: 'RESOLVED',
       estimatedLoss: 8,
@@ -58,11 +60,11 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
       gpsCoordinates: '11.8670° N, 3.3830° E',
       status: 'RESOLVED',
       estimatedLoss: 60,
-    }
+    },
   ];
 
   const vehicles = useMemo(() => {
-    return MOCK_VEHICLES.filter((v) => v.organizationId === currentOrg.id);
+    return MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
   }, [currentOrg.id]);
 
   const filteredAnomalies = useMemo(() => {
@@ -81,22 +83,25 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
               <ShieldAlert className="w-4 h-4 text-rose-500" />
               <span>Fuel Integrity & Theft Prevention</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Fuel Anomaly Detection Service
-            </h2>
+            <h2 className="text-xl font-bold text-slate-900">Fuel Anomaly Detection Service</h2>
             <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-              Cross-referencing GPS telemetry data with fuel level sensors to identify suspicious drops, inefficient routes, and excessive idling.
+              Cross-referencing GPS telemetry data with fuel level sensors to identify suspicious drops,
+              inefficient routes, and excessive idling.
             </p>
           </div>
-          
+
           <div className="flex gap-4">
             <div className="bg-rose-50 border border-rose-200 p-3 rounded-lg text-center">
               <div className="text-2xl font-extrabold text-rose-700">{criticalCount}</div>
-              <div className="text-[10px] text-rose-600 font-bold uppercase tracking-wider">Critical Alerts</div>
+              <div className="text-[10px] text-rose-600 font-bold uppercase tracking-wider">
+                Critical Alerts
+              </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-center">
               <div className="text-2xl font-extrabold text-amber-700">{totalFuelLoss.toFixed(1)} L</div>
-              <div className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Est. Fuel Loss</div>
+              <div className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
+                Est. Fuel Loss
+              </div>
             </div>
           </div>
         </div>
@@ -108,9 +113,9 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
           <span>Detected Anomalies</span>
         </div>
         <div>
-          <select 
+          <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={e => setSelectedStatus(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-orange-500"
           >
             <option value="ALL">All Statuses</option>
@@ -124,9 +129,12 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
       <div className="grid grid-cols-1 gap-4">
         {filteredAnomalies.map(anomaly => {
           const vehicle = vehicles.find(v => v.id === anomaly.vehicleId);
-          
+
           return (
-            <div key={anomaly.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:border-rose-300 transition relative overflow-hidden">
+            <div
+              key={anomaly.id}
+              className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:border-rose-300 transition relative overflow-hidden"
+            >
               {anomaly.severity === 'CRITICAL' && (
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>
               )}
@@ -140,22 +148,30 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
               <div className="flex flex-col sm:flex-row gap-5 items-start justify-between ml-3">
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
-                      anomaly.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-700' :
-                      anomaly.severity === 'WARNING' ? 'bg-amber-100 text-amber-700' :
-                      'bg-indigo-100 text-indigo-700'
-                    }`}>
+                    <span
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                        anomaly.severity === 'CRITICAL'
+                          ? 'bg-rose-100 text-rose-700'
+                          : anomaly.severity === 'WARNING'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-indigo-100 text-indigo-700'
+                      }`}
+                    >
                       {anomaly.type.replace(/_/g, ' ')}
                     </span>
-                    
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${
-                      anomaly.status === 'NEW' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                      anomaly.status === 'INVESTIGATING' ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                      'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                    }`}>
+
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${
+                        anomaly.status === 'NEW'
+                          ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                          : anomaly.status === 'INVESTIGATING'
+                            ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                            : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                      }`}
+                    >
                       Status: {anomaly.status}
                     </span>
-                    
+
                     <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
                       <Clock className="w-3.5 h-3.5" />
                       {new Date(anomaly.timestamp).toLocaleString()}
@@ -163,17 +179,19 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
                   </div>
 
                   <h3 className="text-sm font-bold text-slate-900">
-                    {vehicle ? `${vehicle.immatriculation} - ${vehicle.make} ${vehicle.model}` : 'Unknown Vehicle'}
+                    {vehicle
+                      ? `${vehicle.immatriculation} - ${vehicle.make} ${vehicle.model}`
+                      : 'Unknown Vehicle'}
                   </h3>
-                  
-                  <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">
-                    {anomaly.description}
-                  </p>
+
+                  <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">{anomaly.description}</p>
 
                   <div className="flex items-center gap-4 pt-2">
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
                       <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{anomaly.location} ({anomaly.gpsCoordinates})</span>
+                      <span>
+                        {anomaly.location} ({anomaly.gpsCoordinates})
+                      </span>
                     </div>
                   </div>
                 </div>

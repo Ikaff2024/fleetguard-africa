@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MOCK_VEHICLES, MOCK_DRIVERS, MOCK_GEOFENCES, MOCK_ROUTE_POINTS, MOCK_FUEL_STATIONS } from '../../data/mock-data';
+import {
+  MOCK_VEHICLES,
+  MOCK_DRIVERS,
+  MOCK_GEOFENCES,
+  MOCK_ROUTE_POINTS,
+  MOCK_FUEL_STATIONS,
+} from '../../data/mock-data';
 import { Organization, GpsPoint } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -20,7 +26,7 @@ import {
   AlertTriangle,
   Fuel,
   Phone,
-  Map as MapIcon
+  Map as MapIcon,
 } from 'lucide-react';
 
 interface LiveFleetMapProps {
@@ -90,7 +96,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
         lastGpsPoint.latitude,
         lastGpsPoint.longitude,
         stn.latitude,
-        stn.longitude
+        stn.longitude,
       );
       return { ...stn, distanceKm };
     })
@@ -105,8 +111,10 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
       if (!mapContainerRef.current) return;
 
       // Center map around West Africa / East Africa based on organization country
-      const centerLat = currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
-      const centerLng = currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.1092;
+      const centerLat =
+        currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
+      const centerLng =
+        currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.1092;
 
       if (!mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current).setView([centerLat, centerLng], 7);
@@ -144,19 +152,25 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
       layerGroupRef.current = { traffic: [], weather: [], geofences: [], fuelStations: [], markers: [] };
 
       // Base Tile Layer selection
-      let tileUrl = isDark && baseMapStyle === 'streets'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      let tileAttr = isDark && baseMapStyle === 'streets'
-        ? '&copy; OpenStreetMap contributors &copy; CARTO | FleetGuard Africa'
-        : '&copy; OpenStreetMap contributors | FleetGuard Africa';
+      let tileUrl =
+        isDark && baseMapStyle === 'streets'
+          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+          : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      let tileAttr =
+        isDark && baseMapStyle === 'streets'
+          ? '&copy; OpenStreetMap contributors &copy; CARTO | FleetGuard Africa'
+          : '&copy; OpenStreetMap contributors | FleetGuard Africa';
 
       if (baseMapStyle === 'terrain') {
-        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
-        tileAttr = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), swisstopo, MapmyIndia, OpenStreetMap contributors, and the GIS User Community';
+        tileUrl =
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+        tileAttr =
+          'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), swisstopo, MapmyIndia, OpenStreetMap contributors, and the GIS User Community';
       } else if (baseMapStyle === 'satellite') {
-        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-        tileAttr = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+        tileUrl =
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        tileAttr =
+          'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
       }
 
       const newTileLayer = L.tileLayer(tileUrl, {
@@ -196,7 +210,11 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
           const isCongested = p1.speedKmH < 25;
           const isModerate = p1.speedKmH >= 25 && p1.speedKmH < 50;
           const color = isCongested ? '#ef4444' : isModerate ? '#f59e0b' : '#10b981';
-          const trafficLabel = isCongested ? 'Trafic Très Dense (Ralentissement)' : isModerate ? 'Trafic Modéré' : 'Fluide';
+          const trafficLabel = isCongested
+            ? 'Trafic Très Dense (Ralentissement)'
+            : isModerate
+              ? 'Trafic Modéré'
+              : 'Fluide';
 
           const trafficPolyline = L.polyline(
             [
@@ -208,7 +226,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
               weight: 8,
               opacity: 0.65,
               lineCap: 'round',
-            }
+            },
           ).addTo(map).bindPopup(`
             <div style="font-family: sans-serif; font-size: 11px;">
               <b>Densité du Trafic Routier</b><br/>
@@ -236,7 +254,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             lat: centerLat + 0.8,
             lng: centerLng + 0.25,
             radius: 18000,
-            type: 'Pluie Forte & Risque d\'Aqualissage',
+            type: "Pluie Forte & Risque d'Aqualissage",
             color: '#0284c7',
             icon: '🌧️',
           },
@@ -266,17 +284,23 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
         sortedFuelStations.forEach(stn => {
           const isSelected = stn.id === selectedFuelStationId;
 
-          const brandBgColor = stn.brand === 'TOTAL_ENERGIES'
-            ? '#ea580c'
-            : stn.brand === 'ORYX'
-            ? '#0284c7'
-            : stn.brand === 'SHELL'
-            ? '#eab308'
-            : stn.brand === 'CORLAY'
-            ? '#16a34a'
-            : '#6366f1';
+          const brandBgColor =
+            stn.brand === 'TOTAL_ENERGIES'
+              ? '#ea580c'
+              : stn.brand === 'ORYX'
+                ? '#0284c7'
+                : stn.brand === 'SHELL'
+                  ? '#eab308'
+                  : stn.brand === 'CORLAY'
+                    ? '#16a34a'
+                    : '#6366f1';
 
-          const stockColor = stn.fuelStockStatus === 'OPTIMAL' ? '#10b981' : stn.fuelStockStatus === 'MEDIUM' ? '#f59e0b' : '#ef4444';
+          const stockColor =
+            stn.fuelStockStatus === 'OPTIMAL'
+              ? '#10b981'
+              : stn.fuelStockStatus === 'MEDIUM'
+                ? '#f59e0b'
+                : '#ef4444';
 
           const markerHtml = `
             <div style="
@@ -309,8 +333,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             iconAnchor: [42, 14],
           });
 
-          const fuelMarker = L.marker([stn.latitude, stn.longitude], { icon: fuelIcon })
-            .addTo(map)
+          const fuelMarker = L.marker([stn.latitude, stn.longitude], { icon: fuelIcon }).addTo(map)
             .bindPopup(`
               <div style="font-family: sans-serif; font-size: 11px; min-width: 210px; padding: 2px;">
                 <div style="display: flex; items-center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
@@ -376,7 +399,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
               weight: 3,
               dashArray: '8, 8',
               opacity: 0.9,
-            }
+            },
           ).addTo(map).bindPopup(`
             <div style="font-family: sans-serif; font-size: 11px;">
               <b>Axe de Ravitaillement Express</b><br/>
@@ -397,13 +420,19 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
           const markerColor = point.eventFlags?.includes('OVER_SPEED')
             ? 'rose'
             : point.eventFlags?.includes('HARSH_BRAKE')
-            ? 'amber'
-            : isLatest
-            ? 'emerald'
-            : 'sky';
+              ? 'amber'
+              : isLatest
+                ? 'emerald'
+                : 'sky';
 
           const markerHtml = `<div style="background-color: ${
-            markerColor === 'rose' ? '#ef4444' : markerColor === 'amber' ? '#f59e0b' : markerColor === 'emerald' ? '#10b981' : '#0284c7'
+            markerColor === 'rose'
+              ? '#ef4444'
+              : markerColor === 'amber'
+                ? '#f59e0b'
+                : markerColor === 'emerald'
+                  ? '#10b981'
+                  : '#0284c7'
           }; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`;
 
           const customIcon = L.divIcon({
@@ -413,8 +442,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             iconAnchor: [7, 7],
           });
 
-          const marker = L.marker([point.latitude, point.longitude], { icon: customIcon })
-            .addTo(map)
+          const marker = L.marker([point.latitude, point.longitude], { icon: customIcon }).addTo(map)
             .bindPopup(`
               <div style="font-family: sans-serif; font-size: 11px;">
                 <b>Camion: ${activeVehicle?.immatriculation || 'Flotte'}</b><br/>
@@ -435,7 +463,18 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     // tiers, la CSP peut interdire tout script externe, et le chargement ne
     // paie plus un aller-retour supplémentaire sur les liaisons à forte latence.
     initMap();
-  }, [currentOrg, routePoints, selectedVehicleId, baseMapStyle, showTraffic, showWeather, showGeofences, showFuelStations, selectedFuelStationId, isDark]);
+  }, [
+    currentOrg,
+    routePoints,
+    selectedVehicleId,
+    baseMapStyle,
+    showTraffic,
+    showWeather,
+    showGeofences,
+    showFuelStations,
+    selectedFuelStationId,
+    isDark,
+  ]);
 
   // Simulate Mobile GPS Batch Ingestion
   const handleSimulateGPSBatch = () => {
@@ -471,7 +510,8 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             <span>Suivi Télématique & Carte des Corridors en Temps Réel</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Supervision multi-tenant de la flotte, alertes météo, trafic routier et stations de ravitaillement zone isolée.
+            Supervision multi-tenant de la flotte, alertes météo, trafic routier et stations de ravitaillement
+            zone isolée.
           </p>
         </div>
 
@@ -481,7 +521,11 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             disabled={isSimulatingBatch}
             className="px-3.5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-2 shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
-            {isSimulatingBatch ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isSimulatingBatch ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
             <span>Simuler Ingestion Batch Mobile (X-Batch-Id)</span>
           </button>
           {simulatedBatchCount > 0 && (
@@ -519,7 +563,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-xs text-orange-600 dark:text-orange-400">{veh.immatriculation}</span>
+                    <span className="font-mono font-bold text-xs text-orange-600 dark:text-orange-400">
+                      {veh.immatriculation}
+                    </span>
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         veh.status === 'ACTIVE'
@@ -537,7 +583,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
 
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
                     <span>Chauffeur: {driver?.fullName.split(' ')[0] || 'Non assigné'}</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300">{veh.currentOdometerKm.toLocaleString()} km</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      {veh.currentOdometerKm.toLocaleString()} km
+                    </span>
                   </div>
                 </div>
               );
@@ -567,7 +615,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Horodatage :</span>
-                  <span className="text-slate-300">{new Date(lastGpsPoint.timestamp || '').toLocaleTimeString()}</span>
+                  <span className="text-slate-300">
+                    {new Date(lastGpsPoint.timestamp || '').toLocaleTimeString()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -654,7 +704,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                   {/* Fuel Stations Layer Toggle */}
                   <label className="flex items-center justify-between p-2 rounded-lg bg-orange-950/30 border border-orange-500/30 hover:bg-orange-900/40 transition cursor-pointer">
                     <div className="flex items-center gap-2">
-                      <Fuel className={`w-4 h-4 ${showFuelStations ? 'text-orange-400' : 'text-slate-500'}`} />
+                      <Fuel
+                        className={`w-4 h-4 ${showFuelStations ? 'text-orange-400' : 'text-slate-500'}`}
+                      />
                       <span className="font-bold text-orange-200">Stations Carburant</span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -664,7 +716,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                       <input
                         type="checkbox"
                         checked={showFuelStations}
-                        onChange={(e) => setShowFuelStations(e.target.checked)}
+                        onChange={e => setShowFuelStations(e.target.checked)}
                         className="accent-orange-500 w-4 h-4 cursor-pointer"
                       />
                     </div>
@@ -673,13 +725,15 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                   {/* Traffic Density Toggle */}
                   <label className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition cursor-pointer">
                     <div className="flex items-center gap-2">
-                      <Activity className={`w-4 h-4 ${showTraffic ? 'text-emerald-400' : 'text-slate-500'}`} />
+                      <Activity
+                        className={`w-4 h-4 ${showTraffic ? 'text-emerald-400' : 'text-slate-500'}`}
+                      />
                       <span className="font-medium text-slate-200">Densité du Trafic</span>
                     </div>
                     <input
                       type="checkbox"
                       checked={showTraffic}
-                      onChange={(e) => setShowTraffic(e.target.checked)}
+                      onChange={e => setShowTraffic(e.target.checked)}
                       className="accent-orange-500 w-4 h-4 cursor-pointer"
                     />
                   </label>
@@ -693,7 +747,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                     <input
                       type="checkbox"
                       checked={showWeather}
-                      onChange={(e) => setShowWeather(e.target.checked)}
+                      onChange={e => setShowWeather(e.target.checked)}
                       className="accent-orange-500 w-4 h-4 cursor-pointer"
                     />
                   </label>
@@ -701,13 +755,15 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                   {/* Geofences Overlay Toggle */}
                   <label className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition cursor-pointer">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert className={`w-4 h-4 ${showGeofences ? 'text-amber-400' : 'text-slate-500'}`} />
+                      <ShieldAlert
+                        className={`w-4 h-4 ${showGeofences ? 'text-amber-400' : 'text-slate-500'}`}
+                      />
                       <span className="font-medium text-slate-200">Géofences & Ports</span>
                     </div>
                     <input
                       type="checkbox"
                       checked={showGeofences}
-                      onChange={(e) => setShowGeofences(e.target.checked)}
+                      onChange={e => setShowGeofences(e.target.checked)}
                       className="accent-orange-500 w-4 h-4 cursor-pointer"
                     />
                   </label>
@@ -748,7 +804,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Localisation en temps réel des stations à proximité du véhicule <strong className="text-slate-800 dark:text-slate-200">{activeVehicle?.immatriculation}</strong> pour éviter les pannes sèches en zones sans réseau ou isolées.
+              Localisation en temps réel des stations à proximité du véhicule{' '}
+              <strong className="text-slate-800 dark:text-slate-200">{activeVehicle?.immatriculation}</strong>{' '}
+              pour éviter les pannes sèches en zones sans réseau ou isolées.
             </p>
           </div>
 
@@ -782,7 +840,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             </div>
             <div className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1.5 font-mono">
               <span>32 %</span>
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(~112 Litres / {activeVehicle?.tankCapacityLiters || 350}L)</span>
+              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                (~112 Litres / {activeVehicle?.tankCapacityLiters || 350}L)
+              </span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
               <div className="bg-amber-500 h-full rounded-full" style={{ width: '32%' }}></div>
@@ -856,7 +916,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                   {/* Fuel Prices & Stock Badge */}
                   <div className="mt-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs space-y-1 font-mono">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-500 dark:text-slate-400 text-[11px]">Gazole / Diesel :</span>
+                      <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+                        Gazole / Diesel :
+                      </span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
                         {stn.fuelPrices.dieselPriceXOF} {currentOrg.currency} / L
                       </span>
@@ -871,7 +933,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                     )}
                     <div className="flex justify-between items-center pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]">
                       <span className="text-slate-400 font-sans">Stock Carburant :</span>
-                      <span className={`font-bold font-sans ${stn.fuelStockStatus === 'OPTIMAL' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      <span
+                        className={`font-bold font-sans ${stn.fuelStockStatus === 'OPTIMAL' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
+                      >
                         {stn.fuelStockStatus === 'OPTIMAL' ? 'Optimal (Sans Attente)' : 'Réapprovisionnement'}
                       </span>
                     </div>
@@ -922,7 +986,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                       }`}
                     >
                       <Navigation className="w-3.5 h-3.5" />
-                      <span>{isSelected ? 'Tracé Actif' : 'Tracer l\'Itinéraire'}</span>
+                      <span>{isSelected ? 'Tracé Actif' : "Tracer l'Itinéraire"}</span>
                     </button>
                   </div>
                 </div>

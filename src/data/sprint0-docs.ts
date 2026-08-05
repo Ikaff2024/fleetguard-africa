@@ -4,9 +4,9 @@
 
 export const SPRINT_0_DOCS = {
   title: "FleetGuard Africa - Dossier d'Architecture & Spécifications Spint 0",
-  version: "1.0.0-MVP",
-  date: "Juillet 2026",
-  author: "Senior Software Architect & Lead Product Engineer",
+  version: '1.0.0-MVP',
+  date: 'Juillet 2026',
+  author: 'Senior Software Architect & Lead Product Engineer',
 
   // 1. HYPOTHÈSES ET DÉCISIONS D'ARCHITECTURE
   architectureDecisions: {
@@ -43,7 +43,7 @@ Les flottes de transport inter-États et de livraison urbaine/suburbaine en Afri
 
   // 2. MONOREPO STRUCTURE
   monorepoStructure: {
-    title: "2. Structure Complète du Monorepo",
+    title: '2. Structure Complète du Monorepo',
     content: `
 \`\`\`
 fleetguard-africa/
@@ -419,95 +419,167 @@ model AuditLog {
 
   // 5. ROLE & PERMISSION MATRIX
   rbacMatrix: [
-    { permission: "Créer / Modifier Organisation", superAdmin: true, orgAdmin: false, fleetMgr: false, safetyOfficer: false, tech: false, driver: false },
-    { permission: "Gérer Utilisateurs & Rôles Tenant", superAdmin: true, orgAdmin: true, fleetMgr: false, safetyOfficer: false, tech: false, driver: false },
-    { permission: "Créer / Modifier Véhicules & Affectations", superAdmin: true, orgAdmin: true, fleetMgr: true, safetyOfficer: false, tech: false, driver: false },
-    { permission: "Consulter Carte Temps Réel & Trajets", superAdmin: true, orgAdmin: true, fleetMgr: true, safetyOfficer: true, tech: true, driver: false },
-    { permission: "Configurer Pondération Driver Score", superAdmin: true, orgAdmin: true, fleetMgr: true, safetyOfficer: true, tech: false, driver: false },
-    { permission: "Saisir Maintenance / Carnet d'Entretien", superAdmin: true, orgAdmin: true, fleetMgr: true, safetyOfficer: false, tech: true, driver: false },
-    { permission: "Saisir Plein Carburant", superAdmin: true, orgAdmin: true, fleetMgr: true, safetyOfficer: false, tech: false, driver: true },
-    { permission: "Envoyer Télémétrie GPS (App Mobile)", superAdmin: false, orgAdmin: false, fleetMgr: false, safetyOfficer: false, tech: false, driver: true },
-    { permission: "Consulter Fleet Intelligence AI Hub", superAdmin: true, orgAdmin: true, fleetMgr: true, safetyOfficer: true, tech: false, driver: false },
+    {
+      permission: 'Créer / Modifier Organisation',
+      superAdmin: true,
+      orgAdmin: false,
+      fleetMgr: false,
+      safetyOfficer: false,
+      tech: false,
+      driver: false,
+    },
+    {
+      permission: 'Gérer Utilisateurs & Rôles Tenant',
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: false,
+      safetyOfficer: false,
+      tech: false,
+      driver: false,
+    },
+    {
+      permission: 'Créer / Modifier Véhicules & Affectations',
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: true,
+      safetyOfficer: false,
+      tech: false,
+      driver: false,
+    },
+    {
+      permission: 'Consulter Carte Temps Réel & Trajets',
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: true,
+      safetyOfficer: true,
+      tech: true,
+      driver: false,
+    },
+    {
+      permission: 'Configurer Pondération Driver Score',
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: true,
+      safetyOfficer: true,
+      tech: false,
+      driver: false,
+    },
+    {
+      permission: "Saisir Maintenance / Carnet d'Entretien",
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: true,
+      safetyOfficer: false,
+      tech: true,
+      driver: false,
+    },
+    {
+      permission: 'Saisir Plein Carburant',
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: true,
+      safetyOfficer: false,
+      tech: false,
+      driver: true,
+    },
+    {
+      permission: 'Envoyer Télémétrie GPS (App Mobile)',
+      superAdmin: false,
+      orgAdmin: false,
+      fleetMgr: false,
+      safetyOfficer: false,
+      tech: false,
+      driver: true,
+    },
+    {
+      permission: 'Consulter Fleet Intelligence AI Hub',
+      superAdmin: true,
+      orgAdmin: true,
+      fleetMgr: true,
+      safetyOfficer: true,
+      tech: false,
+      driver: false,
+    },
   ],
 
   // 6. API CONTRACTS
   apiContracts: [
     {
-      endpoint: "POST /api/v1/auth/login",
-      description: "Authentification utilisateur et émission des JWT Access Token & Refresh Token",
+      endpoint: 'POST /api/v1/auth/login',
+      description: 'Authentification utilisateur et émission des JWT Access Token & Refresh Token',
       request: {
-        email: "gestionnaire@transafrik.bj",
-        password: "••••••••••••"
+        email: 'gestionnaire@transafrik.bj',
+        password: '••••••••••••',
       },
       response: {
         statusCode: 200,
         data: {
-          token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          refreshToken: "d7a82b91-4e20-4121-8219-...",
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          refreshToken: 'd7a82b91-4e20-4121-8219-...',
           user: {
-            id: "usr_9921",
-            fullName: "Koffi Mensah",
-            email: "gestionnaire@transafrik.bj",
-            role: "FLEET_MANAGER",
-            organizationId: "org_transafrik_cotonou"
-          }
-        }
-      }
+            id: 'usr_9921',
+            fullName: 'Koffi Mensah',
+            email: 'gestionnaire@transafrik.bj',
+            role: 'FLEET_MANAGER',
+            organizationId: 'org_transafrik_cotonou',
+          },
+        },
+      },
     },
     {
-      endpoint: "POST /api/v1/tracking/telemetry/batch",
+      endpoint: 'POST /api/v1/tracking/telemetry/batch',
       description: "Ingestion par lot de points GPS depuis l'application mobile Android",
       request: {
-        batchId: "batch_20260731_98124",
-        vehicleId: "veh_actros_01",
-        driverId: "drv_moussa_04",
-        deviceId: "imei_864291048291048",
+        batchId: 'batch_20260731_98124',
+        vehicleId: 'veh_actros_01',
+        driverId: 'drv_moussa_04',
+        deviceId: 'imei_864291048291048',
         points: [
           {
             latitude: 6.3654,
             longitude: 2.4183,
             speedKmH: 78.5,
             headingDegree: 142.0,
-            timestamp: "2026-07-31T09:14:00.000Z",
+            timestamp: '2026-07-31T09:14:00.000Z',
             accuracyMeters: 4.2,
             ignitionOn: true,
             batteryLevelPct: 88,
-            networkType: "3G"
+            networkType: '3G',
           },
           {
             latitude: 6.3712,
             longitude: 2.4221,
             speedKmH: 94.2, // Excès de vitesse
             headingDegree: 144.0,
-            timestamp: "2026-07-31T09:14:15.000Z",
+            timestamp: '2026-07-31T09:14:15.000Z',
             accuracyMeters: 3.8,
             ignitionOn: true,
             batteryLevelPct: 88,
-            networkType: "3G",
-            eventFlags: ["OVER_SPEED"]
-          }
-        ]
+            networkType: '3G',
+            eventFlags: ['OVER_SPEED'],
+          },
+        ],
       },
       response: {
         statusCode: 202,
         data: {
           accepted: true,
           processedPoints: 2,
-          batchId: "batch_20260731_98124",
+          batchId: 'batch_20260731_98124',
           idempotentDuplicate: false,
-          safetyEventsGenerated: 1
-        }
-      }
+          safetyEventsGenerated: 1,
+        },
+      },
     },
     {
-      endpoint: "GET /api/v1/scoring/drivers/:id",
+      endpoint: 'GET /api/v1/scoring/drivers/:id',
       description: "Obtention du Driver Safety Score détaillé et explicable d'un chauffeur",
       request: null,
       response: {
         statusCode: 200,
         data: {
-          driverId: "drv_moussa_04",
-          fullName: "Moussa Diop",
+          driverId: 'drv_moussa_04',
+          fullName: 'Moussa Diop',
           currentSafetyScore: 84.5,
           totalKmDrivenPeriod: 1420.0,
           scoreBreakdown: {
@@ -515,23 +587,23 @@ model AuditLog {
             harshBrakingPenalty: -4.5,
             rapidAccelPenalty: -3.0,
             fatigueNightPenalty: -0.0,
-            geofenceBreachPenalty: -0.0
+            geofenceBreachPenalty: -0.0,
           },
           penaltiesExplanations: [
             {
-              category: "EXCÈS_DE_VITESSE",
+              category: 'EXCÈS_DE_VITESSE',
               pointsLost: 8.0,
-              reason: "4 pointements enregistrés au-dessus de 90 km/h sur l'axe Cotonou-Parakou."
+              reason: "4 pointements enregistrés au-dessus de 90 km/h sur l'axe Cotonou-Parakou.",
             },
             {
-              category: "FREINAGE_BRUSQUE",
+              category: 'FREINAGE_BRUSQUE',
               pointsLost: 4.5,
-              reason: "2 décélérations supérieures à 0.4g détectées par accéléromètre."
-            }
-          ]
-        }
-      }
-    }
+              reason: '2 décélérations supérieures à 0.4g détectées par accéléromètre.',
+            },
+          ],
+        },
+      },
+    },
   ],
 
   // 7. GPS PROTOCOL & OFFLINE SYNC
@@ -557,21 +629,25 @@ model AuditLog {
   // 8. SCREEN MOCKUPS
   screenMockups: [
     {
-      screen: "Tableau de Bord Global (Multi-Tenant)",
-      layoutText: "[Header: Logo FleetGuard Africa | Sélecteur Tenant: TransAfrik Logistics | Currency: FCFA | Timezone: GMT+1]\n[KPi Cards: 42 Véhicules Actifs | 92.4% Taux de Disponibilité | Score Moyen Chauffeurs: 87/100 | Alerte Carburant: 2 vols suspectés]\n[Section Carte Live Map: Visualisation interactive MapLibre des axes Cotonou-Parakou, Dakar-Touba, Nairobi-Mombasa]\n[Sidebar Gauche: Carte Live | Flotte & Véhicules | Chauffeurs & Scoring | Maintenance & Carburant | Conformité CEDEAO | Intelligence Hub IA]"
+      screen: 'Tableau de Bord Global (Multi-Tenant)',
+      layoutText:
+        '[Header: Logo FleetGuard Africa | Sélecteur Tenant: TransAfrik Logistics | Currency: FCFA | Timezone: GMT+1]\n[KPi Cards: 42 Véhicules Actifs | 92.4% Taux de Disponibilité | Score Moyen Chauffeurs: 87/100 | Alerte Carburant: 2 vols suspectés]\n[Section Carte Live Map: Visualisation interactive MapLibre des axes Cotonou-Parakou, Dakar-Touba, Nairobi-Mombasa]\n[Sidebar Gauche: Carte Live | Flotte & Véhicules | Chauffeurs & Scoring | Maintenance & Carburant | Conformité CEDEAO | Intelligence Hub IA]',
     },
     {
-      screen: "Carte Temps Réel & Ingestion GPS Live",
-      layoutText: "[Top Controls: Filtre par statut (En Route, Arrêté, En Alerte) | Recherche par immatriculation]\n[Carte Centrée sur l'Afrique de l'Ouest/Est avec marqueurs de couleur (Vert: Normal, Orange: Vitesse, Rouge: Alerte/Panne)]\n[Panneau de Détail Véhicule Glissant: Vitesse instantanée (84 km/h), Niveau Batterie Tracker (92%), Chauffeur Assigné, Trajet En Cours, Statut Réseau (3G/4G)]"
+      screen: 'Carte Temps Réel & Ingestion GPS Live',
+      layoutText:
+        "[Top Controls: Filtre par statut (En Route, Arrêté, En Alerte) | Recherche par immatriculation]\n[Carte Centrée sur l'Afrique de l'Ouest/Est avec marqueurs de couleur (Vert: Normal, Orange: Vitesse, Rouge: Alerte/Panne)]\n[Panneau de Détail Véhicule Glissant: Vitesse instantanée (84 km/h), Niveau Batterie Tracker (92%), Chauffeur Assigné, Trajet En Cours, Statut Réseau (3G/4G)]",
     },
     {
-      screen: "Driver Safety Score Expliqué (100 pts)",
-      layoutText: "[Profil Chauffeur: Moussa Diop | Permis Catégorie CE | Score: 85.5/100]\n[Jauge Circulaire de Score de Sécurité couleur dégradée Vert-Jaune]\n[Tableau Explicatif des Pénalités: Catégorie | Fréquence sur 100 km | Points Déduits | Explication Détaillée]\n[Graphique Recharts: Évolution du Score de Sécurité sur les 30 derniers jours par rapport à la moyenne de l'entreprise]"
+      screen: 'Driver Safety Score Expliqué (100 pts)',
+      layoutText:
+        "[Profil Chauffeur: Moussa Diop | Permis Catégorie CE | Score: 85.5/100]\n[Jauge Circulaire de Score de Sécurité couleur dégradée Vert-Jaune]\n[Tableau Explicatif des Pénalités: Catégorie | Fréquence sur 100 km | Points Déduits | Explication Détaillée]\n[Graphique Recharts: Évolution du Score de Sécurité sur les 30 derniers jours par rapport à la moyenne de l'entreprise]",
     },
     {
-      screen: "Fleet Intelligence Hub (Assistant IA Gemini)",
-      layoutText: "[Zone de Dialogue IA]: 'Analysez la consommation de carburant de la flotte TransAfrik ce mois-ci.'\n[Réponse Structurée Gemini]: Analyse des écarts entre consommation estimée (32L/100km) et réelle (41L/100km) sur le camion RB-4592-A, détection de 2 baisses soudaines de niveau de réservoir à Parakou (vol suspecté), et recommandations d'entretien préventif sur les injecteurs."
-    }
+      screen: 'Fleet Intelligence Hub (Assistant IA Gemini)',
+      layoutText:
+        "[Zone de Dialogue IA]: 'Analysez la consommation de carburant de la flotte TransAfrik ce mois-ci.'\n[Réponse Structurée Gemini]: Analyse des écarts entre consommation estimée (32L/100km) et réelle (41L/100km) sur le camion RB-4592-A, détection de 2 baisses soudaines de niveau de réservoir à Parakou (vol suspecté), et recommandations d'entretien préventif sur les injecteurs.",
+    },
   ],
 
   // 9. TEST PLAN
@@ -590,16 +666,40 @@ model AuditLog {
 3. **Tests de Résilience GPS & Idempotence** :
    - Simulation de réémission 5 fois du même \`batchId\` GPS. Résultat attendu : 1 seule écriture en base, 5 réponses \`HTTP 202\`.
    - Simulation d'un paquet contenant 200 points GPS hors ligne. Résultat attendu : découpage propre en batchs de 50.
-`
+`,
   },
 
   // 10. ROADMAP
   sprintsRoadmap: [
-    { sprint: "Sprint 0", focus: "Architecture, PRD technique, Schéma Prisma, API Contracts, Design System & Maquettes", status: "Terminé (En Cours de Révision)" },
-    { sprint: "Sprint 1", focus: "Auth JWT/Refresh, Multi-Tenant Isolation, Gestion Organisations, Véhicules & Chauffeurs", status: "A Venir" },
-    { sprint: "Sprint 2", focus: "App Mobile Native Kotlin, Ingestion GPS Batch, Live Map MapLibre, Trajets & Géofencing", status: "A Venir" },
-    { sprint: "Sprint 3", focus: "Détection Événements de Conduite, Driver Safety Score sur 100, Moteur d'Alertes", status: "A Venir" },
-    { sprint: "Sprint 4", focus: "Maintenance Préventive, Suivi Carburant (Vol), Conformité CEDEAO, Rapports PDF/Excel", status: "A Venir" },
-    { sprint: "Sprint 5", focus: "Fleet Intelligence Hub (Gemini AI Agent), Anomaly Detection & Tableaux de Bord Avancés", status: "A Venir" }
-  ]
+    {
+      sprint: 'Sprint 0',
+      focus: 'Architecture, PRD technique, Schéma Prisma, API Contracts, Design System & Maquettes',
+      status: 'Terminé (En Cours de Révision)',
+    },
+    {
+      sprint: 'Sprint 1',
+      focus: 'Auth JWT/Refresh, Multi-Tenant Isolation, Gestion Organisations, Véhicules & Chauffeurs',
+      status: 'A Venir',
+    },
+    {
+      sprint: 'Sprint 2',
+      focus: 'App Mobile Native Kotlin, Ingestion GPS Batch, Live Map MapLibre, Trajets & Géofencing',
+      status: 'A Venir',
+    },
+    {
+      sprint: 'Sprint 3',
+      focus: "Détection Événements de Conduite, Driver Safety Score sur 100, Moteur d'Alertes",
+      status: 'A Venir',
+    },
+    {
+      sprint: 'Sprint 4',
+      focus: 'Maintenance Préventive, Suivi Carburant (Vol), Conformité CEDEAO, Rapports PDF/Excel',
+      status: 'A Venir',
+    },
+    {
+      sprint: 'Sprint 5',
+      focus: 'Fleet Intelligence Hub (Gemini AI Agent), Anomaly Detection & Tableaux de Bord Avancés',
+      status: 'A Venir',
+    },
+  ],
 };

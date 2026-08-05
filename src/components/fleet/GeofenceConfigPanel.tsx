@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Geofence, Organization } from '../../types';
 import { MOCK_GEOFENCES, MOCK_VEHICLES } from '../../data/mock-data';
-import { 
-  MapPin, 
-  ShieldAlert, 
-  Bell, 
-  Plus, 
-  Check, 
-  Trash2, 
-  Edit3, 
-  Maximize2, 
-  Radio, 
-  Zap, 
-  Clock, 
-  AlertTriangle, 
-  BellRing, 
-  Sliders, 
+import {
+  MapPin,
+  ShieldAlert,
+  Bell,
+  Plus,
+  Check,
+  Trash2,
+  Edit3,
+  Maximize2,
+  Radio,
+  Zap,
+  Clock,
+  AlertTriangle,
+  BellRing,
+  Sliders,
   Send,
   Eye,
-  MousePointer
+  MousePointer,
 } from 'lucide-react';
 
 interface GeofenceConfigPanelProps {
@@ -31,7 +31,7 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
 
   // State
   const [geofences, setGeofences] = useState<Geofence[]>(() =>
-    MOCK_GEOFENCES.filter(g => g.organizationId === currentOrg.id)
+    MOCK_GEOFENCES.filter(g => g.organizationId === currentOrg.id),
   );
   const orgVehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
 
@@ -46,10 +46,10 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
   const [formType, setFormType] = useState<Geofence['type']>('WAREHOUSE');
   const [formGeometryType, setFormGeometryType] = useState<'CIRCLE' | 'POLYGON'>('CIRCLE');
   const [formCenterLat, setFormCenterLat] = useState<number>(
-    currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 6.3533
+    currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 6.3533,
   );
   const [formCenterLng, setFormCenterLng] = useState<number>(
-    currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.4311
+    currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.4311,
   );
   const [formRadius, setFormRadius] = useState<number>(1000);
   const [formSpeedLimit, setFormSpeedLimit] = useState<number>(30);
@@ -72,20 +72,22 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
     severity: string;
   } | null>(null);
 
-  const [alertLogs, setAlertLogs] = useState<Array<{
-    id: string;
-    geofenceName: string;
-    vehiclePlate: string;
-    action: string;
-    time: string;
-    severity: string;
-  }>>([
+  const [alertLogs, setAlertLogs] = useState<
+    Array<{
+      id: string;
+      geofenceName: string;
+      vehiclePlate: string;
+      action: string;
+      time: string;
+      severity: string;
+    }>
+  >([
     {
       id: 'log-1',
       geofenceName: 'Port Autonome de Cotonou',
       vehiclePlate: 'RB-4592-A',
       action: 'ENTRÉE DÉTECTÉE',
-      time: 'Aujourd\'hui 08:14',
+      time: "Aujourd'hui 08:14",
       severity: 'HIGH',
     },
     {
@@ -109,8 +111,10 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
       L = (window as any).L;
       if (!L) return;
 
-      const defaultLat = currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
-      const defaultLng = currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.1092;
+      const defaultLat =
+        currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
+      const defaultLng =
+        currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.1092;
 
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -127,7 +131,14 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
       // Render Existing Geofences
       geofences.forEach(geo => {
         const isSelected = geo.id === selectedGeofenceId;
-        const color = geo.type === 'PORT' ? '#2563eb' : geo.type === 'BORDER_POST' ? '#d97706' : geo.type === 'RESTRICTED_ZONE' ? '#dc2626' : '#16a34a';
+        const color =
+          geo.type === 'PORT'
+            ? '#2563eb'
+            : geo.type === 'BORDER_POST'
+              ? '#d97706'
+              : geo.type === 'RESTRICTED_ZONE'
+                ? '#dc2626'
+                : '#16a34a';
 
         if (geo.geometryType === 'CIRCLE' && geo.centerLat && geo.centerLng) {
           const circle = L.circle([geo.centerLat, geo.centerLng], {
@@ -237,7 +248,17 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
     } else {
       initMap();
     }
-  }, [currentOrg, geofences, selectedGeofenceId, drawingMode, formCenterLat, formCenterLng, formRadius, drawnPolygonPoints, isFormOpen]);
+  }, [
+    currentOrg,
+    geofences,
+    selectedGeofenceId,
+    drawingMode,
+    formCenterLat,
+    formCenterLng,
+    formRadius,
+    drawnPolygonPoints,
+    isFormOpen,
+  ]);
 
   // Handle Save Geofence
   const handleSaveGeofence = (e: React.FormEvent) => {
@@ -258,7 +279,12 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
               centerLat: formGeometryType === 'CIRCLE' ? formCenterLat : undefined,
               centerLng: formGeometryType === 'CIRCLE' ? formCenterLng : undefined,
               radiusMeters: formGeometryType === 'CIRCLE' ? formRadius : undefined,
-              coordinates: formGeometryType === 'POLYGON' ? (drawnPolygonPoints.length >= 3 ? drawnPolygonPoints : g.coordinates) : undefined,
+              coordinates:
+                formGeometryType === 'POLYGON'
+                  ? drawnPolygonPoints.length >= 3
+                    ? drawnPolygonPoints
+                    : g.coordinates
+                  : undefined,
               speedLimitKmH: formSpeedLimit,
               notifyOnEntry: formNotifyOnEntry,
               notifyOnExit: formNotifyOnExit,
@@ -271,7 +297,7 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
             };
           }
           return g;
-        })
+        }),
       );
     } else {
       // Create new
@@ -284,7 +310,16 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
         centerLat: formGeometryType === 'CIRCLE' ? formCenterLat : undefined,
         centerLng: formGeometryType === 'CIRCLE' ? formCenterLng : undefined,
         radiusMeters: formGeometryType === 'CIRCLE' ? formRadius : undefined,
-        coordinates: formGeometryType === 'POLYGON' ? (drawnPolygonPoints.length >= 3 ? drawnPolygonPoints : [[formCenterLat, formCenterLng], [formCenterLat + 0.02, formCenterLng + 0.02], [formCenterLat, formCenterLng + 0.04]]) : undefined,
+        coordinates:
+          formGeometryType === 'POLYGON'
+            ? drawnPolygonPoints.length >= 3
+              ? drawnPolygonPoints
+              : [
+                  [formCenterLat, formCenterLng],
+                  [formCenterLat + 0.02, formCenterLng + 0.02],
+                  [formCenterLat, formCenterLng + 0.04],
+                ]
+            : undefined,
         speedLimitKmH: formSpeedLimit,
         isActive: true,
         notifyOnEntry: formNotifyOnEntry,
@@ -332,9 +367,7 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
 
   // Toggle Active State
   const handleToggleActive = (id: string) => {
-    setGeofences(prev =>
-      prev.map(g => (g.id === id ? { ...g, isActive: !(g.isActive ?? true) } : g))
-    );
+    setGeofences(prev => prev.map(g => (g.id === id ? { ...g, isActive: !(g.isActive ?? true) } : g)));
   };
 
   // Delete Geofence
@@ -393,8 +426,8 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
               </div>
               <div className="text-sm font-bold mt-0.5">
                 Véhicule <span className="underline">{simulatedAlert.vehiclePlate}</span> : Event{' '}
-                <span className="bg-white/20 px-1.5 py-0.5 rounded">{simulatedAlert.action}</span> dans la zone{' '}
-                <strong>"{simulatedAlert.geofenceName}"</strong>
+                <span className="bg-white/20 px-1.5 py-0.5 rounded">{simulatedAlert.action}</span> dans la
+                zone <strong>"{simulatedAlert.geofenceName}"</strong>
               </div>
             </div>
           </div>
@@ -424,7 +457,8 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
             Configuration des Zones Géofencées & Notification d'Alerte
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Dessinez des zones circulaires ou corridors polygonaux interactifs et définissez les déclencheurs d'alerte en temps réel (Entrée, Sortie, Vitesse).
+            Dessinez des zones circulaires ou corridors polygonaux interactifs et définissez les déclencheurs
+            d'alerte en temps réel (Entrée, Sortie, Vitesse).
           </p>
         </div>
 
@@ -556,7 +590,9 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
               <form onSubmit={handleSaveGeofence} className="space-y-3.5 text-xs">
                 {/* Zone Name */}
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Nom de la Zone / Corridor :</label>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Nom de la Zone / Corridor :
+                  </label>
                   <input
                     type="text"
                     required
@@ -725,8 +761,12 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">Canal de Diffusion :</label>
                     <div className="text-[10px] text-slate-600 font-semibold space-y-1 mt-1">
-                      <span className="inline-block bg-orange-100 text-orange-800 px-2 py-0.5 rounded mr-1">App Push</span>
-                      <span className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded">SMS GSM</span>
+                      <span className="inline-block bg-orange-100 text-orange-800 px-2 py-0.5 rounded mr-1">
+                        App Push
+                      </span>
+                      <span className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                        SMS GSM
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -754,7 +794,8 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
               </div>
 
               <p className="text-xs text-slate-600">
-                Simulez le franchissement d'un camion sur une zone configurée pour vérifier l'envoi immédiat de notification push et SMS.
+                Simulez le franchissement d'un camion sur une zone configurée pour vérifier l'envoi immédiat
+                de notification push et SMS.
               </p>
 
               <div className="space-y-2">
@@ -829,7 +870,8 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
               Liste des Zones & Corridors Configurés ({geofences.length})
             </h3>
             <p className="text-xs text-slate-500">
-              Gérez les règles de surveillance, activez/désactivez les périmètres et modifiez les paramètres d'alerte.
+              Gérez les règles de surveillance, activez/désactivez les périmètres et modifiez les paramètres
+              d'alerte.
             </p>
           </div>
         </div>
@@ -876,7 +918,9 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
                       {geo.type}
                     </span>
                     <span className="text-[10px] font-semibold bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded">
-                      {geo.geometryType === 'CIRCLE' ? `Cercle (${geo.radiusMeters}m)` : `Polygone (${geo.coordinates?.length || 0} pts)`}
+                      {geo.geometryType === 'CIRCLE'
+                        ? `Cercle (${geo.radiusMeters}m)`
+                        : `Polygone (${geo.coordinates?.length || 0} pts)`}
                     </span>
                     <span className="text-[10px] font-bold bg-orange-100 text-orange-800 px-2 py-0.5 rounded">
                       Max {geo.speedLimitKmH || 30} km/h

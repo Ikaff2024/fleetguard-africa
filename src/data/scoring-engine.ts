@@ -36,7 +36,7 @@ export interface SafetyScoreResult {
  */
 export function calculateDriverSafetyScore(
   input: ScoreCalculationInput,
-  config: DriverScoreConfig
+  config: DriverScoreConfig,
 ): SafetyScoreResult {
   const {
     distanceDrivenKm,
@@ -51,7 +51,8 @@ export function calculateDriverSafetyScore(
   const normDist = config.normalizationDistanceKm || 100;
   const distanceFactor = Math.max(0.2, distanceDrivenKm / normDist); // Minimum factor of 0.2 to avoid divide-by-zero or excessive penalty on 1 km
 
-  const { overspeedWeight, harshBrakingWeight, rapidAccelWeight, fatigueNightWeight, geofenceBreachWeight } = config.weights;
+  const { overspeedWeight, harshBrakingWeight, rapidAccelWeight, fatigueNightWeight, geofenceBreachWeight } =
+    config.weights;
 
   // Taux d'incidents par 100 km
   const overspeedRate = overspeedEventsCount / distanceFactor;
@@ -63,12 +64,29 @@ export function calculateDriverSafetyScore(
   // Calcul des pénalités brutes selon les poids de la configuration
   // Ex: Poids Overspeed = 35% -> 1 incident d'excès de vitesse par 100km déduit ~5 points
   const overspeedPenalty = Math.min(35, Math.round(overspeedRate * 7 * (overspeedWeight / 35) * 10) / 10);
-  const harshBrakingPenalty = Math.min(25, Math.round(harshBrakingRate * 6 * (harshBrakingWeight / 25) * 10) / 10);
+  const harshBrakingPenalty = Math.min(
+    25,
+    Math.round(harshBrakingRate * 6 * (harshBrakingWeight / 25) * 10) / 10,
+  );
   const rapidAccelPenalty = Math.min(15, Math.round(rapidAccelRate * 4 * (rapidAccelWeight / 15) * 10) / 10);
-  const fatigueNightPenalty = Math.min(15, Math.round(nightHoursRate * 5 * (fatigueNightWeight / 15) * 10) / 10);
-  const geofenceBreachPenalty = Math.min(10, Math.round(geofenceBreachRate * 10 * (geofenceBreachWeight / 10) * 10) / 10);
+  const fatigueNightPenalty = Math.min(
+    15,
+    Math.round(nightHoursRate * 5 * (fatigueNightWeight / 15) * 10) / 10,
+  );
+  const geofenceBreachPenalty = Math.min(
+    10,
+    Math.round(geofenceBreachRate * 10 * (geofenceBreachWeight / 10) * 10) / 10,
+  );
 
-  const totalPenalties = Math.round((overspeedPenalty + harshBrakingPenalty + rapidAccelPenalty + fatigueNightPenalty + geofenceBreachPenalty) * 10) / 10;
+  const totalPenalties =
+    Math.round(
+      (overspeedPenalty +
+        harshBrakingPenalty +
+        rapidAccelPenalty +
+        fatigueNightPenalty +
+        geofenceBreachPenalty) *
+        10,
+    ) / 10;
   const finalScore = Math.max(0, Math.min(100, Math.round((100 - totalPenalties) * 10) / 10));
 
   // Génération des explications lisibles pour l'utilisateur/gestionnaire
@@ -145,7 +163,7 @@ export function calculateVehicleHealthScore(
   odometerKm: number,
   lastServiceKm: number,
   nextServiceKmDue: number,
-  activeMaintenanceLogsCount: number
+  activeMaintenanceLogsCount: number,
 ): number {
   let score = 100;
 
@@ -167,7 +185,7 @@ export function calculateVehicleHealthScore(
  */
 export function calculateFuelEfficiencyScore(
   expectedL100km: number,
-  actualL100km: number
+  actualL100km: number,
 ): { score: number; status: 'EXCELLENT' | 'NORMAL' | 'POOR' | 'SUSPECTED_THEFT' } {
   if (!actualL100km || actualL100km <= 0) return { score: 100, status: 'NORMAL' };
 

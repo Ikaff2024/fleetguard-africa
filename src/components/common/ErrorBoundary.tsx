@@ -41,8 +41,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
             Ce module n'a pas pu s'afficher
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Les autres écrans restent utilisables. Si le problème persiste, communiquez la référence
-            suivante au support :
+            Les autres écrans restent utilisables. Si le problème persiste, communiquez la référence suivante
+            au support :
           </p>
           <p className="text-[11px] font-mono text-slate-400 break-all max-w-md mx-auto pt-1">
             {this.props.moduleName ?? 'module'} — {this.state.error.message}
