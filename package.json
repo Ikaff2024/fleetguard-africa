@@ -32,7 +32,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "infra:logs": "docker compose logs -f"
+    "infra:logs": "docker compose logs -f",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "schema": "prisma/schema.prisma",
@@ -40,6 +41,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "clsx": "^2.1.1",
     "compression": "^1.8.1",

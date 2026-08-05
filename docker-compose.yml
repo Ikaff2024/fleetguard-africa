@@ -20,7 +20,8 @@ services:
       # Le tri linguistique compte : les noms de chauffeurs comportent des accents.
       POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=fr-FR'
     ports:
-      - '5432:5432'
+      # Port configurable : beaucoup de postes ont déjà un PostgreSQL sur 5432.
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -37,7 +38,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - '6379:6379'
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     healthcheck:
@@ -57,8 +58,8 @@ services:
       MINIO_ROOT_USER: fleetguard
       MINIO_ROOT_PASSWORD: fleetguard_local_only
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio_data:/data
     healthcheck:

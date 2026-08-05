@@ -1,0 +1,803 @@
+// FleetGuard Africa — schéma de données
+//
+// Dérivé de src/types/index.ts, qui reste la source de vérité du domaine.
+//
+// Trois principes structurent ce schéma :
+//
+//   1. `organizationId` est présent sur chaque table métier et indexé en tête
+//      de chaque index composite. L'isolation est ensuite garantie par le
+//      Row-Level Security PostgreSQL (voir prisma/sql/001_rls_policies.sql) :
+//      même un bug applicatif ne peut pas faire fuiter les données d'un client
+//      vers un autre.
+//
+//   2. Les identifiants sont des UUID, jamais des séquences. Un identifiant
+//      incrémental exposé dans une URL permet d'énumérer les ressources et de
+//      mesurer l'activité d'un concurrent.
+//
+//   3. Les géométries sont des types PostGIS (`Unsupported`), pas des paires de
+//      flottants. Un test d'appartenance à une geofence doit être un
+//      `ST_Contains` indexé, pas une boucle applicative sur des millions de points.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7 : l'URL de connexion vit dans prisma.config.ts (migrations) et dans
+// l'adaptateur passé au client, plus dans ce fichier.
+//
+// Les extensions PostgreSQL (postgis, pgcrypto, pg_trgm, unaccent) ne sont pas
+// déclarées ici volontairement : sur une base managée, `CREATE EXTENSION`
+// relève de l'administrateur et l'utilisateur applicatif n'a pas ce droit.
+// Elles sont installées par docker/postgres-init/01-extensions.sql en local et
+// par l'exploitant en production. Les déclarer dans le schéma ferait voir à
+// Prisma une dérive à chaque migration.
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// IDENTITÉ & MULTI-TENANCY
+// ============================================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ORGANIZATION_ADMIN
+  FLEET_MANAGER
+  SAFETY_OFFICER
+  MAINTENANCE_TECH
+  DRIVER
+}
+
+enum CurrencyCode {
+  XOF
+  XAF
+  KES
+  NGN
+  GHS
+  USD
+  EUR
+}
+
+model Organization {
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String
+  code         String       @unique
+  country      String
+  currency     CurrencyCode
+  timezone     String
+  logoUrl      String?
+  maxVehicles  Int          @default(50)
+  contactEmail String
+  contactPhone String
+
+  // Suspension d'un client pour impayé sans destruction de ses données.
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  users           User[]
+  vehicles        Vehicle[]
+  drivers         Driver[]
+  geofences       Geofence[]
+  safetyEvents    SafetyEvent[]
+  scoreConfigs    DriverScoreConfig[]
+  dailyScores     DriverDailyScore[]
+  maintenanceLogs MaintenanceLog[]
+  fuelLogs        FuelLog[]
+  complianceDocs  ComplianceDoc[]
+  auditLogs       AuditLog[]
+  gpsPoints       GpsPoint[]
+  telemetryBatches TelemetryBatch[]
+  rewardProfiles  DriverRewardProfile[]
+
+  @@index([code])
+  @@map("organizations")
+}
+
+model User {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email    String
+  fullName String
+  phone    String
+  role     UserRole
+
+  // Argon2id de préférence : plus résistant que bcrypt aux attaques par GPU.
+  passwordHash String
+  // Invalide tous les jetons émis avant cette date (changement de mot de passe,
+  // révocation d'accès d'un salarié qui quitte l'entreprise).
+  tokensValidFrom DateTime @default(now())
+
+  avatarUrl        String?
+  isActive         Boolean   @default(true)
+  lastLoginAt      DateTime?
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  driver        Driver?
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  // L'unicité de l'e-mail est globale : elle sert d'identifiant de connexion
+  // et ne peut donc pas être réutilisée d'une organisation à l'autre.
+  @@unique([email])
+  @@index([organizationId, role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Seul le condensé est stocké : une fuite de la table ne donne aucun jeton
+  // utilisable.
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  // Rotation : le jeton qui a remplacé celui-ci. Une réutilisation d'un jeton
+  // déjà tourné signale un vol et doit révoquer toute la chaîne.
+  replacedById String? @db.Uuid
+
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// FLOTTE
+// ============================================================================
+
+enum VehicleType {
+  HEAVY_TRUCK
+  MEDIUM_TRUCK
+  VAN
+  PICKUP
+  BUS
+  CONTAINER_CARRIER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  IDLE
+  OUT_OF_SERVICE
+}
+
+enum FuelType {
+  DIESEL
+  GASOLINE
+  HYBRID
+  ELECTRIC
+}
+
+model Vehicle {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  immatriculation String
+  vin             String
+  make            String
+  model           String
+  year            Int
+  type            VehicleType
+  fuelType        FuelType
+
+  tankCapacityLiters       Decimal @db.Decimal(8, 2)
+  // Référence de consommation : l'écart avec le relevé réel est le premier
+  // signal de siphonnage.
+  expectedConsumptionL100km Decimal @db.Decimal(6, 2)
+  currentOdometerKm        Int     @default(0)
+
+  status          VehicleStatus @default(ACTIVE)
+  speedGovernorId String?
+  gpsTrackerImei  String?
+  lastServiceDate DateTime?
+  nextServiceKm   Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  drivers         Driver[]
+  safetyEvents    SafetyEvent[]
+  maintenanceLogs MaintenanceLog[]
+  fuelLogs        FuelLog[]
+  complianceDocs  ComplianceDoc[]
+  gpsPoints       GpsPoint[]
+  telemetryBatches TelemetryBatch[]
+
+  // Une immatriculation est unique au sein d'une organisation, pas mondialement :
+  // deux transporteurs de pays différents peuvent porter la même plaque.
+  @@unique([organizationId, immatriculation])
+  @@unique([organizationId, vin])
+  @@index([organizationId, status])
+  @@index([gpsTrackerImei])
+  @@map("vehicles")
+}
+
+enum DriverStatus {
+  AVAILABLE
+  ON_TRIP
+  OFF_DUTY
+  SUSPENDED
+}
+
+model Driver {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Un chauffeur n'a pas toujours de compte applicatif (pas de smartphone).
+  userId String? @unique @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  fullName          String
+  phone             String
+  licenseNumber     String
+  licenseCategory   String
+  licenseExpiryDate DateTime
+
+  assignedVehicleId String?  @db.Uuid
+  assignedVehicle   Vehicle? @relation(fields: [assignedVehicleId], references: [id], onDelete: SetNull)
+
+  // Dernier score calculé, conservé ici pour l'affichage des listes.
+  // La vérité historique reste dans DriverDailyScore.
+  currentSafetyScore Decimal @default(100) @db.Decimal(5, 2)
+  totalKmDriven      Int     @default(0)
+
+  status    DriverStatus @default(AVAILABLE)
+  avatarUrl String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  safetyEvents   SafetyEvent[]
+  dailyScores    DriverDailyScore[]
+  fuelLogs       FuelLog[]
+  complianceDocs ComplianceDoc[]
+  gpsPoints      GpsPoint[]
+  telemetryBatches TelemetryBatch[]
+  rewardProfile  DriverRewardProfile?
+  unlockedBadges DriverUnlockedBadge[]
+
+  @@unique([organizationId, licenseNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, currentSafetyScore])
+  @@map("drivers")
+}
+
+// ============================================================================
+// TÉLÉMÉTRIE
+// ============================================================================
+
+enum NetworkType {
+  FOURG
+  THREEG
+  TWOG
+  NONE
+}
+
+/// Lot de points remonté par un boîtier ou l'application mobile.
+/// Sert de clé d'idempotence : un boîtier qui sort d'une zone blanche rejoue
+/// fréquemment le même lot. Sans cette table, les infractions sont comptées
+/// deux fois et le score du chauffeur — donc sa prime — est faussé.
+model TelemetryBatch {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Identifiant fourni par l'équipement, unique par organisation.
+  batchId  String
+  deviceId String?
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String? @db.Uuid
+  driver    Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  pointCount  Int
+  sentAt      DateTime?
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@unique([organizationId, batchId])
+  @@index([organizationId, receivedAt])
+  @@map("telemetry_batches")
+}
+
+/// Point GPS brut.
+///
+/// Volumétrie de référence : 500 véhicules × 8 h de roulage × 1 point/10 s
+/// ≈ 43 millions de lignes par mois. Cette table est partitionnée par mois
+/// (voir prisma/sql/002_partitioning.sql) : purger une période revient alors à
+/// détacher une partition, opération instantanée, là où un DELETE massif
+/// bloquerait la table et ferait exploser le volume WAL.
+model GpsPoint {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String? @db.Uuid
+  driver    Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  recordedAt DateTime
+
+  latitude  Decimal @db.Decimal(9, 6)
+  longitude Decimal @db.Decimal(9, 6)
+  // Colonne PostGIS alimentée par un trigger à partir de latitude/longitude.
+  // C'est elle qui porte l'index spatial utilisé par le moteur de geofencing.
+  location Unsupported("geography(Point, 4326)")?
+
+  altitude       Decimal?    @db.Decimal(8, 2)
+  speedKmH       Decimal     @db.Decimal(6, 2)
+  headingDegree  Int
+  accuracyMeters Decimal     @db.Decimal(8, 2)
+  ignitionOn     Boolean
+  batteryLevelPct Int
+  networkType    NetworkType
+
+  eventFlags String[]
+
+  createdAt DateTime @default(now())
+
+  // Index de tête : reconstituer le trajet d'un véhicule sur une période est
+  // la requête la plus fréquente du produit.
+  @@index([organizationId, vehicleId, recordedAt])
+  @@index([organizationId, recordedAt])
+  @@map("gps_points")
+}
+
+// ============================================================================
+// SÉCURITÉ & SCORING
+// ============================================================================
+
+enum SafetyEventType {
+  OVER_SPEED
+  HARSH_BRAKING
+  RAPID_ACCELERATION
+  FATIGUE_NIGHT_DRIVING
+  GEOFENCE_BREACH
+  IDLING_EXCESS
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model SafetyEvent {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String  @db.Uuid
+  driver    Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  eventType SafetyEventType
+  severity  Severity
+
+  recordedAt DateTime
+  latitude   Decimal @db.Decimal(9, 6)
+  longitude  Decimal @db.Decimal(9, 6)
+  location   Unsupported("geography(Point, 4326)")?
+
+  speedKmH        Decimal  @db.Decimal(6, 2)
+  speedLimitKmH   Decimal? @db.Decimal(6, 2)
+  durationSeconds Int?
+  description     String
+
+  penaltyPointsDeducted Decimal @db.Decimal(5, 2)
+
+  // Un chauffeur doit pouvoir contester une infraction, et la contestation
+  // doit laisser une trace opposable.
+  isDisputed     Boolean   @default(false)
+  disputeNote    String?
+  reviewedByUserId String? @db.Uuid
+  reviewedAt     DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, driverId, recordedAt])
+  @@index([organizationId, eventType, recordedAt])
+  @@map("safety_events")
+}
+
+/// Configuration de calcul du score, versionnée.
+///
+/// Le versionnement n'est pas optionnel : un score recalculé un an plus tard
+/// avec des pondérations modifiées ne serait pas défendable devant un
+/// chauffeur ou un inspecteur du travail. Chaque score conserve la version de
+/// configuration qui l'a produit.
+model DriverScoreConfig {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  version Int
+
+  overspeedWeight      Decimal @db.Decimal(5, 2)
+  harshBrakingWeight   Decimal @db.Decimal(5, 2)
+  rapidAccelWeight     Decimal @db.Decimal(5, 2)
+  fatigueNightWeight   Decimal @db.Decimal(5, 2)
+  geofenceBreachWeight Decimal @db.Decimal(5, 2)
+
+  normalizationDistanceKm Int @default(100)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dailyScores DriverDailyScore[]
+
+  @@unique([organizationId, version])
+  @@index([organizationId, isActive])
+  @@map("driver_score_configs")
+}
+
+model DriverDailyScore {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  driverId String @db.Uuid
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  configId String            @db.Uuid
+  config   DriverScoreConfig @relation(fields: [configId], references: [id])
+
+  date             DateTime @db.Date
+  distanceDrivenKm Decimal  @db.Decimal(10, 2)
+  score            Decimal  @db.Decimal(5, 2)
+
+  overspeedCount        Int @default(0)
+  harshBrakingCount     Int @default(0)
+  rapidAccelCount       Int @default(0)
+  geofenceBreachesCount Int @default(0)
+  nightKmDriven         Decimal @default(0) @db.Decimal(10, 2)
+
+  // Détail des points perdus, tel qu'affiché au chauffeur. Stocké et non
+  // recalculé : l'explication doit rester identique à celle qui lui a été
+  // présentée le jour même.
+  penaltyExplanations Json
+
+  createdAt DateTime @default(now())
+
+  @@unique([driverId, date])
+  @@index([organizationId, date])
+  @@map("driver_daily_scores")
+}
+
+// ============================================================================
+// GEOFENCING
+// ============================================================================
+
+enum GeofenceType {
+  WAREHOUSE
+  PORT
+  BORDER_POST
+  RESTRICTED_ZONE
+  FUEL_STATION
+  CUSTOM_CORRIDOR
+}
+
+model Geofence {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name String
+  type GeofenceType
+
+  // Géométrie unique pour les cercles comme pour les polygones : un cercle est
+  // stocké comme le tampon (`ST_Buffer`) de son centre. Un seul index spatial
+  // suffit alors, et le moteur n'a plus deux chemins de code à maintenir.
+  area Unsupported("geography(Polygon, 4326)")?
+
+  centerLat    Decimal? @db.Decimal(9, 6)
+  centerLng    Decimal? @db.Decimal(9, 6)
+  radiusMeters Int?
+
+  speedLimitKmH       Int?
+  maxDwellTimeMinutes Int?
+
+  notifyOnEntry         Boolean @default(false)
+  notifyOnExit          Boolean @default(false)
+  notifyOnSpeeding      Boolean @default(false)
+  notifyOnProlongedStay Boolean @default(false)
+
+  notificationChannels String[]
+  assignedVehicleIds   String[] @db.Uuid
+
+  severity Severity @default(MEDIUM)
+  isActive Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organizationId, isActive])
+  @@map("geofences")
+}
+
+// ============================================================================
+// MAINTENANCE, CARBURANT, CONFORMITÉ
+// ============================================================================
+
+enum MaintenanceType {
+  PREVENTATIVE
+  CORRECTIVE
+  TIRE_REPLACEMENT
+  OIL_CHANGE
+  BRAKE_SERVICE
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model MaintenanceLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  type        MaintenanceType
+  description String
+
+  odometerKmAtService Int
+  // Decimal et non Float : un montant financier ne tolère aucune approximation
+  // binaire, surtout en XOF où l'unité n'a pas de décimale.
+  cost     Decimal      @db.Decimal(14, 2)
+  currency CurrencyCode
+
+  serviceProvider String
+  technicianName  String?
+  technicianNotes String?
+
+  performedAt      DateTime
+  nextServiceKmDue Int?
+  status           MaintenanceStatus @default(COMPLETED)
+
+  partsReplaced Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, vehicleId, performedAt])
+  @@index([organizationId, status])
+  @@map("maintenance_logs")
+}
+
+model FuelLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String? @db.Uuid
+  driver    Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  litersAdded   Decimal @db.Decimal(10, 2)
+  totalCost     Decimal @db.Decimal(14, 2)
+  pricePerLiter Decimal @db.Decimal(10, 2)
+  currency      CurrencyCode
+
+  odometerKm    Int
+  stationName   String
+  receiptNumber String?
+  receiptFileUrl String?
+
+  // Consommation calculée entre deux pleins.
+  calculatedL100km Decimal? @db.Decimal(6, 2)
+  // Signalement automatique, à confirmer humainement : une accusation de vol
+  // ne peut pas reposer sur un seuil sans contrôle.
+  suspectedFuelTheft Boolean   @default(false)
+  reviewedByUserId   String?   @db.Uuid
+  reviewedAt         DateTime?
+
+  loggedAt  DateTime
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, vehicleId, loggedAt])
+  @@index([organizationId, suspectedFuelTheft])
+  @@map("fuel_logs")
+}
+
+enum ComplianceDocType {
+  INSURANCE
+  TECHNICAL_INSPECTION
+  CEDEAO_BROWN_CARD
+  AXLE_LOAD_CERTIFICATE
+  DRIVER_LICENSE
+  HAZMAT_PERMIT
+}
+
+enum ComplianceStatus {
+  VALID
+  EXPIRING_SOON
+  EXPIRED
+}
+
+model ComplianceDoc {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String?  @db.Uuid
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String?  @db.Uuid
+  driver    Driver?  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  title     String
+  docType   ComplianceDocType
+  docNumber String
+
+  issuedDate DateTime
+  expiryDate DateTime
+  status     ComplianceStatus @default(VALID)
+
+  fileUrl String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Requête quotidienne du planificateur d'alertes d'expiration : un camion
+  // immobilisé à un poste frontière pour une carte brune périmée coûte
+  // beaucoup plus cher que le renouvellement.
+  @@index([organizationId, expiryDate])
+  @@index([organizationId, status])
+  @@map("compliance_docs")
+}
+
+// ============================================================================
+// GAMIFICATION & PRIMES
+// ============================================================================
+
+enum PayoutStatus {
+  ELIGIBLE
+  CALCULATED
+  APPROVED
+  PAID
+  ON_HOLD
+}
+
+enum PayoutMethod {
+  ORANGE_MONEY
+  MTN_MOMO
+  WAVE
+  FUEL_VOUCHER
+}
+
+model DigitalBadge {
+  id          String @id @default(uuid()) @db.Uuid
+  code        String @unique
+  title       String
+  description String
+  category    String
+  rarity      String
+  iconName    String
+
+  expBonusPoints      Int     @default(0)
+  fuelBonusMultiplier Decimal @default(1) @db.Decimal(4, 2)
+  criterion           String
+
+  createdAt DateTime @default(now())
+
+  unlockedBy DriverUnlockedBadge[]
+
+  @@map("digital_badges")
+}
+
+model DriverUnlockedBadge {
+  id String @id @default(uuid()) @db.Uuid
+
+  driverId String @db.Uuid
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  badgeId  String @db.Uuid
+  badge    DigitalBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  unlockedAt  DateTime @default(now())
+  periodLabel String
+  grantedBy   String
+
+  @@unique([driverId, badgeId, periodLabel])
+  @@map("driver_unlocked_badges")
+}
+
+/// Profil de récompense d'un chauffeur.
+///
+/// Attention : verser une prime en monnaie électronique (Orange Money, MTN
+/// MoMo, Wave) relève de la réglementation BCEAO et suppose un agrégateur
+/// agréé. Tant que ce partenariat n'est pas signé, seul FUEL_VOUCHER doit être
+/// utilisé. Voir PRODUCTION_PLAN.md § Conformité.
+model DriverRewardProfile {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  driverId String @unique @db.Uuid
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  ecoScore      Decimal @default(0) @db.Decimal(5, 2)
+  scoreTrend30d Decimal @default(0) @db.Decimal(5, 2)
+
+  fuelEfficiencySavingsL100km Decimal @default(0) @db.Decimal(6, 2)
+  estimatedFuelSavedLiters    Decimal @default(0) @db.Decimal(10, 2)
+  bonusEarned                 Decimal @default(0) @db.Decimal(14, 2)
+  currency                    CurrencyCode
+
+  payoutStatus  PayoutStatus @default(ELIGIBLE)
+  payoutMethod  PayoutMethod @default(FUEL_VOUCHER)
+  lastPayoutAt  DateTime?
+
+  totalPoints   Int @default(0)
+  rankInCompany Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, payoutStatus])
+  @@map("driver_reward_profiles")
+}
+
+// ============================================================================
+// AUDIT
+// ============================================================================
+
+/// Journal d'audit.
+///
+/// Obligatoire dès lors que la plateforme traite des données de
+/// géolocalisation nominatives : il faut pouvoir répondre à « qui a consulté
+/// la position de ce chauffeur, et quand ». Table en insertion seule ; la
+/// politique RLS interdit toute mise à jour et toute suppression.
+model AuditLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId    String? @db.Uuid
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail String
+
+  action     String
+  resource   String
+  resourceId String?
+
+  ipAddress String?
+  userAgent String?
+  details   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, userId, createdAt])
+  @@index([organizationId, resource, resourceId])
+  @@map("audit_logs")
+}

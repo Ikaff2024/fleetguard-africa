@@ -37,3 +37,6 @@ npm-debug.log*
 # Archives et artefacts lourds (passer par les releases, pas par git)
 *.zip
 *.tar.gz
+
+# Client Prisma genere (recree par `npm run db:generate`)
+src/generated/
