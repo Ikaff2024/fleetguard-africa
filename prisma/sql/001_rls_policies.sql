@@ -155,7 +155,13 @@ CREATE POLICY badges_readable ON public.digital_badges FOR SELECT USING (true);
 -- trace, une fois écrite, ne peut être ni retouchée ni effacée par
 -- l'application — y compris par un compte compromis.
 
+-- Ces suppressions préalables ne sont pas cosmétiques : sans elles, une
+-- seconde exécution du script échoue sur « policy already exists », et tout
+-- redémarrage du conteneur — qui rejoue ces scripts — se solde par un échec de
+-- préparation de la base.
 DROP POLICY IF EXISTS tenant_isolation ON public.audit_logs;
+DROP POLICY IF EXISTS audit_insert ON public.audit_logs;
+DROP POLICY IF EXISTS audit_select ON public.audit_logs;
 
 CREATE POLICY audit_insert ON public.audit_logs
   FOR INSERT
