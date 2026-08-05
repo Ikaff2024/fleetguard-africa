@@ -8,7 +8,10 @@ WORKDIR /app
 
 # Copier d'abord les manifestes : cette couche n'est reconstruite que si les
 # dépendances changent réellement, pas à chaque modification de code.
-COPY package.json package-lock.json ./
+# Le schéma Prisma est copié également car le hook `postinstall` génère le
+# client, ce qui exige la présence du schéma.
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci --no-audit --no-fund
 
 ###############################################################################
@@ -23,7 +26,10 @@ COPY . .
 # Vite remplace les variables VITE_* à la compilation : toute valeur passée ici
 # se retrouve dans le bundle public. N'y mettre aucun secret.
 ENV NODE_ENV=production
-RUN npm run build
+
+# Le client Prisma est régénéré ici : `COPY . .` vient d'écraser src/ avec le
+# contenu du dépôt, où le client généré n'est pas versionné.
+RUN npx prisma generate && npm run build
 
 ###############################################################################
 # Étape 3 — Dépendances d'exécution uniquement
@@ -32,7 +38,9 @@ FROM node:22-alpine AS prod-deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+# `--ignore-scripts` : la CLI Prisma est une dépendance de développement, donc
+# absente ici. Le client généré est repris de l'étape de compilation.
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts && npm cache clean --force
 
 ###############################################################################
 # Étape 4 — Image finale
@@ -50,6 +58,8 @@ ENV NODE_ENV=production \
 
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+# Client Prisma généré à la compilation (requis dès la Phase 1).
+COPY --from=build /app/src/generated ./src/generated
 COPY package.json ./
 
 # Ne jamais tourner en root : une faille applicative ne doit pas donner les

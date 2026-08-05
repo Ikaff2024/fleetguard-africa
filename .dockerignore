@@ -1,6 +1,8 @@
 node_modules
 dist
 coverage
+# Client Prisma : toujours régénéré dans l'image, jamais repris du poste local.
+src/generated
 .git
 .github
 .vscode
