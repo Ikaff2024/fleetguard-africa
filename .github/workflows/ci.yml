@@ -81,6 +81,34 @@ jobs:
       - name: Build web + serveur
         run: npm run build
 
+      - name: Installation du navigateur de test
+        run: npx playwright install --with-deps chromium
+
+      - name: Contrôle de fumée (l'application se charge-t-elle vraiment ?)
+        # Une page peut renvoyer un HTML valide et rester blanche parce qu'un
+        # script échoue. C'est arrivé en production : toutes les ressources
+        # répondaient 200, mais la politique CORS bloquait les fichiers de la
+        # page. Seule l'exécution du JavaScript dans un navigateur le détecte.
+        run: |
+          NODE_ENV=production PORT=3000 node dist/server.cjs &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/v1/health > /dev/null && break
+            sleep 1
+          done
+          node scripts/smoke-test.mjs http://localhost:3000
+          STATUS=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $STATUS
+
+      - name: Capture en cas d'échec
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-screenshot
+          path: smoke-screenshot.png
+          retention-days: 7
+
       - name: Contrôle du poids de l'écran d'accueil
         # Garde-fou anti-régression : sur une 3G de corridor, chaque centaine de
         # kilo-octets ajoute plusieurs secondes avant le premier affichage.
