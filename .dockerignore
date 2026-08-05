@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.git
+.github
+.vscode
+.idea
+*.log
+.env
+.env.*
+!.env.example
+*.zip
+*.tar.gz
+README.md
+PRODUCTION_PLAN.md
+docs

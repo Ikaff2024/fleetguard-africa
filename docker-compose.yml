@@ -1,0 +1,73 @@
+# Environnement de développement local.
+#
+# Objectif : `docker compose up -d` doit suffire à un nouveau développeur pour
+# disposer des mêmes services qu'en production. Les identifiants ci-dessous sont
+# volontairement faibles — ils ne servent qu'en local et ne doivent jamais être
+# repris en production, où ils proviennent d'un gestionnaire de secrets.
+
+services:
+  postgres:
+    # PostGIS est requis : les geofences et les corridors sont des géométries,
+    # pas des paires de flottants. `ST_Contains` sur index GIST reste rapide
+    # là où un calcul applicatif s'effondre à quelques millions de points.
+    image: postgis/postgis:16-3.4-alpine
+    container_name: fleetguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fleetguard
+      POSTGRES_PASSWORD: fleetguard_local_only
+      POSTGRES_DB: fleetguard_db
+      # Le tri linguistique compte : les noms de chauffeurs comportent des accents.
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=fr-FR'
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fleetguard -d fleetguard_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    # Deux usages : clés d'idempotence de l'ingestion GPS et files BullMQ.
+    image: redis:7-alpine
+    container_name: fleetguard-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Stockage objet compatible S3 pour les documents de conformité
+  # (cartes brunes CEDEAO, visites techniques, reçus de carburant).
+  minio:
+    image: minio/minio:latest
+    container_name: fleetguard-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: fleetguard
+      MINIO_ROOT_PASSWORD: fleetguard_local_only
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
