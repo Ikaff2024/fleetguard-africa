@@ -56,11 +56,19 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0
 
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-# Client Prisma généré à la compilation (requis dès la Phase 1).
-COPY --from=build /app/src/generated ./src/generated
-COPY package.json ./
+# `--chown` est indispensable : le conteneur tourne en utilisateur `node`, et
+# le CLI Prisma doit pouvoir écrire dans node_modules lors des migrations.
+# Sans cela, `migrate deploy` échoue sur un refus de permission.
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+# Client Prisma généré à la compilation.
+COPY --from=build --chown=node:node /app/src/generated ./src/generated
+# Schéma, migrations et scripts SQL : le conteneur prépare lui-même sa base au
+# démarrage, ce qui évite d'exposer PostgreSQL publiquement pour migrer.
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node prisma.config.ts ./
+COPY --chown=node:node scripts/start-production.mjs ./scripts/
+COPY --chown=node:node package.json ./
 
 # Ne jamais tourner en root : une faille applicative ne doit pas donner les
 # pleins pouvoirs sur le conteneur.
@@ -74,4 +82,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/server.js"]
+CMD ["node", "scripts/start-production.mjs"]
