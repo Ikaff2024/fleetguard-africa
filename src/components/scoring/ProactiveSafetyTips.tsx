@@ -78,11 +78,10 @@ export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ curren
     setCopiedText(false);
     setErrorMessage(null);
     try {
-      const data = await apiClient.post<SafetyCoachingResponse>(
-        '/scoring/safety-tips',
-        { driverId, focusArea: focus },
-        { organizationId: currentOrg.id },
-      );
+      const data = await apiClient.post<SafetyCoachingResponse>('/scoring/safety-tips', {
+        driverId,
+        focusArea: focus,
+      });
       setTipsData(data);
     } catch (err) {
       // Une fiche de coaching absente doit se voir : sans cela, l'écran garde

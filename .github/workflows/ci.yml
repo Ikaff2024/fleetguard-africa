@@ -90,7 +90,7 @@ jobs:
         # répondaient 200, mais la politique CORS bloquait les fichiers de la
         # page. Seule l'exécution du JavaScript dans un navigateur le détecte.
         run: |
-          NODE_ENV=production PORT=3000 node dist/server.cjs &
+          NODE_ENV=production PORT=3000 node dist/server.js &
           SERVER_PID=$!
           for i in $(seq 1 30); do
             curl -sf http://localhost:3000/api/v1/health > /dev/null && break

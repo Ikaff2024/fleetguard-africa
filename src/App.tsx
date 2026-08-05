@@ -1,9 +1,12 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, NavigationTab } from './components/layout/Sidebar';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ModuleLoader } from './components/common/ModuleLoader';
 import { OfflineSyncDrawer } from './components/common/OfflineSyncDrawer';
+import { LoginPage } from './components/auth/LoginPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { setDemoOrganizationId } from './lib/api-client';
 
 /**
  * Chaque écran est chargé à la demande.
@@ -37,7 +40,7 @@ import { OfflineSyncProvider, useOfflineSync } from './context/OfflineSyncContex
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MOCK_ORGANIZATIONS } from './data/mock-data';
 import { Organization, UserRole } from './types';
-import { Database, X, RefreshCw, Headphones } from 'lucide-react';
+import { Database, X, RefreshCw, Headphones, LogOut } from 'lucide-react';
 
 function AppContent() {
   const [currentOrg, setCurrentOrg] = useState<Organization>(MOCK_ORGANIZATIONS[0]);
@@ -58,6 +61,14 @@ function AppContent() {
     isSyncing,
   } = useOfflineSync();
   const { isNightDispatcher } = useTheme();
+  const { status, user, logout } = useAuth();
+
+  // En mode démonstration, le sélecteur d'organisation de la barre supérieure
+  // reste actif : l'API a besoin de savoir quel tenant afficher. Avec une
+  // session réelle, cet en-tête n'est pas transmis — le tenant vient du jeton.
+  useEffect(() => {
+    setDemoOrganizationId(status === 'demonstration' ? currentOrg.id : null);
+  }, [status, currentOrg.id]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-orange-500 selection:text-white transition-colors duration-200">
@@ -190,6 +201,27 @@ function AppContent() {
             <Database className="w-3.5 h-3.5" />
             <span>IndexedDB Queue ({pendingCount})</span>
           </button>
+
+          {status === 'demonstration' ? (
+            <span className="text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900">
+              Mode démonstration — sans authentification
+            </span>
+          ) : (
+            user && (
+              <span className="flex items-center gap-2">
+                <span className="text-slate-600 dark:text-slate-300">
+                  {user.fullName} · <strong>{user.role}</strong>
+                </span>
+                <button
+                  onClick={logout}
+                  className="text-slate-500 hover:text-red-600 dark:hover:text-red-400 font-bold flex items-center gap-1 cursor-pointer transition"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Déconnexion</span>
+                </button>
+              </span>
+            )
+          )}
         </div>
       </footer>
 
@@ -203,12 +235,40 @@ function AppContent() {
   );
 }
 
+/**
+ * Aiguillage selon l'état de la session.
+ *
+ * L'espace de travail complet — carte, alertes, scoring, primes, maintenance,
+ * fatigue, intelligence — est servi à l'identique dans les deux cas ; seule la
+ * porte d'entrée change.
+ */
+function AuthGate() {
+  const { status } = useAuth();
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] flex items-center justify-center">
+        <ModuleLoader label="Ouverture de la session…" />
+      </div>
+    );
+  }
+
+  if (status === 'anonymous') {
+    return <LoginPage />;
+  }
+
+  // `authenticated` et `demonstration` accèdent au même espace de travail.
+  return <AppContent />;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
-      <OfflineSyncProvider>
-        <AppContent />
-      </OfflineSyncProvider>
+      <AuthProvider>
+        <OfflineSyncProvider>
+          <AuthGate />
+        </OfflineSyncProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

@@ -388,11 +388,10 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
     }
 
     try {
-      const data = await apiClient.post<SafetyCoachingResponse>(
-        '/scoring/safety-tips',
-        { driverId: alert.driverId, focusArea: alert.title },
-        { organizationId: currentOrg.id },
-      );
+      const data = await apiClient.post<SafetyCoachingResponse>('/scoring/safety-tips', {
+        driverId: alert.driverId,
+        focusArea: alert.title,
+      });
 
       setAiSimulated(data.isSimulated);
       setAiAnalysisResult(

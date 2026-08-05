@@ -97,13 +97,24 @@ authRouter.post(
 /** Profil courant, permissions comprises : l'interface s'y adapte sans deviner. */
 authRouter.get(
   '/auth/me',
+  // Ce contrôle précède la vérification du jeton, et c'est délibéré : sans
+  // base de données, aucun compte n'existe et l'interface doit pouvoir
+  // distinguer « session absente » (il faut se connecter) de « serveur sans
+  // base » (mode démonstration). Un 401 rendrait ces deux cas indiscernables.
+  (_req, _res, next) => {
+    if (!isDatabaseEnabled()) {
+      return next(
+        ApiError.serviceUnavailable(
+          "Aucune base de données n'est configurée : l'authentification est indisponible.",
+          'AUTH_UNAVAILABLE',
+        ),
+      );
+    }
+    next();
+  },
   requireAuth,
   asyncHandler(async (req, res) => {
     const auth = requireAuthContext(req);
-
-    if (!isDatabaseEnabled()) {
-      throw ApiError.serviceUnavailable('Base de données indisponible.', 'AUTH_UNAVAILABLE');
-    }
 
     const user = await withTenant(auth.organizationId, tx =>
       tx.user.findFirst({

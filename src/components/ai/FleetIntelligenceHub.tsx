@@ -71,11 +71,11 @@ export const FleetIntelligenceHub: React.FC<FleetIntelligenceHubProps> = ({ curr
     setIsLoading(true);
 
     try {
-      const result = await apiClient.post<FleetAnalysisResponse>(
-        '/intelligence/analyze',
-        { prompt: promptToSend },
-        { organizationId: currentOrg.id },
-      );
+      // L'organisation n'est plus transmise : le serveur la lit dans le jeton
+      // de session, où elle est prouvée.
+      const result = await apiClient.post<FleetAnalysisResponse>('/intelligence/analyze', {
+        prompt: promptToSend,
+      });
 
       setMessages(prev => [
         ...prev,

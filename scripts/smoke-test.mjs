@@ -23,15 +23,49 @@ const pageErrors = [];
 const browser = await chromium.launch();
 const page = await browser.newPage();
 
+/**
+ * Bruit de développement à ignorer : le rechargement à chaud de Vite n'existe
+ * pas en production et ses avertissements ne disent rien de la santé de la page.
+ */
+const IGNORED_CONSOLE = [
+  /\[vite\]/i,
+  /websocket/i,
+  /HMR/i,
+  // Le navigateur journalise tout code >= 400, y compris ceux que
+  // l'application traite (session absente, mode démonstration).
+  /Failed to load resource/i,
+];
+
+/**
+ * Seules les ressources de la page comptent.
+ *
+ * Un script ou une feuille de style en échec rend la page inutilisable — c'est
+ * exactement la panne qu'on cherche à détecter. Un appel d'API qui répond 401
+ * ou 503 est, lui, un état applicatif géré par l'interface : le signaler comme
+ * une panne rendrait ce contrôle inexploitable.
+ */
+const PAGE_RESOURCES = new Set(['document', 'script', 'stylesheet', 'font']);
+
 page.on('console', msg => {
-  if (msg.type() === 'error') consoleErrors.push(msg.text());
+  if (msg.type() !== 'error') return;
+  const text = msg.text();
+  if (IGNORED_CONSOLE.some(pattern => pattern.test(text))) return;
+  consoleErrors.push(text);
 });
-page.on('pageerror', err => pageErrors.push(err.message));
+page.on('pageerror', err => {
+  // Idem pour les exceptions : celles du client de rechargement à chaud ne
+  // concernent pas le code applicatif.
+  if (IGNORED_CONSOLE.some(pattern => pattern.test(err.message))) return;
+  pageErrors.push(err.message);
+});
 page.on('requestfailed', req => {
+  if (!PAGE_RESOURCES.has(req.resourceType())) return;
   failedRequests.push(`${req.method()} ${req.url()} — ${req.failure()?.errorText ?? 'échec'}`);
 });
 page.on('response', res => {
-  if (res.status() >= 400) failedRequests.push(`HTTP ${res.status()} ${res.url()}`);
+  if (res.status() >= 400 && PAGE_RESOURCES.has(res.request().resourceType())) {
+    failedRequests.push(`HTTP ${res.status()} ${res.url()}`);
+  }
 });
 
 console.log(`\nContrôle de fumée : ${url}\n`);
@@ -54,12 +88,47 @@ try {
   }
   console.log(`  [OK] Contenu affiché (${textLength} caractères)`);
 
-  // 3. Les repères de l'interface.
-  for (const label of ['Carte Live', 'FleetGuard']) {
-    if (!(await page.getByText(label, { exact: false }).first().isVisible())) {
-      throw new Error(`Élément d'interface introuvable : « ${label} »`);
+  // 3. Marque présente dans les deux états possibles.
+  if (!(await page.getByText('FleetGuard', { exact: false }).first().isVisible())) {
+    throw new Error("Élément d'interface introuvable : « FleetGuard »");
+  }
+  console.log('  [OK] Présent à l’écran : « FleetGuard »');
+
+  /**
+   * L'application peut légitimement s'ouvrir sur deux écrans :
+   *   - la connexion, quand une base de données est configurée ;
+   *   - l'espace de travail, en mode démonstration.
+   * Les deux sont des succès ; ce qui compte, c'est qu'un écran s'affiche.
+   */
+  const loginVisible = await page
+    .getByRole('button', { name: /se connecter/i })
+    .isVisible()
+    .catch(() => false);
+
+  if (loginVisible) {
+    console.log('  [OK] Écran de connexion affiché (authentification requise)');
+
+    // Si des identifiants sont fournis, on va jusqu'au bout : c'est le seul
+    // moyen de vérifier que l'espace de travail se charge après connexion.
+    const email = process.env.SMOKE_EMAIL;
+    const password = process.env.SMOKE_PASSWORD;
+
+    if (email && password) {
+      await page.fill('#email', email);
+      await page.fill('#password', password);
+      await page.getByRole('button', { name: /se connecter/i }).click();
+
+      await page.waitForSelector('text=Carte Live', { timeout: 20_000 });
+      console.log('  [OK] Connexion réussie, espace de travail chargé');
+
+      const workspaceText = (await page.locator('body').innerText()).trim().length;
+      console.log(`  [OK] Espace de travail affiché (${workspaceText} caractères)`);
+    } else {
+      console.log('  [i]  SMOKE_EMAIL/SMOKE_PASSWORD absents : connexion non testée');
     }
-    console.log(`  [OK] Présent à l'écran : « ${label} »`);
+  } else {
+    await page.waitForSelector('text=Carte Live', { timeout: 10_000 });
+    console.log('  [OK] Espace de travail affiché (mode démonstration)');
   }
 
   await page.screenshot({ path: 'smoke-screenshot.png', fullPage: false });

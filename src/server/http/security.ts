@@ -31,11 +31,17 @@ export function applySecurity(app: Express) {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          // En développement, Vite injecte son préambule de rechargement à
+          // chaud sous forme de script inline : sans cette tolérance, la page
+          // reste blanche en local. La production conserve `'self'` seul.
+          scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'"],
           // Tailwind injecte des styles à l'exécution.
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:', 'blob:', ...TILE_HOSTS],
-          connectSrc: ["'self'", ...TILE_HOSTS],
+          // Le rechargement à chaud passe par un websocket local.
+          connectSrc: isProduction
+            ? ["'self'", ...TILE_HOSTS]
+            : ["'self'", 'ws://localhost:*', 'ws://127.0.0.1:*', ...TILE_HOSTS],
           fontSrc: ["'self'", 'data:'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
