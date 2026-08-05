@@ -40,7 +40,7 @@ function run(command, args, env = {}) {
   }
 }
 
-async function waitForDatabase(connectionString, attempts = 30) {
+async function waitForDatabase(connectionString, attempts = 60) {
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const client = new pg.Client({ connectionString });
     try {
@@ -53,6 +53,9 @@ async function waitForDatabase(connectionString, attempts = 30) {
       await client.end().catch(() => undefined);
       if (attempt === attempts) {
         throw new Error(`Base injoignable après ${attempts} tentatives : ${err.message}`);
+      }
+      if (attempt === 1 || attempt % 5 === 0) {
+        log(`base pas encore prête (tentative ${attempt}/${attempts}) : ${err.message}`);
       }
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
