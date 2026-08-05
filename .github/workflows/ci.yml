@@ -128,6 +128,69 @@ jobs:
             exit 1
           fi
 
+  isolation:
+    name: Isolation multi-tenant (base réelle)
+    runs-on: ubuntu-latest
+    # Exigence du cahier des charges : « les tests démontrent qu'un tenant ne
+    # peut pas lire les données d'un autre ». Ces tests s'exécutent contre une
+    # vraie base PostGIS, avec le rôle applicatif soumis au Row-Level Security.
+    # Les valider sur des données en mémoire ne prouverait que le filtrage
+    # applicatif, pas la défense en profondeur.
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: fleetguard
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: fleetguard_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleetguard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://fleetguard:ci_only_password@localhost:5432/fleetguard_db?schema=public
+      DATABASE_APP_URL: postgresql://fleetguard_app:ci_app_password@localhost:5432/fleetguard_db?schema=public
+      APP_DB_PASSWORD: ci_app_password
+      JWT_SECRET: integration-tests-secret-de-32-caracteres-minimum
+      SEED_ON_START: 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Installation
+        run: npm ci --no-audit --no-fund
+
+      - name: Préparation de la base (extensions, migrations, RLS, comptes)
+        run: |
+          npm run build:server
+          npm run build:seed
+          node -e "
+            import('./scripts/start-production.mjs').catch(e => { console.error(e); process.exit(1); });
+          " &
+          PREP_PID=$!
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/v1/health > /dev/null && break
+            sleep 2
+          done
+          kill $PREP_PID 2>/dev/null || true
+
+      - name: Contrôle SQL de l'isolation
+        run: |
+          PGPASSWORD=ci_only_password psql -h localhost -U fleetguard -d fleetguard_db \
+            -v ON_ERROR_STOP=1 -f prisma/sql/999_verify_rls.sql
+
+      - name: Tests d'isolation multi-tenant
+        run: npx vitest run tests/tenant-isolation.test.ts
+
   docker:
     name: Image Docker
     runs-on: ubuntu-latest
