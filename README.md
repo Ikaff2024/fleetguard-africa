@@ -4,11 +4,16 @@ Plateforme SaaS B2B multi-tenant de gestion de flotte, conçue pour les corridor
 routiers africains : suivi GPS, score de sécurité chauffeur explicable, détection
 d'anomalies carburant, maintenance, conformité réglementaire et travail hors ligne.
 
+**Démonstration en ligne :** https://fleetguard-africa-production.up.railway.app
+
 > **État actuel : prototype avancé, pas encore exploitable en production.**
 > L'interface est complète et le socle technique est en place (API durcie, schéma
 > de base, isolation multi-tenant vérifiée), mais **l'authentification n'existe
 > pas encore** et les données proviennent d'un jeu de démonstration.
-> Ne pas exposer sur Internet avec des données réelles.
+>
+> L'instance publique ci-dessus ne contient que des données fictives
+> (TransAfrik, Sahel Express, Kigali Freight). **Aucune flotte réelle ne doit y
+> être enregistrée** tant que la Phase 1 n'est pas livrée.
 > Feuille de route détaillée : [PRODUCTION_PLAN.md](PRODUCTION_PLAN.md).
 
 ---
