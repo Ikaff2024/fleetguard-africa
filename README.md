@@ -6,15 +6,28 @@ d'anomalies carburant, maintenance, conformité réglementaire et travail hors l
 
 **Démonstration en ligne :** https://fleetguard-africa-production.up.railway.app
 
-> **État actuel : prototype avancé, pas encore exploitable en production.**
-> L'interface est complète et le socle technique est en place (API durcie, schéma
-> de base, isolation multi-tenant vérifiée), mais **l'authentification n'existe
-> pas encore** et les données proviennent d'un jeu de démonstration.
+> **État actuel : Sprint 1 livré.** Authentification, RBAC sur 6 rôles et
+> isolation multi-tenant garantie par PostgreSQL sont en place et vérifiés sur
+> base réelle. La télémétrie GPS n'est en revanche **pas encore persistée**
+> (Sprint 2), et l'instance publique ne contient que des données fictives
+> (TransAfrik, Sahel Express, Kigali Freight).
 >
-> L'instance publique ci-dessus ne contient que des données fictives
-> (TransAfrik, Sahel Express, Kigali Freight). **Aucune flotte réelle ne doit y
-> être enregistrée** tant que la Phase 1 n'est pas livrée.
 > Feuille de route détaillée : [PRODUCTION_PLAN.md](PRODUCTION_PLAN.md).
+
+### Comptes de démonstration
+
+| Compte                    | Rôle                   | Organisation            |
+| ------------------------- | ---------------------- | ----------------------- |
+| `admin@transafrik.bj`     | Administrateur         | TransAfrik (Bénin)      |
+| `manager@transafrik.bj`   | Gestionnaire de flotte | TransAfrik (Bénin)      |
+| `securite@transafrik.bj`  | Responsable sécurité   | TransAfrik (Bénin)      |
+| `atelier@transafrik.bj`   | Technicien maintenance | TransAfrik (Bénin)      |
+| `manager@sahelexpress.sn` | Gestionnaire de flotte | Sahel Express (Sénégal) |
+
+Mot de passe commun : `FleetGuard2026!Demo`
+
+Connectez-vous avec deux organisations différentes pour constater l'isolation :
+chacune ne voit que son propre parc.
 
 ---
 
@@ -120,11 +133,15 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 
 À lire avant toute mise en service :
 
-- **Aucune authentification.** `X-Organization-Id` est déclaratif : n'importe
-  qui peut désigner n'importe quel tenant. Phase 1.
-- **Aucune persistance.** L'API sert le jeu de démonstration ; la télémétrie et
-  la synchronisation hors ligne valident les données mais ne les écrivent pas
-  (`persisted: false` dans les réponses, volontairement explicite).
+- **Télémétrie non persistée.** L'ingestion GPS et la synchronisation hors
+  ligne valident et dédoublonnent les données, mais ne les écrivent pas encore
+  (`persisted: false` dans les réponses, volontairement explicite). Sprint 2.
+- **Distance de scoring fictive.** Le score de sécurité utilise une distance
+  constante héritée du jeu de démonstration : il sera faux sur des données
+  réelles tant que la télémétrie n'alimente pas ce calcul.
+- **Écrans encore alimentés par le jeu de démonstration.** L'API sert les
+  données réelles de PostgreSQL ; la migration écran par écran vers ces
+  données est en cours.
 - **Pas encore une application installable hors ligne.** La file IndexedDB
   existe, mais sans service worker l'application ne s'ouvre pas sans réseau.
 - **Tuiles cartographiques** : les serveurs OpenStreetMap publics sont interdits

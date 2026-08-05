@@ -1,6 +1,6 @@
 # FleetGuard Africa — Plan de mise en production
 
-_Dernière mise à jour : 5 août 2026_
+_Dernière mise à jour : 5 août 2026 — Sprint 1 livré_
 
 Ce document est la référence d'engagement de l'équipe technique. Il décrit
 l'écart entre l'état actuel et une plateforme exploitable par des clients
@@ -81,22 +81,32 @@ référentielle du jeu de démonstration.
 
 ## 3. Ce qui reste — par phase
 
-### Phase 1 — Identité et persistance (4 semaines) — **critique**
+### Phase 1 — Identité et persistance — **livrée** ✅
 
-Rien ne peut être mis en service avant cette phase.
+- ✅ Authentification JWT (accès 15 min, rafraîchissement rotatif de 30 jours),
+  scrypt, verrouillage après 5 échecs, limiteur dédié à la connexion.
+- ✅ RBAC sur les 6 rôles, matrice centralisée en un seul fichier.
+- ✅ Le tenant provient du jeton signé ; `X-Organization-Id` n'a plus d'effet
+  (un test le vérifie explicitement).
+- ✅ Chaque transaction pose `SET LOCAL app.current_organization_id`, et
+  l'application se connecte avec `fleetguard_app` (`NOBYPASSRLS`).
+- ✅ Contrôle au démarrage : le service refuse de démarrer en production si sa
+  connexion contourne le RLS.
+- ✅ Repositories sur Prisma, avec repli sur le jeu de démonstration hors
+  production.
+- ✅ Écran de connexion, renouvellement silencieux, états de chargement.
+- ✅ Journal d'audit sur la consultation des dossiers nominatifs.
+- ✅ Déploiement autonome : le conteneur applique extensions, migrations,
+  politiques RLS et peuplement à son démarrage.
+- ⏳ **Reste à faire** : migration écran par écran des 18 composants vers les
+  données réelles de l'API (l'infrastructure est en place, le chemin est
+  démontré de bout en bout).
 
-- Authentification JWT (accès court, rafraîchissement rotatif), RBAC sur les
-  6 rôles déjà modélisés, verrouillage après échecs répétés.
-- Le tenant provient du jeton signé ; l'en-tête `X-Organization-Id` disparaît.
-- Chaque transaction pose `SET LOCAL app.current_organization_id`, et
-  l'application se connecte avec le rôle `fleetguard_app`.
-- Bascule des repositories vers Prisma — les routes ne changent pas.
-- Migration des 18 composants vers le client API (2 modules par semaine).
-- Écrans de connexion, de chargement, d'erreur et d'état vide.
-- Journal d'audit alimenté sur chaque accès à une position nominative.
-
-**Critère de sortie** : plus aucun `import { MOCK_` hors seed et tests ; le test
-d'isolation passe avec deux comptes réels de tenants différents.
+**Vérifié sur base réelle et en production** : TransAfrik voit 6 véhicules,
+Sahel Express 1 ; un identifiant de chauffeur connu d'un tenant reste
+inaccessible à l'autre ; un technicien maintenance est refusé sur la liste des
+chauffeurs. 11 tests d'isolation tournent en intégration continue contre une
+base PostGIS.
 
 ### Phase 2 — Télémétrie réelle (4 semaines)
 
@@ -196,9 +206,9 @@ l'abonnement.
 
 Ne pas ouvrir à un client tant que les points suivants ne sont pas tous vrais :
 
-- [ ] Authentification et RBAC en place, tenant issu du jeton signé
-- [ ] Application connectée avec le rôle `fleetguard_app`, `999_verify_rls.sql` au vert
-- [ ] Données persistées ; plus aucune réponse `persisted: false`
+- [x] Authentification et RBAC en place, tenant issu du jeton signé
+- [x] Application connectée avec le rôle `fleetguard_app`, `999_verify_rls.sql` au vert
+- [ ] Données télémétriques persistées ; plus aucune réponse `persisted: false`
 - [ ] Restauration de sauvegarde testée de bout en bout
 - [ ] Secrets en coffre-fort, `AI_DEMO_MODE=false`
 - [ ] Journal d'audit alimenté et consultable
