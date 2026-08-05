@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Organization } from '../../types';
-import { AlertCircle, MapPin, Fuel, TrendingDown, Clock, CheckCircle2, Navigation, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { MapPin, TrendingDown, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { MOCK_VEHICLES } from '../../data/mock-data';
 
 interface FuelAnomalyDetectionProps {

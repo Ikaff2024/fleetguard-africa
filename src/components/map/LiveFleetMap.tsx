@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MOCK_VEHICLES, MOCK_DRIVERS, MOCK_GEOFENCES, MOCK_ROUTE_POINTS, MOCK_FUEL_STATIONS } from '../../data/mock-data';
-import { Organization, GpsPoint, FuelStation } from '../../types';
+import { Organization, GpsPoint } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import {
   MapPin,
   Navigation,
-  Gauge,
   ShieldAlert,
   Radio,
   RefreshCw,
@@ -16,17 +15,9 @@ import {
   Activity,
   Mountain,
   Eye,
-  Sun,
-  Wind,
   AlertTriangle,
-  Zap,
   Fuel,
-  Compass,
-  Truck,
   Phone,
-  ExternalLink,
-  ShieldCheck,
-  Check,
   Map as MapIcon
 } from 'lucide-react';
 

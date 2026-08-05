@@ -1,31 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Organization } from '../../types';
 import { 
-  Navigation, 
   MapPin, 
-  Fuel, 
-  Clock, 
-  DollarSign, 
   Truck, 
   Sparkles, 
   CheckCircle2, 
   AlertTriangle, 
-  Layers, 
   Plus, 
   Trash2, 
-  ArrowRight, 
   TrendingDown, 
   Zap, 
   Send, 
   RotateCcw, 
-  Sliders, 
   ShieldCheck, 
-  ShieldAlert, 
-  Info, 
-  CornerDownRight, 
-  Share2, 
-  Compass,
-  Gauge
+  Compass
 } from 'lucide-react';
 
 interface RouteOptimizationToolProps {

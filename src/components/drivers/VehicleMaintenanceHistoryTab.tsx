@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, MaintenanceLog, Vehicle, Driver } from '../../types';
+import { Organization, MaintenanceLog } from '../../types';
 import { MOCK_MAINTENANCE_LOGS, MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import {
   Wrench,
   Search,
-  Filter,
   Calendar,
   Clock,
   CheckCircle2,
@@ -14,11 +13,7 @@ import {
   Package,
   Plus,
   Truck,
-  Building,
   Printer,
-  ChevronDown,
-  ChevronUp,
-  Tag,
   DollarSign,
   X
 } from 'lucide-react';

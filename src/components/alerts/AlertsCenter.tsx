@@ -1,13 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, Vehicle, Driver } from '../../types';
+import { Organization } from '../../types';
 import {
   MOCK_VEHICLES,
   MOCK_DRIVERS,
-  MOCK_GEOFENCES,
-  MOCK_SAFETY_EVENTS,
-  MOCK_MAINTENANCE_LOGS,
-  MOCK_FUEL_LOGS,
-  MOCK_COMPLIANCE_DOCS,
 } from '../../data/mock-data';
 import { FuelAnomalyDetector } from './FuelAnomalyDetector';
 import {
@@ -21,7 +16,6 @@ import {
   Sparkles,
   RefreshCw,
   Search,
-  Filter,
   Truck,
   UserCheck,
   Compass,
@@ -29,18 +23,11 @@ import {
   FileText,
   X,
   Send,
-  Plus,
   Zap,
   Check,
-  ExternalLink,
   ShieldCheck,
-  Phone,
-  BarChart2,
-  Calendar,
   AlertOctagon,
-  ArrowRight,
   Flame,
-  Radio,
   Printer
 } from 'lucide-react';
 import { PrintableReportModal } from '../common/PrintableReportModal';

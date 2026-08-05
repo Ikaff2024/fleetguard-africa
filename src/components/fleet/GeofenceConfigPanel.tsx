@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Geofence, Organization, Vehicle } from '../../types';
+import { Geofence, Organization } from '../../types';
 import { MOCK_GEOFENCES, MOCK_VEHICLES } from '../../data/mock-data';
 import { 
   MapPin, 
@@ -13,11 +13,8 @@ import {
   Radio, 
   Zap, 
   Clock, 
-  Layers, 
-  Sparkles, 
   AlertTriangle, 
   BellRing, 
-  CheckCircle2, 
   Sliders, 
   Send,
   Eye,

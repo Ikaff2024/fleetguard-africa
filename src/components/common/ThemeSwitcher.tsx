@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 import { useTheme, ThemeMode } from '../../context/ThemeContext';
 
-import { Sun, Moon, Headphones, ChevronDown, Check, ShieldAlert, Eye, Sparkles } from 'lucide-react';
+import { Sun, Moon, Headphones, ChevronDown, Check, Eye, Sparkles } from 'lucide-react';
 
 export const ThemeSwitcher: React.FC = () => {
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, Driver, Vehicle } from '../../types';
+import { Organization, Driver } from '../../types';
 import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
 import { ShiftFatigueOptimizer } from './ShiftFatigueOptimizer';
 import { VehicleMaintenanceHistoryTab } from './VehicleMaintenanceHistoryTab';
@@ -13,13 +13,10 @@ import {
   Filter,
   Phone,
   Gauge,
-  CheckCircle2,
-  AlertTriangle,
   Star,
   ChevronRight,
   MessageSquare,
   Zap,
-  Clock,
   Wrench
 } from 'lucide-react';
 

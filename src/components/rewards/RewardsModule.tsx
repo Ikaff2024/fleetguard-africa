@@ -1,17 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, Driver } from '../../types';
+import { Organization } from '../../types';
 import {
   MOCK_DIGITAL_BADGES,
   MOCK_DRIVER_REWARD_PROFILES,
-  MOCK_FUEL_BONUS_CONFIG,
-  MOCK_DRIVERS
+  MOCK_FUEL_BONUS_CONFIG
 } from '../../data/mock-data';
 import {
   DigitalBadge,
   DriverRewardProfile,
   FuelBonusRuleConfig,
   BadgeRarity,
-  BadgeCategory,
   PayoutStatus
 } from '../../types';
 import {
@@ -23,26 +21,17 @@ import {
   Moon,
   Coins,
   TrendingUp,
-  Sparkles,
   CheckCircle2,
   AlertTriangle,
   Gift,
   Send,
   Sliders,
-  DollarSign,
   Wallet,
   Users,
   Star,
   ChevronRight,
   Info,
-  Check,
-  RefreshCw,
-  PlusCircle,
-  FileCheck,
-  Search,
-  HelpCircle,
-  Clock,
-  ThumbsUp
+  PlusCircle
 } from 'lucide-react';
 
 interface RewardsModuleProps {

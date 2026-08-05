@@ -13,7 +13,7 @@ import { OfflineSyncProvider, useOfflineSync } from './context/OfflineSyncContex
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MOCK_ORGANIZATIONS } from './data/mock-data';
 import { Organization, UserRole } from './types';
-import { Database, X, RefreshCw, Moon, Headphones, Sun } from 'lucide-react';
+import { Database, X, RefreshCw, Headphones } from 'lucide-react';
 
 function AppContent() {
   const [currentOrg, setCurrentOrg] = useState<Organization>(MOCK_ORGANIZATIONS[0]);

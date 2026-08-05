@@ -1,35 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, Vehicle, Driver } from '../../types';
+import { Organization } from '../../types';
 import {
   MOCK_VEHICLES,
   MOCK_DRIVERS,
-  MOCK_FUEL_LOGS,
-  MOCK_MAINTENANCE_LOGS,
-  MOCK_SAFETY_EVENTS,
 } from '../../data/mock-data';
 import {
-  FileText,
-  Download,
   Printer,
-  Calendar,
   Filter,
   Truck,
   Fuel,
   Wrench,
-  ShieldAlert,
-  BarChart3,
   CheckCircle2,
-  AlertTriangle,
   Sparkles,
-  Zap,
   Award,
-  DollarSign,
   TrendingDown,
-  ChevronRight,
-  Share2,
-  FileSpreadsheet,
-  Building,
-  UserCheck
+  FileSpreadsheet
 } from 'lucide-react';
 import { PrintableReportModal } from '../common/PrintableReportModal';
 

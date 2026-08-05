@@ -1,4 +1,4 @@
-import { Organization, Vehicle, Driver, Geofence, SafetyEvent, DriverScoreConfig, DriverDailyScore, MaintenanceLog, FuelLog, ComplianceDoc, GpsPoint, FuelStation, DriverFatigueMetrics, ShiftScheduleSlot, LegalDrivingFrameworkConfig, DigitalBadge, DriverRewardProfile, FuelBonusRuleConfig } from '../types';
+import { Organization, Vehicle, Driver, Geofence, SafetyEvent, DriverScoreConfig, MaintenanceLog, FuelLog, ComplianceDoc, GpsPoint, FuelStation, DriverFatigueMetrics, ShiftScheduleSlot, LegalDrivingFrameworkConfig, DigitalBadge, DriverRewardProfile, FuelBonusRuleConfig } from '../types';
 
 export const MOCK_ORGANIZATIONS: Organization[] = [
   {

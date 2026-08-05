@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
-import { Printer, Download, X, Check, FileText, ShieldAlert, Wrench, Calendar, Building, UserCheck } from 'lucide-react';
+import { Printer, Download, X, FileText, ShieldAlert, Wrench, Building } from 'lucide-react';
 
 interface PrintableReportModalProps {
   isOpen: boolean;

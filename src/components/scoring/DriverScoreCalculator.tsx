@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { MOCK_DRIVERS, MOCK_SCORE_CONFIG, MOCK_VEHICLES } from '../../data/mock-data';
+import { MOCK_DRIVERS, MOCK_SCORE_CONFIG } from '../../data/mock-data';
 import { calculateDriverSafetyScore, calculateVehicleHealthScore, calculateFuelEfficiencyScore } from '../../data/scoring-engine';
 import { Organization, DriverScoreConfig } from '../../types';
-import { Award, ShieldAlert, Sliders, Info, CheckCircle2, AlertTriangle, Gauge, Zap, Trophy, Calculator, Sparkles, MessageSquare, Gift } from 'lucide-react';
+import { Award, Sliders, Info, CheckCircle2, AlertTriangle, Gauge, Zap, Trophy, Calculator, Sparkles, MessageSquare, Gift } from 'lucide-react';
 import { DriverLeaderboard } from './DriverLeaderboard';
 import { ProactiveSafetyTips } from './ProactiveSafetyTips';
 import { DriverMessagingModule } from './DriverMessagingModule';

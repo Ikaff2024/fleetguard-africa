@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
 import { 
-  LineChart, 
   Line, 
   XAxis, 
   YAxis, 
@@ -10,9 +9,7 @@ import {
   Legend, 
   ResponsiveContainer, 
   AreaChart, 
-  Area,
-  BarChart,
-  Bar
+  Area
 } from 'recharts';
 import { 
   Wrench, 
@@ -24,16 +21,8 @@ import {
   Calendar, 
   Sparkles, 
   ShieldAlert, 
-  Zap, 
-  Thermometer, 
   Gauge, 
-  Cpu, 
-  Truck, 
-  Filter, 
-  FileText, 
-  CheckSquare, 
-  ArrowRight,
-  Info,
+  Cpu,
   DollarSign
 } from 'lucide-react';
 

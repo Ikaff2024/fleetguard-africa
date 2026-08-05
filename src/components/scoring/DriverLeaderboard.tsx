@@ -13,16 +13,9 @@ import {
   Sliders, 
   Search, 
   ChevronRight, 
-  CheckCircle2, 
-  AlertTriangle, 
   Sparkles, 
-  UserCheck, 
-  Target, 
   X, 
-  BarChart3, 
-  Flame,
-  Zap,
-  Star
+  BarChart3
 } from 'lucide-react';
 
 interface DriverLeaderboardProps {

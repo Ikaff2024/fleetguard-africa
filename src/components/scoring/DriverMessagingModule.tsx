@@ -1,28 +1,17 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Organization, Driver } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { Organization } from '../../types';
 import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
 import {
-  MessageSquare,
   Send,
   Smartphone,
-  ShieldCheck,
   ShieldAlert,
-  Bell,
   CheckCheck,
   Clock,
-  User,
-  Search,
-  Filter,
   Sparkles,
   Zap,
   Truck,
-  Award,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  Volume2,
-  FileText,
-  RotateCcw,
   Check
 } from 'lucide-react';
 
@@ -344,7 +333,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
 
                 <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3 font-medium">
                   <span>Permis: <strong>{selectedDriver?.licenseNumber || 'Catégorie C/E'}</strong></span>
-                  <span>Téléphone: <strong>{selectedDriver?.phoneNumber || '+229 97 00 11 22'}</strong></span>
+                  <span>Téléphone: <strong>{selectedDriver?.phone || 'Non renseigné'}</strong></span>
                   <span>Véhicule: <strong>{assignedVehicle ? `${assignedVehicle.immatriculation} (${assignedVehicle.make})` : 'Camion Flotte'}</strong></span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
-import { Sparkles, Send, Bot, User, RefreshCw, AlertCircle, CheckCircle2, ShieldCheck, Zap, Fuel, MessageSquare, Wrench, Compass, FileSpreadsheet } from 'lucide-react';
+import { Sparkles, Send, Bot, User, RefreshCw, AlertCircle, Zap, Fuel, MessageSquare, Wrench, Compass, FileSpreadsheet } from 'lucide-react';
 import { FuelAnalyticsDashboard } from './FuelAnalyticsDashboard';
 import { MaintenanceForecast } from './MaintenanceForecast';
 import { RouteOptimizationTool } from './RouteOptimizationTool';

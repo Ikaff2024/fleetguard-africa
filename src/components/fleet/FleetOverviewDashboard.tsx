@@ -1,7 +1,7 @@
 import React from 'react';
 import { Organization } from '../../types';
 import { MOCK_VEHICLES, MOCK_FUEL_LOGS } from '../../data/mock-data';
-import { Activity, Droplet, Truck, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, Droplet, Truck, TrendingUp } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
 interface FleetOverviewDashboardProps {

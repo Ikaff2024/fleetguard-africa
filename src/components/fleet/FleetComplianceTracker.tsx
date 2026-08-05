@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Organization, Vehicle, ComplianceDoc } from '../../types';
+import { Organization, ComplianceDoc } from '../../types';
 import { MOCK_VEHICLES, MOCK_COMPLIANCE_DOCS } from '../../data/mock-data';
-import { ShieldCheck, AlertTriangle, FileText, Calendar, Plus, Filter, Search, Bell, Clock, FileWarning, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, FileText, Calendar, Plus, Search, Bell, Clock, FileWarning, CheckCircle2 } from 'lucide-react';
 
 interface FleetComplianceTrackerProps {
   currentOrg: Organization;
@@ -27,7 +27,7 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
       
       const matchesVehicle = selectedVehicle === 'ALL' || doc.vehicleId === selectedVehicle;
       const matchesStatus = selectedStatus === 'ALL' || doc.status === selectedStatus;
-      const matchesType = selectedType === 'ALL' || doc.type === selectedType;
+      const matchesType = selectedType === 'ALL' || doc.docType === selectedType;
 
       return matchesSearch && matchesVehicle && matchesStatus && matchesType;
     });
@@ -59,16 +59,23 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
     );
   };
 
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = (type: ComplianceDoc['docType']) => {
+    const badgeClass = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border';
     switch (type) {
       case 'INSURANCE':
-        return <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Assurance</span>;
-      case 'ROADWORTHINESS':
-        return <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Visite Technique</span>;
-      case 'PERMIT':
-        return <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Autorisation</span>;
+        return <span className={`${badgeClass} text-blue-600 bg-blue-50 border-blue-200`}>Assurance</span>;
+      case 'TECHNICAL_INSPECTION':
+        return <span className={`${badgeClass} text-purple-600 bg-purple-50 border-purple-200`}>Visite Technique</span>;
+      case 'CEDEAO_BROWN_CARD':
+        return <span className={`${badgeClass} text-amber-600 bg-amber-50 border-amber-200`}>Carte Brune CEDEAO</span>;
+      case 'AXLE_LOAD_CERTIFICATE':
+        return <span className={`${badgeClass} text-teal-600 bg-teal-50 border-teal-200`}>Charge à l'Essieu</span>;
+      case 'DRIVER_LICENSE':
+        return <span className={`${badgeClass} text-indigo-600 bg-indigo-50 border-indigo-200`}>Permis de Conduire</span>;
+      case 'HAZMAT_PERMIT':
+        return <span className={`${badgeClass} text-red-600 bg-red-50 border-red-200`}>Matières Dangereuses</span>;
       default:
-        return <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Document</span>;
+        return <span className={`${badgeClass} text-slate-600 bg-slate-50 border-slate-200`}>Document</span>;
     }
   };
 
@@ -166,8 +173,11 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
           >
             <option value="ALL">Tous les Types</option>
             <option value="INSURANCE">Assurance</option>
-            <option value="ROADWORTHINESS">Visite Technique</option>
-            <option value="PERMIT">Autorisation</option>
+            <option value="TECHNICAL_INSPECTION">Visite Technique</option>
+            <option value="CEDEAO_BROWN_CARD">Carte Brune CEDEAO</option>
+            <option value="AXLE_LOAD_CERTIFICATE">Charge à l'Essieu</option>
+            <option value="DRIVER_LICENSE">Permis de Conduire</option>
+            <option value="HAZMAT_PERMIT">Matières Dangereuses</option>
           </select>
           
           <select 
@@ -212,7 +222,7 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-slate-900 text-sm">{doc.title}</h3>
-                      {getTypeBadge(doc.type || 'DOCUMENT')}
+                      {getTypeBadge(doc.docType)}
                     </div>
                     <div className="text-xs text-slate-500 font-mono">
                       N° Pièce: <strong className="text-slate-700">{doc.docNumber}</strong>

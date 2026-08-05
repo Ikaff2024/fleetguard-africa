@@ -21,18 +21,15 @@ import {
 import { 
   Fuel, 
   TrendingDown, 
-  TrendingUp, 
   AlertTriangle, 
   Sparkles, 
   CheckCircle2, 
   BarChart3, 
-  Filter, 
   Zap, 
   Droplets, 
   Truck, 
   ShieldCheck, 
   DollarSign, 
-  ArrowUpRight, 
   ArrowDownRight,
   Info
 } from 'lucide-react';
@@ -196,10 +193,10 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
           <div className="font-bold border-b border-slate-700 pb-1 flex justify-between gap-4">
             <span>Mois de {label}</span>
             <span className="text-orange-400 font-mono font-bold">
-              {metricType === 'cost' 
-                ? `${(payload[0]?.payload?.costXOF).toLocaleString()} ${currencySymbol}`
+              {metricType === 'cost'
+                ? `${(payload[0]?.payload?.costXOF ?? 0).toLocaleString()} ${currencySymbol}`
                 : metricType === 'avgL100km'
-                ? `${payload[0]?.payload?.avgL100km} L/100km`
+                ? `${payload[0]?.payload?.avgL100km ?? '—'} L/100km`
                 : `${totalLiters.toLocaleString()} Litres Total`}
             </span>
           </div>
@@ -499,7 +496,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number) => [`${val.toLocaleString()} Litres`, 'Volume']}
+                  formatter={value => [`${Number(value).toLocaleString()} Litres`, 'Volume']}
                 />
               </PieChart>
             </ResponsiveContainer>

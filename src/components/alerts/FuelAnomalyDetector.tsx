@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Organization, Vehicle, Driver } from '../../types';
+import { Organization } from '../../types';
 import { UnifiedAlert } from './AlertsCenter';
 import {
   MOCK_VEHICLES,
@@ -7,24 +7,15 @@ import {
 } from '../../data/mock-data';
 import {
   ShieldAlert,
-  Fuel,
-  Zap,
   Play,
   Pause,
   RotateCcw,
   AlertTriangle,
-  CheckCircle2,
-  Lock,
-  Power,
   Flame,
   Radio,
-  Clock,
-  MapPin,
-  TrendingDown,
   Sparkles,
   Volume2,
   VolumeX,
-  Bell,
   ArrowRight
 } from 'lucide-react';
 
