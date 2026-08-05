@@ -55,7 +55,10 @@ async function waitForDatabase(connectionString, attempts = 60) {
     } catch (err) {
       await client.end().catch(() => undefined);
       if (attempt === attempts) {
-        throw new Error(`Base injoignable après ${attempts} tentatives : ${err.message}`);
+        // `cause` préserve l'erreur d'origine : sans elle, le diagnostic se
+        // limite à « base injoignable », sans le motif réel (DNS, refus de
+        // connexion, authentification).
+        throw new Error(`Base injoignable après ${attempts} tentatives`, { cause: err });
       }
       if (attempt === 1 || attempt % 5 === 0) {
         log(`base pas encore prête (tentative ${attempt}/${attempts}) : ${err.message}`);

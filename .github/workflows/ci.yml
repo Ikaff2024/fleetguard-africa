@@ -90,7 +90,11 @@ jobs:
         # répondaient 200, mais la politique CORS bloquait les fichiers de la
         # page. Seule l'exécution du JavaScript dans un navigateur le détecte.
         run: |
-          NODE_ENV=production PORT=3000 node dist/server.js &
+          # NODE_ENV=development : ce job ne dispose pas de base de données, et
+          # la configuration refuse — a raison — de démarrer en production sans
+          # DATABASE_URL ni JWT_SECRET. Le mode production authentifié est
+          # couvert par le job « Isolation multi-tenant ».
+          NODE_ENV=development PORT=3000 node dist/server.js &
           SERVER_PID=$!
           for i in $(seq 1 30); do
             curl -sf http://localhost:3000/api/v1/health > /dev/null && break
