@@ -1,0 +1,11 @@
+# Normalisation des fins de ligne : LF dans le dépôt, quel que soit l'OS du poste.
+# Évite le bruit de diff entre postes Windows et runners CI Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary

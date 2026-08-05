@@ -1,26 +1,31 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
     "module": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "skipLibCheck": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
     "moduleResolution": "bundler",
-    "isolatedModules": true,
     "moduleDetection": "force",
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
     "allowJs": true,
     "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "resolveJsonModule": true,
+
+    /* Rigueur — un SaaS multi-tenant ne tolère pas les `undefined` silencieux */
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "server.ts", "vite.config.ts", "vitest.config.ts", "prisma", "tests"],
+  "exclude": ["node_modules", "dist", "coverage"]
 }
