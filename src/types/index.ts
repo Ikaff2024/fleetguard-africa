@@ -93,6 +93,33 @@ export interface Driver {
  * traçabilité, un chiffre affiché ne pourrait fonder aucune décision vis-à-vis
  * d'un chauffeur.
  */
+/**
+ * Profil de prime tel que le serveur le calcule.
+ *
+ * `ineligibilityReason` est renseigné dès que la prime est nulle : une prime
+ * refusée doit pouvoir s'expliquer au chauffeur qui l'attendait.
+ */
+export interface RewardProfileRecord {
+  driverId: string;
+  driverName: string;
+  assignedVehicle: string;
+  currentSafetyScore: number;
+  scoreTrend30d: number;
+  ecoScore: number;
+  fuelEfficiencySavingsL100km: number;
+  estimatedFuelSavedLiters: number;
+  bonusEarned: number;
+  currency: string;
+  eligible: boolean;
+  ineligibilityReason?: string;
+  payoutStatus: PayoutStatus;
+  payoutMethod: 'ORANGE_MONEY' | 'MTN_MOMO' | 'WAVE' | 'FUEL_VOUCHER';
+  lastPayoutAt?: string;
+  totalPoints: number;
+  rankInCompany: number;
+  unlockedBadges: { badgeId: string; code: string; title: string; unlockedAt: string }[];
+}
+
 export interface AlertRecord {
   id: string;
   organizationId: string;

@@ -17,6 +17,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
   MOCK_COMPLIANCE_DOCS,
+  MOCK_DIGITAL_BADGES,
   MOCK_DRIVERS,
   MOCK_FUEL_LOGS,
   MOCK_GEOFENCES,
@@ -441,11 +442,45 @@ async function main() {
   }
   console.log(`  ${accounts.length} comptes utilisateurs`);
 
+  // --- Catalogue des distinctions ------------------------------------------
+  // Il est commun à toutes les organisations : un « zéro excès sur 30 jours »
+  // a le même sens à Cotonou et à Dakar. Les profils de prime, eux, sont
+  // calculés à partir des données réelles de chaque flotte.
+  for (const badge of MOCK_DIGITAL_BADGES) {
+    await prisma.digitalBadge.upsert({
+      where: { code: badge.code },
+      update: {
+        title: badge.title,
+        description: badge.description,
+        criterion: badge.criterion,
+        expBonusPoints: badge.expBonusPoints,
+        fuelBonusMultiplier: badge.fuelBonusMultiplier,
+      },
+      create: {
+        id: stableUuid(badge.id),
+        code: badge.code,
+        title: badge.title,
+        description: badge.description,
+        category: badge.category,
+        rarity: badge.rarity,
+        iconName: badge.iconName,
+        expBonusPoints: badge.expBonusPoints,
+        fuelBonusMultiplier: badge.fuelBonusMultiplier,
+        criterion: badge.criterion,
+      },
+    });
+  }
+  console.log(`  ${MOCK_DIGITAL_BADGES.length} distinctions au catalogue`);
+
   // --- Trace GPS et trajets reconstruits ------------------------------------
   // Deux missions sur les jours précédents, pour que l'historique ne soit pas
   // vide à la première ouverture.
-  const traceVehicle = MOCK_VEHICLES[0];
-  const traceDriver = MOCK_DRIVERS.find(d => d.assignedVehicleId === traceVehicle?.id);
+  // Le chauffeur le mieux noté porte la trace : la démonstration doit montrer
+  // le cas nominal du partage de gain, où la conduite économe se traduit
+  // réellement en prime. Les autres profils, eux, exposent chacun un motif
+  // d'inéligibilité — c'est aussi ce qu'un transporteur doit voir.
+  const traceDriver = [...MOCK_DRIVERS].sort((a, b) => b.currentSafetyScore - a.currentSafetyScore)[0];
+  const traceVehicle = MOCK_VEHICLES.find(v => v.id === traceDriver?.assignedVehicleId);
 
   if (traceVehicle && traceDriver) {
     const vehicleId = stableUuid(traceVehicle.id);
@@ -515,7 +550,37 @@ async function main() {
       }
     }
 
-    console.log(`  ${pointCount} positions GPS, ${tripCount} trajet(s) reconstruit(s)`);
+    // Pleins cohérents avec la distance parcourue. Sans eux, la prime resterait
+    // à zéro faute d'économie mesurable : le module de partage de gain se
+    // calcule sur les pleins réels, jamais sur une estimation.
+    const referenceL100km = Number(traceVehicle.expectedConsumptionL100km);
+    const distanceKm = 348.4 * 2;
+    // Conduite économe : environ 22 % sous la référence du véhicule.
+    const litersUsed = Math.round((referenceL100km * 0.78 * distanceKm) / 100);
+
+    await prisma.fuelLog.upsert({
+      where: { id: stableUuid(`fuel-demo-${traceVehicle.id}`) },
+      update: { litersAdded: litersUsed },
+      create: {
+        id: stableUuid(`fuel-demo-${traceVehicle.id}`),
+        organizationId,
+        vehicleId,
+        driverId,
+        litersAdded: litersUsed,
+        pricePerLiter: 750,
+        totalCost: litersUsed * 750,
+        currency: 'XOF',
+        odometerKm: traceVehicle.currentOdometerKm,
+        stationName: 'Station Total Parakou Centre',
+        receiptNumber: `DEMO-${traceVehicle.immatriculation}`,
+        calculatedL100km: Math.round((litersUsed / distanceKm) * 100 * 10) / 10,
+        loggedAt: new Date(Date.now() - 86_400_000),
+      },
+    });
+
+    console.log(
+      `  ${pointCount} positions GPS, ${tripCount} trajet(s) reconstruit(s), ${litersUsed} L relevés`,
+    );
   }
 
   console.log('\nPeuplement terminé.');

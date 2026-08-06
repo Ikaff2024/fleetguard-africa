@@ -6,7 +6,9 @@ import type {
   FuelLog,
   Geofence,
   MaintenanceLog,
+  DigitalBadge,
   Organization,
+  RewardProfileRecord,
   Trip,
   Vehicle,
 } from '../types';
@@ -65,3 +67,23 @@ export const useTrips = (filters: { vehicleId?: string; limit?: number } = {}) =
  * fabrique rien et n'a rien à recalculer.
  */
 export const useAlerts = () => useApiResource<AlertRecord[]>('/alerts');
+
+/**
+ * Primes de conduite économe.
+ *
+ * Le serveur calcule les montants sur les pleins et les distances réellement
+ * enregistrés ; l'écran n'estime rien.
+ */
+export const useRewardProfiles = () => useApiResource<RewardProfileRecord[]>('/rewards/profiles');
+
+export const useRewardBadges = () => useApiResource<DigitalBadge[]>('/rewards/badges');
+
+export const useBonusRules = () =>
+  useApiResource<{
+    fuelPricePerLiter: number;
+    sharedSavingsPercentage: number;
+    minSafetyScoreForBonus: number;
+    maxMonthlyBonusCap: number;
+    baseTierBonus: number;
+    bonusPayoutCycle: 'WEEKLY' | 'MONTHLY';
+  }>('/rewards/rules');

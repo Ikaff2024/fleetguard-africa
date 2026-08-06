@@ -1,10 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Organization } from '../../types';
-import {
-  MOCK_DIGITAL_BADGES,
-  MOCK_DRIVER_REWARD_PROFILES,
-  MOCK_FUEL_BONUS_CONFIG,
-} from '../../data/mock-data';
+import { apiClient } from '../../lib/api-client';
+import { useBonusRules, useRewardBadges, useRewardProfiles } from '../../hooks/useFleetData';
 import {
   DigitalBadge,
   DriverRewardProfile,
@@ -45,12 +42,91 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
     'DRIVER_TRENDS' | 'BADGES_GALLERY' | 'FUEL_BONUSES' | 'BONUS_SIMULATOR'
   >('DRIVER_TRENDS');
 
-  // Rewards State (mutable)
-  const [driverProfiles, setDriverProfiles] = useState<DriverRewardProfile[]>(
-    MOCK_DRIVER_REWARD_PROFILES.filter(p => p.organizationId === currentOrg.id),
+  /**
+   * Primes, distinctions et règles viennent du serveur.
+   *
+   * Le montant se calcule sur les pleins et les distances réellement
+   * enregistrés : l'écran filtrait auparavant un jeu de démonstration sur
+   * l'identifiant d'organisation, qui ne correspondait à rien en base réelle —
+   * tous les compteurs restaient donc à zéro.
+   */
+  const profilesQuery = useRewardProfiles();
+  const badgesQuery = useRewardBadges();
+  const rulesQuery = useBonusRules();
+
+  const [writeError, setWriteError] = useState<string | null>(null);
+
+  const driverProfiles = useMemo<DriverRewardProfile[]>(
+    () =>
+      (profilesQuery.data ?? []).map(profile => ({
+        driverId: profile.driverId,
+        organizationId: currentOrg.id,
+        driverName: profile.driverName,
+        assignedVehicle: profile.assignedVehicle,
+        currentSafetyScore: profile.currentSafetyScore,
+        scoreTrend30d: profile.scoreTrend30d,
+        ecoScore: profile.ecoScore,
+        fuelEfficiencySavingsL100km: profile.fuelEfficiencySavingsL100km,
+        estimatedFuelSavedLiters: profile.estimatedFuelSavedLiters,
+        fuelBonusEarnedXOF: profile.bonusEarned,
+        payoutStatus: profile.payoutStatus,
+        payoutMethod: profile.payoutMethod,
+        lastPayoutDate: profile.lastPayoutAt?.slice(0, 10),
+        totalPoints: profile.totalPoints,
+        rankInCompany: profile.rankInCompany,
+        unlockedBadges: profile.unlockedBadges.map(badge => ({
+          badgeId: badge.badgeId,
+          unlockedAt: badge.unlockedAt,
+          periodLabel: badge.unlockedAt.slice(0, 7),
+          grantedBy: 'Régulateur',
+        })),
+        // Aucune progression vers un badge n'est suivie côté serveur : mieux
+        // vaut ne rien afficher qu'une barre de progression inventée.
+        badgeProgress: [],
+        // Les indicateurs reprennent des faits déjà calculés, jamais un
+        // commentaire fabriqué.
+        trendHighlights: [
+          profile.eligible
+            ? {
+                metric: `${profile.estimatedFuelSavedLiters} L économisés`,
+                trendType: 'POSITIVE' as const,
+                description: `Consommation inférieure de ${Math.abs(profile.fuelEfficiencySavingsL100km).toFixed(1)} L/100 km à la référence du véhicule.`,
+              }
+            : {
+                metric: 'Prime non versée',
+                trendType: 'WARNING' as const,
+                description: profile.ineligibilityReason ?? 'Conditions non réunies.',
+              },
+          {
+            metric: `Score de sécurité ${profile.currentSafetyScore.toFixed(0)}/100`,
+            trendType:
+              profile.currentSafetyScore >= 85
+                ? ('POSITIVE' as const)
+                : profile.currentSafetyScore >= 70
+                  ? ('NEUTRAL' as const)
+                  : ('WARNING' as const),
+            description: `Seuil d'éligibilité à la prime : 85/100.`,
+          },
+        ],
+        ineligibilityReason: profile.ineligibilityReason,
+      })),
+    [profilesQuery.data, currentOrg.id],
   );
-  const [digitalBadges, setDigitalBadges] = useState<DigitalBadge[]>(MOCK_DIGITAL_BADGES);
-  const [bonusConfig, setBonusConfig] = useState<FuelBonusRuleConfig>(MOCK_FUEL_BONUS_CONFIG);
+
+  const digitalBadges = useMemo<DigitalBadge[]>(() => badgesQuery.data ?? [], [badgesQuery.data]);
+
+  const bonusConfig = useMemo<FuelBonusRuleConfig>(
+    () => ({
+      organizationId: currentOrg.id,
+      fuelPricePerLiterXOF: rulesQuery.data?.fuelPricePerLiter ?? 750,
+      sharedSavingsPercentage: rulesQuery.data?.sharedSavingsPercentage ?? 50,
+      minSafetyScoreForBonus: rulesQuery.data?.minSafetyScoreForBonus ?? 85,
+      bonusPayoutCycle: rulesQuery.data?.bonusPayoutCycle ?? 'MONTHLY',
+      maxMonthlyBonusCapXOF: rulesQuery.data?.maxMonthlyBonusCap ?? 150_000,
+      baseTierBonusXOF: rulesQuery.data?.baseTierBonus ?? 15_000,
+    }),
+    [rulesQuery.data, currentOrg.id],
+  );
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -158,61 +234,45 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Change Payout Status
-  const handleApproveBonus = (driverId: string, nextStatus: PayoutStatus) => {
-    setDriverProfiles(prev =>
-      prev.map(p => {
-        if (p.driverId === driverId) {
-          return {
-            ...p,
-            payoutStatus: nextStatus,
-            lastPayoutDate: nextStatus === 'PAID' ? '2026-08-04' : p.lastPayoutDate,
-          };
-        }
-        return p;
-      }),
-    );
+  /**
+   * Décision de versement.
+   *
+   * Elle est écrite avant tout affichage : marquer une prime « versée » dans le
+   * seul navigateur laisserait croire, après rechargement, à un paiement qui
+   * n'a pas eu lieu.
+   */
+  const handleApproveBonus = async (driverId: string, nextStatus: PayoutStatus) => {
     const profile = driverProfiles.find(p => p.driverId === driverId);
-    showToast(
-      `Statut prime mis à jour [${nextStatus}] pour ${profile?.driverName} (${profile?.fuelBonusEarnedXOF.toLocaleString()} XOF).`,
-    );
+    setWriteError(null);
+    try {
+      await apiClient.patch(`/rewards/profiles/${driverId}`, { payoutStatus: nextStatus });
+      profilesQuery.reload();
+      showToast(
+        `Statut de prime enregistré [${nextStatus}] pour ${profile?.driverName} (${profile?.fuelBonusEarnedXOF.toLocaleString()} XOF).`,
+      );
+    } catch {
+      setWriteError("La décision de versement n'a pas pu être enregistrée. Réessayez.");
+    }
   };
 
-  // Manually Grant Badge to Driver
-  const handleGrantBadgeSubmit = () => {
+  /** Attribution d'une distinction, enregistrée côté serveur. */
+  const handleGrantBadgeSubmit = async () => {
     if (!selectedDriverId || !badgeToGrantId) return;
 
     const badge = digitalBadges.find(b => b.id === badgeToGrantId);
     if (!badge) return;
 
-    setDriverProfiles(prev =>
-      prev.map(p => {
-        if (p.driverId === selectedDriverId) {
-          const alreadyUnlocked = p.unlockedBadges.some(b => b.badgeId === badgeToGrantId);
-          if (alreadyUnlocked) return p;
-
-          return {
-            ...p,
-            totalPoints: p.totalPoints + badge.expBonusPoints,
-            unlockedBadges: [
-              ...p.unlockedBadges,
-              {
-                badgeId: badge.id,
-                unlockedAt: '2026-08-04',
-                periodLabel: 'Août 2026',
-                grantedBy: 'Régulateur / B2B Manager',
-              },
-            ],
-          };
-        }
-        return p;
-      }),
-    );
-
-    setIsGrantBadgeModalOpen(false);
-    showToast(
-      `Badge "${badge.title}" décerné à ${selectedProfile?.driverName} (+${badge.expBonusPoints} pts)!`,
-    );
+    setWriteError(null);
+    try {
+      await apiClient.post(`/rewards/profiles/${selectedDriverId}/badges`, {
+        badgeCode: badge.code,
+      });
+      profilesQuery.reload();
+      setIsGrantBadgeModalOpen(false);
+      showToast(`Distinction « ${badge.title} » décernée à ${selectedProfile?.driverName}.`);
+    } catch {
+      setWriteError("La distinction n'a pas pu être enregistrée. Réessayez.");
+    }
   };
 
   return (
@@ -222,6 +282,23 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-bounce">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Un échec d'écriture doit se voir : une prime que l'on croit approuvée
+          sans qu'elle le soit, c'est une promesse non tenue au chauffeur. */}
+      {writeError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between gap-3">
+          <span className="text-xs font-bold text-red-700">{writeError}</span>
+          <button
+            onClick={() => {
+              setWriteError(null);
+              profilesQuery.reload();
+            }}
+            className="text-xs font-bold text-red-700 underline cursor-pointer"
+          >
+            Recharger
+          </button>
         </div>
       )}
 
@@ -321,7 +398,9 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
             {stats.avgSafetyScore} / 100
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Tendance +4.8% ce mois
+            {/* Le seuil est un fait ; une tendance mensuelle demanderait un
+                historique de scores qui n'est pas encore constitué. */}
+            Seuil de prime : {bonusConfig.minSafetyScoreForBonus} / 100
           </div>
         </div>
       </div>

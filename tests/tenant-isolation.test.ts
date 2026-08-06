@@ -732,3 +732,120 @@ describe.skipIf(!DATABASE_CONFIGURED)('Saisies hors ligne', () => {
     expect(res.body.data.syncedItemIds).not.toContain(id);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Primes de conduite économe', () => {
+  let adminToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+  });
+
+  const profiles = (token: string) =>
+    request(app).get('/api/v1/rewards/profiles').set('Authorization', `Bearer ${token}`);
+
+  it('calcule les primes sur les données réelles de la flotte', async () => {
+    const res = await profiles(adminToken);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+
+    for (const profile of res.body.data) {
+      // Une prime nulle doit toujours s'expliquer au chauffeur qui l'attendait.
+      if (profile.bonusEarned === 0) {
+        expect(profile.ineligibilityReason).toBeTruthy();
+      } else {
+        expect(profile.estimatedFuelSavedLiters).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('classe les chauffeurs sans trou dans les rangs', async () => {
+    const res = await profiles(adminToken);
+    const ranks = res.body.data.map((p: { rankInCompany: number }) => p.rankInCompany);
+    expect(ranks).toEqual(ranks.map((_: number, index: number) => index + 1));
+  });
+
+  it('conserve la décision de versement au rechargement', async () => {
+    const before = await profiles(adminToken);
+    const target = before.body.data[0];
+
+    const patched = await request(app)
+      .patch(`/api/v1/rewards/profiles/${target.driverId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ payoutStatus: 'APPROVED' });
+    expect(patched.status).toBe(200);
+
+    // Le recalcul du montant ne doit pas effacer la décision d'engagement.
+    const after = await profiles(adminToken);
+    const reloaded = after.body.data.find((p: { driverId: string }) => p.driverId === target.driverId);
+    expect(reloaded.payoutStatus).toBe('APPROVED');
+  });
+
+  it('horodate le versement côté serveur', async () => {
+    const list = await profiles(adminToken);
+    const target = list.body.data[0];
+
+    await request(app)
+      .patch(`/api/v1/rewards/profiles/${target.driverId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ payoutStatus: 'PAID', payoutMethod: 'FUEL_VOUCHER' });
+
+    const after = await profiles(adminToken);
+    const reloaded = after.body.data.find((p: { driverId: string }) => p.driverId === target.driverId);
+    expect(reloaded.lastPayoutAt).toBeTruthy();
+  });
+
+  it('enregistre une distinction décernée', async () => {
+    const list = await profiles(adminToken);
+    const target = list.body.data[0];
+
+    const badges = await request(app)
+      .get('/api/v1/rewards/badges')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const code = badges.body.data[0].code;
+
+    const granted = await request(app)
+      .post(`/api/v1/rewards/profiles/${target.driverId}/badges`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ badgeCode: code });
+    expect(granted.status).toBe(201);
+
+    const after = await profiles(adminToken);
+    const reloaded = after.body.data.find((p: { driverId: string }) => p.driverId === target.driverId);
+    expect(reloaded.unlockedBadges.some((b: { code: string }) => b.code === code)).toBe(true);
+  });
+
+  it('refuse de décorer un chauffeur d’une autre organisation', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+    const list = await profiles(adminToken);
+    const target = list.body.data[0];
+
+    const res = await request(app)
+      .post(`/api/v1/rewards/profiles/${target.driverId}/badges`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ badgeCode: 'ZERO_OVERSPEED_30D' });
+
+    // Deux barrières se présentent dans cet ordre : le rôle, puis
+    // l'organisation. Ce compte est gestionnaire de flotte et n'a pas le droit
+    // de décerner ; il serait de toute façon arrêté par la seconde.
+    expect([403, 404]).toContain(res.status);
+
+    // Ce qui compte reste vérifié : rien n'a été inscrit.
+    const after = await profiles(adminToken);
+    const reloaded = after.body.data.find((p: { driverId: string }) => p.driverId === target.driverId);
+    expect(reloaded.unlockedBadges.some((b: { code: string }) => b.code === 'ZERO_OVERSPEED_30D')).toBe(
+      false,
+    );
+  });
+
+  it('ne montre pas les primes d’une organisation à une autre', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    const mine = await profiles(adminToken);
+    const theirs = await profiles(otherToken);
+
+    const myDrivers = new Set(mine.body.data.map((p: { driverId: string }) => p.driverId));
+    expect(theirs.body.data.some((p: { driverId: string }) => myDrivers.has(p.driverId))).toBe(false);
+  });
+});

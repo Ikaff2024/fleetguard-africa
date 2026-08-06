@@ -9,6 +9,7 @@ import { fleetRouter } from './routes/fleet.js';
 import { fleetWriteRouter } from './routes/fleet-write.js';
 import { healthRouter } from './routes/health.js';
 import { intelligenceRouter } from './routes/intelligence.js';
+import { rewardsRouter } from './routes/rewards.js';
 import { scoringRouter } from './routes/scoring.js';
 import { syncRouter } from './routes/sync.js';
 import { trackingRouter } from './routes/tracking.js';
@@ -43,6 +44,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   api.use(alertsRouter);
   api.use(fleetRouter);
   api.use(fleetWriteRouter);
+  api.use(rewardsRouter);
   api.use(scoringRouter);
   api.use(trackingRouter);
   api.use(syncRouter);
