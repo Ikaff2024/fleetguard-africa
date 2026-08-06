@@ -112,16 +112,25 @@ inaccessible à l'autre ; un technicien maintenance est refusé sur la liste des
 chauffeurs. 11 tests d'isolation tournent en intégration continue contre une
 base PostGIS.
 
-### Phase 2 — Télémétrie réelle (4 semaines)
+### Phase 2 — Télémétrie réelle — **partiellement livrée**
 
-- Ingestion vers Redis (idempotence durable) puis BullMQ.
-- `gps_points` effectivement partitionnée ; création et purge automatisées.
-- Moteur de geofencing PostGIS, moteur de scoring serveur alimenté par la
-  distance réelle (aujourd'hui une constante du jeu de démonstration).
-- WebSocket pour la carte live ; alertes SMS via agrégateur local.
+- ✅ Points GPS persistés, géométrie PostGIS alimentée par trigger.
+- ✅ Idempotence par contrainte d'unicité en base : un rejeu après
+  redéploiement, ou vers une autre instance, ne recompte plus les infractions.
+- ✅ Détection serveur des événements : excès regroupés en épisodes, tolérance
+  et durée minimale, limites de zone via `ST_Contains`, freinages issus de
+  l'accéléromètre, conduite nocturne comptée une fois par période.
+- ✅ Score calculé sur la distance réelle (PostGIS) et historisé avec la
+  version de configuration qui l'a produit. `basedOnRealTelemetry` signale un
+  score sans valeur probante.
+- ✅ Odomètre et kilométrage chauffeur incrémentés du trajet réel.
+- ⏳ **Reste** : reconstruction des trajets (début, fin, arrêts), table
+  `Alert` avec acquittement traçable, partitionnement effectif de
+  `gps_points`, file BullMQ, WebSocket temps réel, alertes SMS.
 
-**Critère de sortie** : un camion réel trace un trajet réel, et une infraction
-réelle fait varier un score réel.
+**Critère de sortie atteint en partie** : une infraction réelle fait
+effectivement varier un score réel — vérifié en production. La reconstruction
+de trajet reste à faire.
 
 ### Phase 3 — Terrain et réseau dégradé (4 semaines, en parallèle)
 

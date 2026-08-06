@@ -12,8 +12,11 @@ d'anomalies carburant, maintenance, conformité réglementaire et travail hors l
 > les données de l'organisation connectée — connectez-vous avec deux comptes
 > différents pour le constater.
 >
-> La télémétrie GPS n'est en revanche **pas encore persistée** (Sprint 2), et
-> l'instance publique ne contient que des données fictives.
+> La télémétrie GPS est désormais **persistée** : les points sont enregistrés,
+> les infractions détectées côté serveur, et le score de sécurité calculé sur la
+> distance réellement parcourue puis historisé.
+>
+> L'instance publique ne contient que des données fictives.
 >
 > Feuille de route détaillée : [PRODUCTION_PLAN.md](PRODUCTION_PLAN.md).
 
@@ -138,14 +141,14 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 
 À lire avant toute mise en service :
 
-- **Télémétrie non persistée.** L'ingestion GPS et la synchronisation hors
-  ligne valident et dédoublonnent les données, mais ne les écrivent pas encore
-  (`persisted: false` dans les réponses, volontairement explicite). Sprint 2.
-- **Distance de scoring fictive.** Le score de sécurité utilise une distance
-  constante héritée du jeu de démonstration : il sera faux sur des données
-  réelles tant que la télémétrie n'alimente pas ce calcul.
-- **Trajets et alertes traçables** : pas de reconstruction de trajet ni de
-  table d'alertes ; les alertes affichées sont calculées à l'écran.
+- **Synchronisation hors ligne non persistée.** La file IndexedDB est validée
+  et dédoublonnée, mais son contenu n'est pas encore écrit (`persisted: false`
+  dans les réponses, volontairement explicite).
+- **Trajets et alertes traçables** : pas de reconstruction de trajet (début,
+  fin, arrêts) ni de table d'alertes ; les alertes affichées sont calculées à
+  l'écran et leur acquittement n'est pas conservé.
+- **Pas d'application mobile chauffeur** : la télémétrie s'ingère par l'API,
+  mais rien ne l'émet encore depuis le terrain.
 - **Modules hors périmètre du cahier des charges** (primes, fatigue,
   optimisation d'itinéraires) : conservés, mais alimentés par un jeu de
   démonstration — l'API ne les expose pas encore.
