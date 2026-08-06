@@ -18,6 +18,7 @@ import {
   MOCK_COMPLIANCE_DOCS,
   MOCK_DRIVERS,
   MOCK_FUEL_LOGS,
+  MOCK_GEOFENCES,
   MOCK_MAINTENANCE_LOGS,
   MOCK_ORGANIZATIONS,
   MOCK_SAFETY_EVENTS,
@@ -27,6 +28,7 @@ import {
 import type {
   ComplianceDoc,
   Driver,
+  Geofence,
   DriverScoreConfig,
   FuelLog,
   MaintenanceLog,
@@ -39,6 +41,7 @@ import {
   mapComplianceDoc,
   mapDriver,
   mapFuelLog,
+  mapGeofence,
   mapMaintenanceLog,
   mapOrganization,
   mapSafetyEvent,
@@ -155,6 +158,20 @@ export async function listFuelLogs(organizationId: string, driverId?: string): P
       take: 500,
     });
     return rows.map(mapFuelLog);
+  });
+}
+
+export async function listGeofences(organizationId: string): Promise<Geofence[]> {
+  if (!isDatabaseEnabled()) {
+    return MOCK_GEOFENCES.filter(g => g.organizationId === organizationId);
+  }
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.geofence.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: 'asc' },
+    });
+    return rows.map(mapGeofence);
   });
 }
 

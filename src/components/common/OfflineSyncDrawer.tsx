@@ -31,7 +31,6 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
     queueItems,
     pendingCount,
     isSyncing,
-    lastSyncReport,
     enqueueUpdate,
     triggerManualSync,
     clearSyncedItems,

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useDrivers, useMaintenanceLogs, useVehicles } from '../../hooks/useFleetData';
 import { Organization, MaintenanceLog } from '../../types';
-import { MOCK_MAINTENANCE_LOGS, MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import {
   Wrench,
   Search,
@@ -24,18 +24,17 @@ interface VehicleMaintenanceHistoryTabProps {
 }
 
 export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTabProps> = ({ currentOrg }) => {
+  const driversQuery = useDrivers();
+  const maintenanceQuery = useMaintenanceLogs();
+  const vehiclesQuery = useVehicles();
   // Local state for logs
   const [logs, setLogs] = useState<MaintenanceLog[]>(() => {
-    return MOCK_MAINTENANCE_LOGS.filter(m => m.organizationId === currentOrg.id);
+    return maintenanceQuery.data ?? [];
   });
 
-  const vehicles = useMemo(() => {
-    return MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+  const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
 
-  const drivers = useMemo(() => {
-    return MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+  const drivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -431,7 +430,6 @@ export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTab
             const assignedDriver = drivers.find(
               d => d.assignedVehicleId === log.vehicleId || d.id === vehicle?.currentDriverId,
             );
-            const isExpanded = expandedLogId === log.id;
 
             return (
               <div

@@ -10,6 +10,22 @@ import { recordAudit } from '../services/audit.js';
 export const scoringRouter = Router();
 
 /**
+ * Configuration active du calcul de score.
+ *
+ * Exposée parce que l'interface doit pouvoir expliquer un score : sans les
+ * pondérations en vigueur, « -12 points » reste une sanction opaque, et un
+ * chauffeur ne peut pas la contester utilement.
+ */
+scoringRouter.get(
+  '/scoring/config',
+  resolveTenant,
+  requirePermission('scoring:read'),
+  asyncHandler(async (req, res) => {
+    res.json({ statusCode: 200, data: await getScoreConfig(requireTenantId(req)) });
+  }),
+);
+
+/**
  * Score de sécurité détaillé d'un chauffeur.
  *
  * Le calcul reste serveur : un score qui conditionne une sanction ou une prime

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
-import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
 import { ApiClientError, apiClient, type AiGenerated } from '../../lib/api-client';
 import {
   Sparkles,
@@ -57,10 +57,12 @@ export interface SafetyTipsResponse {
 /** Fiche de coaching accompagnée de sa provenance (réelle ou démonstration). */
 export type SafetyCoachingResponse = SafetyTipsResponse & AiGenerated;
 
-export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ currentOrg }) => {
-  const drivers = MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
+export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = () => {
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
+  const drivers = driversQuery.data ?? [];
   const [selectedDriverId, setSelectedDriverId] = useState<string>(
-    drivers[0]?.id || MOCK_DRIVERS[0]?.id || '',
+    drivers[0]?.id || (driversQuery.data ?? [])[0]?.id || '',
   );
   const [focusArea, setFocusArea] = useState<string>('Toutes catégories');
 
@@ -71,7 +73,7 @@ export const ProactiveSafetyTips: React.FC<ProactiveSafetyTipsProps> = ({ curren
   const [copiedText, setCopiedText] = useState<boolean>(false);
 
   const selectedDriver = drivers.find(d => d.id === selectedDriverId) || drivers[0];
-  const assignedVehicle = MOCK_VEHICLES.find(v => v.id === selectedDriver?.assignedVehicleId);
+  const assignedVehicle = (vehiclesQuery.data ?? []).find(v => v.id === selectedDriver?.assignedVehicleId);
 
   const fetchSafetyTips = async (driverId: string, focus: string) => {
     setLoading(true);

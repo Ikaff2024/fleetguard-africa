@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
+import { useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
 import { MapPin, TrendingDown, Clock, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { MOCK_VEHICLES } from '../../data/mock-data';
 
 interface FuelAnomalyDetectionProps {
   currentOrg: Organization;
 }
 
-export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ currentOrg }) => {
+export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = () => {
+  const vehiclesQuery = useVehicles();
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   const anomalies = [
@@ -63,9 +64,7 @@ export const FuelAnomalyDetection: React.FC<FuelAnomalyDetectionProps> = ({ curr
     },
   ];
 
-  const vehicles = useMemo(() => {
-    return MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+  const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
 
   const filteredAnomalies = useMemo(() => {
     return anomalies.filter(a => selectedStatus === 'ALL' || a.status === selectedStatus);

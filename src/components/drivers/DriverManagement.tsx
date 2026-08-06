@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization, Driver } from '../../types';
-import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
 import { ShiftFatigueOptimizer } from './ShiftFatigueOptimizer';
 import { VehicleMaintenanceHistoryTab } from './VehicleMaintenanceHistoryTab';
 import {
@@ -89,13 +89,11 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
 };
 
 export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, onNavigateToMessaging }) => {
-  const drivers = useMemo(() => {
-    return MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
+  const drivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
-  const vehicles = useMemo(() => {
-    return MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+  const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -144,12 +142,6 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
   // KPI Metrics
   const totalKm = useMemo(() => {
     return drivers.reduce((acc, d) => acc + d.totalKmDriven, 0);
-  }, [drivers]);
-
-  const avgSafetyScore = useMemo(() => {
-    if (drivers.length === 0) return 0;
-    const sum = drivers.reduce((acc, d) => acc + d.currentSafetyScore, 0);
-    return (sum / drivers.length).toFixed(1);
   }, [drivers]);
 
   const eliteCount = useMemo(() => {

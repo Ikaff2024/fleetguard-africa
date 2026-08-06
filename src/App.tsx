@@ -7,6 +7,8 @@ import { OfflineSyncDrawer } from './components/common/OfflineSyncDrawer';
 import { LoginPage } from './components/auth/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { setDemoOrganizationId } from './lib/api-client';
+import { clearApiCache } from './hooks/useApiResource';
+import { useOrganization } from './hooks/useFleetData';
 
 /**
  * Chaque écran est chargé à la demande.
@@ -40,7 +42,15 @@ import { Organization, UserRole } from './types';
 import { Database, X, RefreshCw, Headphones, LogOut } from 'lucide-react';
 
 function AppContent() {
-  const [currentOrg, setCurrentOrg] = useState<Organization>(MOCK_ORGANIZATIONS[0]);
+  /**
+   * Organisation affichée.
+   *
+   * En session réelle, elle vient de l'API — c'est celle du jeton, la seule
+   * que le serveur acceptera de servir. En démonstration, le sélecteur de la
+   * barre supérieure permet de passer d'une organisation fictive à l'autre
+   * pour montrer le cloisonnement.
+   */
+  const [demoOrg, setDemoOrg] = useState<Organization>(MOCK_ORGANIZATIONS[0]);
   const [currentRole, setCurrentRole] = useState<UserRole>('FLEET_MANAGER');
   // La carte live est l'écran de travail quotidien du régulateur. Le dossier
   // d'architecture reste accessible dans le menu, mais n'est plus la page
@@ -60,12 +70,16 @@ function AppContent() {
   const { isNightDispatcher } = useTheme();
   const { status, user, logout } = useAuth();
 
-  // En mode démonstration, le sélecteur d'organisation de la barre supérieure
-  // reste actif : l'API a besoin de savoir quel tenant afficher. Avec une
-  // session réelle, cet en-tête n'est pas transmis — le tenant vient du jeton.
+  // L'en-tête d'organisation n'est transmis qu'en démonstration ; avec une
+  // session réelle, le tenant vient du jeton signé.
   useEffect(() => {
-    setDemoOrganizationId(status === 'demonstration' ? currentOrg.id : null);
-  }, [status, currentOrg.id]);
+    setDemoOrganizationId(status === 'demonstration' ? demoOrg.id : null);
+    // Les données en cache appartiennent à l'organisation précédente.
+    clearApiCache();
+  }, [status, demoOrg.id]);
+
+  const { data: apiOrg } = useOrganization();
+  const currentOrg = status === 'demonstration' ? demoOrg : (apiOrg ?? demoOrg);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-orange-500 selection:text-white transition-colors duration-200">
@@ -120,7 +134,7 @@ function AppContent() {
       {/* Top Navigation Bar */}
       <Navbar
         currentOrg={currentOrg}
-        onSelectOrg={setCurrentOrg}
+        onSelectOrg={setDemoOrg}
         currentRole={currentRole}
         onSelectRole={setCurrentRole}
         onOpenOfflineDrawer={() => setIsDrawerOpen(true)}

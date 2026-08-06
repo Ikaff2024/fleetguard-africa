@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { MOCK_DRIVERS, MOCK_SCORE_CONFIG } from '../../data/mock-data';
+import React, { useEffect, useState } from 'react';
+import { useDrivers, useScoreConfig, useVehicles } from '../../hooks/useFleetData';
+import { DataState } from '../common/DataState';
 import {
   calculateDriverSafetyScore,
   calculateVehicleHealthScore,
@@ -30,18 +31,31 @@ interface DriverScoreCalculatorProps {
 }
 
 export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ currentOrg }) => {
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
+  const scoreConfigQuery = useScoreConfig();
   const [activeSubTab, setActiveSubTab] = useState<
     'leaderboard' | 'rewards' | 'messaging' | 'safetyTips' | 'calculator'
   >('leaderboard');
 
-  const drivers = MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
+  const drivers = driversQuery.data ?? [];
   const [selectedDriverId, setSelectedDriverId] = useState<string>(
-    drivers[0]?.id || MOCK_DRIVERS[0]?.id || '',
+    drivers[0]?.id || (driversQuery.data ?? [])[0]?.id || '',
   );
   const selectedDriver = drivers.find(d => d.id === selectedDriverId) || drivers[0];
 
-  // Config weights
-  const [scoreConfig, setScoreConfig] = useState<DriverScoreConfig>(MOCK_SCORE_CONFIG);
+  /**
+   * Pondérations du score.
+   *
+   * Chargées depuis l'API — ce sont celles réellement appliquées à
+   * l'organisation. L'écran permet de les faire varier pour simuler l'effet
+   * d'un changement de politique, sans modifier la configuration en vigueur.
+   */
+  const [scoreConfig, setScoreConfig] = useState<DriverScoreConfig | null>(null);
+
+  useEffect(() => {
+    if (scoreConfigQuery.data) setScoreConfig(scoreConfigQuery.data);
+  }, [scoreConfigQuery.data]);
 
   // Simulation Inputs
   const [distanceKm, setDistanceKm] = useState<number>(450);
@@ -50,6 +64,24 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
   const [rapidAccelCount, setRapidAccelCount] = useState<number>(1);
   const [nightHours, setNightHours] = useState<number>(1.5);
   const [geofenceBreaches, setGeofenceBreaches] = useState<number>(0);
+
+  const isLoading = driversQuery.isLoading || scoreConfigQuery.isLoading;
+  const loadError = driversQuery.error ?? scoreConfigQuery.error;
+
+  if (isLoading || loadError || !scoreConfig) {
+    return (
+      <DataState
+        isLoading={isLoading || !scoreConfig}
+        error={loadError}
+        onRetry={() => {
+          driversQuery.reload();
+          scoreConfigQuery.reload();
+        }}
+      >
+        {null}
+      </DataState>
+    );
+  }
 
   // Calculate Driver Safety Score
   const scoreResult = calculateDriverSafetyScore(

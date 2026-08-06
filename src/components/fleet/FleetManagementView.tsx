@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-  MOCK_VEHICLES,
-  MOCK_DRIVERS,
-  MOCK_MAINTENANCE_LOGS,
-  MOCK_FUEL_LOGS,
-  MOCK_COMPLIANCE_DOCS,
-} from '../../data/mock-data';
+  useComplianceDocs,
+  useDrivers,
+  useFuelLogs,
+  useMaintenanceLogs,
+  useVehicles,
+} from '../../hooks/useFleetData';
 import { Organization } from '../../types';
 import {
   Truck,
@@ -34,6 +34,11 @@ interface FleetManagementViewProps {
 }
 
 export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ currentOrg }) => {
+  const complianceQuery = useComplianceDocs();
+  const driversQuery = useDrivers();
+  const fuelQuery = useFuelLogs();
+  const maintenanceQuery = useMaintenanceLogs();
+  const vehiclesQuery = useVehicles();
   const [activeSubTab, setActiveSubTab] = useState<
     'overview' | 'vehicles' | 'drivers' | 'geofencing' | 'maintenance' | 'fuel' | 'compliance'
   >('overview');
@@ -48,11 +53,11 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
 
   const { enqueueUpdate, isOnline } = useOfflineSync();
 
-  const vehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
-  const drivers = MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  const maintenance = MOCK_MAINTENANCE_LOGS.filter(m => m.organizationId === currentOrg.id);
-  const fuelLogs = MOCK_FUEL_LOGS.filter(f => f.organizationId === currentOrg.id);
-  const compliance = MOCK_COMPLIANCE_DOCS.filter(c => c.organizationId === currentOrg.id);
+  const vehicles = vehiclesQuery.data ?? [];
+  const drivers = driversQuery.data ?? [];
+  const maintenance = maintenanceQuery.data ?? [];
+  const fuelLogs = fuelQuery.data ?? [];
+  const compliance = complianceQuery.data ?? [];
 
   const handleAddFuelLogSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

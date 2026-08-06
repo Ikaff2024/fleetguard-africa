@@ -190,7 +190,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
   const [selectedRouteType, setSelectedRouteType] = useState<'ECO_FUEL' | 'STANDARD_FASTEST' | 'BYPASS'>(
     'ECO_FUEL',
   );
-  const [isCalculating, setIsCalculating] = useState<boolean>(false);
+  // Seul le setter est utilisé : l'état rythme la simulation sans être affiché.
+  const [, setIsCalculating] = useState<boolean>(false);
   const [dispatchSuccessMessage, setDispatchSuccessMessage] = useState<string | null>(null);
 
   const currencySymbol = currentOrg.currency || 'FCFA';

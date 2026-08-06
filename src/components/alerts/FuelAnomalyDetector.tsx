@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
 import { UnifiedAlert } from './AlertsCenter';
-import { MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import {
   ShieldAlert,
   Play,
@@ -37,11 +37,13 @@ export const FuelAnomalyDetector: React.FC<FuelAnomalyDetectorProps> = ({
   onAlertTriggered,
   onNavigateToAlerts,
 }) => {
-  const orgVehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
+  const orgVehicles = vehiclesQuery.data ?? [];
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(orgVehicles[0]?.id || 'veh_actros_01');
 
   const activeVehicle = orgVehicles.find(v => v.id === selectedVehicleId) || orgVehicles[0];
-  const assignedDriver = MOCK_DRIVERS.find(
+  const assignedDriver = (driversQuery.data ?? []).find(
     d => d.assignedVehicleId === activeVehicle?.id || d.id === activeVehicle?.currentDriverId,
   );
 

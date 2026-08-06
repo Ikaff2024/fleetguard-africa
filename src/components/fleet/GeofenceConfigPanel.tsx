@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useGeofences, useVehicles } from '../../hooks/useFleetData';
 import { Geofence, Organization } from '../../types';
-import { MOCK_GEOFENCES, MOCK_VEHICLES } from '../../data/mock-data';
 import {
   MapPin,
   ShieldAlert,
@@ -26,14 +26,14 @@ interface GeofenceConfigPanelProps {
 }
 
 export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ currentOrg }) => {
+  const geofencesQuery = useGeofences();
+  const vehiclesQuery = useVehicles();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
 
   // State
-  const [geofences, setGeofences] = useState<Geofence[]>(() =>
-    MOCK_GEOFENCES.filter(g => g.organizationId === currentOrg.id),
-  );
-  const orgVehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
+  const [geofences, setGeofences] = useState<Geofence[]>(() => geofencesQuery.data ?? []);
+  const orgVehicles = vehiclesQuery.data ?? [];
 
   const [selectedGeofenceId, setSelectedGeofenceId] = useState<string | null>(geofences[0]?.id || null);
   const [drawingMode, setDrawingMode] = useState<'VIEW' | 'DRAW_CIRCLE' | 'DRAW_POLYGON'>('VIEW');
@@ -381,7 +381,7 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
   // Trigger Instant Live Alert Simulation
   const handleSimulateAlert = (actionType: 'ENTRÉE' | 'SORTIE' | 'EXCÈS DE VITESSE') => {
     const targetGeo = geofences.find(g => g.id === selectedGeofenceId) || geofences[0];
-    const targetVehicle = orgVehicles[0] || MOCK_VEHICLES[0];
+    const targetVehicle = orgVehicles[0] || (vehiclesQuery.data ?? [])[0];
 
     const newAlert = {
       id: `alert-${Date.now()}`,

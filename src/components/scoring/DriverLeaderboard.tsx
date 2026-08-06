@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization, Driver } from '../../types';
-import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
 import {
   Trophy,
   Award,
@@ -49,6 +49,8 @@ export interface DriverPerformanceRecord {
 }
 
 export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg }) => {
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'COMPOSITE' | 'SAFETY' | 'FUEL' | 'PUNCTUALITY'>('COMPOSITE');
   const [timePeriod, setTimePeriod] = useState<'THIS_MONTH' | 'QUARTER' | 'YEAR'>('THIS_MONTH');
@@ -62,14 +64,12 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
   // Selected driver for detailed comparison modal
   const [selectedPerformance, setSelectedPerformance] = useState<DriverPerformanceRecord | null>(null);
 
-  const orgDrivers = useMemo(() => {
-    return MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+  const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   // Compute detailed performance records for drivers
   const performanceRecords = useMemo(() => {
     const rawList = orgDrivers.map((driver, index) => {
-      const vehicle = MOCK_VEHICLES.find(v => v.id === driver.assignedVehicleId);
+      const vehicle = (vehiclesQuery.data ?? []).find(v => v.id === driver.assignedVehicleId);
       const vehicleName = vehicle
         ? `${vehicle.immatriculation} (${vehicle.make} ${vehicle.model})`
         : 'Véhicule Flotte';

@@ -35,7 +35,8 @@
     "infra:logs": "docker compose logs -f",
     "postinstall": "prisma generate",
     "test:smoke": "node scripts/smoke-test.mjs",
-    "build:seed": "esbuild prisma/seed.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/seed.js"
+    "build:seed": "esbuild prisma/seed.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/seed.js",
+    "test:isolation-ui": "node scripts/verify-tenant-isolation-ui.mjs"
   },
   "prisma": {
     "schema": "prisma/schema.prisma",

@@ -5,6 +5,7 @@ import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import {
   findOrganizationById,
   listComplianceDocs,
+  listGeofences,
   listDrivers,
   listFuelLogs,
   listMaintenanceLogs,
@@ -66,6 +67,15 @@ fleetRouter.get(
   requirePermission('fuel:read'),
   asyncHandler(async (req, res) => {
     res.json({ statusCode: 200, data: await listFuelLogs(requireTenantId(req)) });
+  }),
+);
+
+fleetRouter.get(
+  '/geofences',
+  resolveTenant,
+  requirePermission('fleet:read'),
+  asyncHandler(async (req, res) => {
+    res.json({ statusCode: 200, data: await listGeofences(requireTenantId(req)) });
   }),
 );
 

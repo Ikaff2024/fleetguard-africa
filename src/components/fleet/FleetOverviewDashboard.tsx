@@ -1,6 +1,7 @@
 import React from 'react';
 import { Organization } from '../../types';
-import { MOCK_VEHICLES, MOCK_FUEL_LOGS } from '../../data/mock-data';
+import { useFuelLogs, useVehicles } from '../../hooks/useFleetData';
+import { DataState } from '../common/DataState';
 import { Activity, Droplet, Truck, TrendingUp } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
@@ -38,9 +39,16 @@ const sparklineDataActive = [
   { value: 15 },
 ];
 
-export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ currentOrg }) => {
-  const vehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
-  const fuelLogs = MOCK_FUEL_LOGS.filter(f => f.organizationId === currentOrg.id);
+export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () => {
+  // Les données viennent de l'API, déjà bornées à l'organisation de la session
+  // par le serveur : aucun filtre côté client n'est nécessaire.
+  const vehiclesQuery = useVehicles();
+  const fuelQuery = useFuelLogs();
+  const vehicles = vehiclesQuery.data ?? [];
+  const fuelLogs = fuelQuery.data ?? [];
+
+  const isLoading = vehiclesQuery.isLoading || fuelQuery.isLoading;
+  const loadError = vehiclesQuery.error ?? fuelQuery.error;
 
   const activeVehicles = vehicles.filter(v => v.status === 'ACTIVE').length;
 
@@ -51,6 +59,21 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = ({ 
     450; // Fallback mock value
 
   const healthScore = 94; // Mock score
+
+  if (isLoading || loadError) {
+    return (
+      <DataState
+        isLoading={isLoading}
+        error={loadError}
+        onRetry={() => {
+          vehiclesQuery.reload();
+          fuelQuery.reload();
+        }}
+      >
+        {null}
+      </DataState>
+    );
+  }
 
   return (
     <div className="space-y-6">

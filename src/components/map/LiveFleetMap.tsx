@@ -1,13 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useDrivers, useGeofences, useVehicles } from '../../hooks/useFleetData';
+import { DataState } from '../common/DataState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import {
-  MOCK_VEHICLES,
-  MOCK_DRIVERS,
-  MOCK_GEOFENCES,
-  MOCK_ROUTE_POINTS,
-  MOCK_FUEL_STATIONS,
-} from '../../data/mock-data';
+import { MOCK_ROUTE_POINTS, MOCK_FUEL_STATIONS } from '../../data/mock-data';
 import { Organization, GpsPoint } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -51,6 +47,9 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
 }
 
 export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
+  const driversQuery = useDrivers();
+  const geofencesQuery = useGeofences();
+  const vehiclesQuery = useVehicles();
   const { isDark } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -65,7 +64,14 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     markers?: any[];
   }>({});
 
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(MOCK_VEHICLES[0].id);
+  /**
+   * Véhicule sélectionné.
+   *
+   * Vide au premier rendu : les données arrivent de l'API, le tableau n'est pas
+   * encore peuplé. Un accès direct au premier élément planterait la carte
+   * avant même le chargement.
+   */
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [routePoints, setRoutePoints] = useState<GpsPoint[]>(MOCK_ROUTE_POINTS);
   const [isSimulatingBatch, setIsSimulatingBatch] = useState<boolean>(false);
   const [simulatedBatchCount, setSimulatedBatchCount] = useState<number>(0);
@@ -82,9 +88,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
   const [selectedFuelStationId, setSelectedFuelStationId] = useState<string | null>(null);
 
   // Filter vehicles for active tenant
-  const tenantVehicles = MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id);
+  const tenantVehicles = vehiclesQuery.data ?? [];
   const activeVehicle = tenantVehicles.find(v => v.id === selectedVehicleId) || tenantVehicles[0];
-  const activeDriver = MOCK_DRIVERS.find(d => d.id === activeVehicle?.currentDriverId);
+  const activeDriver = (driversQuery.data ?? []).find(d => d.id === activeVehicle?.currentDriverId);
 
   // Active Vehicle GPS Position
   const lastGpsPoint = routePoints[routePoints.length - 1] || { latitude: 7.9124, longitude: 2.1092 };
@@ -182,7 +188,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
 
       // 1. Geofences Layer
       if (showGeofences) {
-        const tenantGeofences = MOCK_GEOFENCES.filter(g => g.organizationId === currentOrg.id);
+        const tenantGeofences = geofencesQuery.data ?? [];
         tenantGeofences.forEach(geo => {
           if (geo.centerLat && geo.centerLng) {
             const circle = L.circle([geo.centerLat, geo.centerLng], {
@@ -500,6 +506,18 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     }, 800);
   };
 
+  if (vehiclesQuery.isLoading || vehiclesQuery.error) {
+    return (
+      <DataState
+        isLoading={vehiclesQuery.isLoading}
+        error={vehiclesQuery.error}
+        onRetry={vehiclesQuery.reload}
+      >
+        {null}
+      </DataState>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Control Header Bar */}
@@ -546,7 +564,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
           <div className="space-y-2">
             {tenantVehicles.map(veh => {
               const isSelected = veh.id === selectedVehicleId;
-              const driver = MOCK_DRIVERS.find(d => d.id === veh.currentDriverId);
+              const driver = (driversQuery.data ?? []).find(d => d.id === veh.currentDriverId);
 
               return (
                 <div

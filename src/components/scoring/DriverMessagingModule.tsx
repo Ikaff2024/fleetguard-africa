@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
-import { MOCK_DRIVERS, MOCK_VEHICLES } from '../../data/mock-data';
 import {
   Send,
   Smartphone,
@@ -40,13 +40,10 @@ export interface DriverMessageItem {
   ackReceived?: boolean;
 }
 
-export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
-  currentOrg,
-  defaultDriverId,
-}) => {
-  const orgDrivers = useMemo(() => {
-    return MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id);
-  }, [currentOrg.id]);
+export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({ defaultDriverId }) => {
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
+  const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   const [selectedDriverId, setSelectedDriverId] = useState<string>(
     defaultDriverId || orgDrivers[0]?.id || 'drv_moussa_01',
@@ -57,10 +54,10 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
   }, [orgDrivers, selectedDriverId]);
 
   const assignedVehicle = useMemo(() => {
-    return MOCK_VEHICLES.find(
+    return (vehiclesQuery.data ?? []).find(
       v => v.id === selectedDriver?.assignedVehicleId || v.currentDriverId === selectedDriver?.id,
     );
-  }, [selectedDriver]);
+  }, [selectedDriver, vehiclesQuery.data]);
 
   // Message history state per driver
   const [messagesMap, setMessagesMap] = useState<Record<string, DriverMessageItem[]>>({
@@ -255,7 +252,7 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({
 
           <div className="space-y-2">
             {orgDrivers.map(drv => {
-              const veh = MOCK_VEHICLES.find(
+              const veh = (vehiclesQuery.data ?? []).find(
                 v => v.id === drv.assignedVehicleId || v.currentDriverId === drv.id,
               );
               const isSelected = drv.id === selectedDriverId;

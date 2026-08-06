@@ -2,6 +2,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import type {
   ComplianceDoc,
   Driver,
+  Geofence,
   FuelLog,
   MaintenanceLog,
   Organization,
@@ -282,5 +283,51 @@ export function mapComplianceDoc(row: {
     expiryDate: toDateOnly(row.expiryDate),
     status: row.status as ComplianceDoc['status'],
     fileUrl: row.fileUrl ?? undefined,
+  };
+}
+
+export function mapGeofence(row: {
+  id: string;
+  organizationId: string;
+  name: string;
+  type: string;
+  centerLat: Prisma.Decimal | null;
+  centerLng: Prisma.Decimal | null;
+  radiusMeters: number | null;
+  speedLimitKmH: number | null;
+  maxDwellTimeMinutes: number | null;
+  notifyOnEntry: boolean;
+  notifyOnExit: boolean;
+  notifyOnSpeeding: boolean;
+  notifyOnProlongedStay: boolean;
+  notificationChannels: string[];
+  assignedVehicleIds: string[];
+  severity: string;
+  isActive: boolean;
+  createdAt: Date;
+}): Geofence {
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    name: row.name,
+    type: row.type as Geofence['type'],
+    // La géométrie PostGIS n'est pas transmise au client : l'interface trace
+    // un cercle à partir du centre et du rayon, ce qui évite d'envoyer des
+    // polygones de plusieurs kilo-octets sur une liaison mobile.
+    geometryType: row.radiusMeters ? 'CIRCLE' : 'POLYGON',
+    centerLat: toOptionalNumber(row.centerLat),
+    centerLng: toOptionalNumber(row.centerLng),
+    radiusMeters: row.radiusMeters ?? undefined,
+    speedLimitKmH: row.speedLimitKmH ?? undefined,
+    maxDwellTimeMinutes: row.maxDwellTimeMinutes ?? undefined,
+    notifyOnEntry: row.notifyOnEntry,
+    notifyOnExit: row.notifyOnExit,
+    notifyOnSpeeding: row.notifyOnSpeeding,
+    notifyOnProlongedStay: row.notifyOnProlongedStay,
+    notificationChannels: row.notificationChannels as Geofence['notificationChannels'],
+    assignedVehicleIds: row.assignedVehicleIds,
+    severity: row.severity as Geofence['severity'],
+    isActive: row.isActive,
+    createdAt: toIso(row.createdAt),
   };
 }

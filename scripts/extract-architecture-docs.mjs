@@ -58,9 +58,7 @@ for (const [key, value] of Object.entries(SPRINT_0_DOCS)) {
 
   const meta = META[key] ?? {};
   const heading = meta.title ?? title;
-  const content = meta.fence
-    ? `\`\`\`${meta.fence}\n${String(body).trim()}\n\`\`\``
-    : String(body).trim();
+  const content = meta.fence ? `\`\`\`${meta.fence}\n${String(body).trim()}\n\`\`\`` : String(body).trim();
 
   const file = path.join(outputDir, `${slug(key)}.md`);
   writeFileSync(file, `# ${heading}\n\n${content}\n`, 'utf8');

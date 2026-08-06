@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
-import { MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import { ApiClientError, apiClient } from '../../lib/api-client';
 import type { SafetyCoachingResponse } from '../scoring/ProactiveSafetyTips';
 import { FuelAnomalyDetector } from './FuelAnomalyDetector';
@@ -62,15 +62,11 @@ interface AlertsCenterProps {
 }
 
 export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNavigateToMap }) => {
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
   // Filter mock data for active organization
-  const orgVehicles = useMemo(
-    () => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id),
-    [currentOrg.id],
-  );
-  const orgDrivers = useMemo(
-    () => MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id),
-    [currentOrg.id],
-  );
+  const orgVehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
+  const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   // Generate initial unified alerts from mock datasets
   const initialAlerts = useMemo<UnifiedAlert[]>(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
-import { MOCK_VEHICLES, MOCK_DRIVERS } from '../../data/mock-data';
 import {
   Printer,
   Filter,
@@ -20,20 +20,16 @@ interface MonthlyReportGeneratorProps {
 }
 
 export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ currentOrg }) => {
+  const driversQuery = useDrivers();
+  const vehiclesQuery = useVehicles();
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
   const [selectedScope, setSelectedScope] = useState<string>('ALL'); // ALL or vehicleId
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   // Filter vehicles and drivers for current organization
-  const orgVehicles = useMemo(
-    () => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id),
-    [currentOrg.id],
-  );
-  const orgDrivers = useMemo(
-    () => MOCK_DRIVERS.filter(d => d.organizationId === currentOrg.id),
-    [currentOrg.id],
-  );
+  const orgVehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
+  const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   // Month labels helper
   const monthLabels: Record<string, string> = {

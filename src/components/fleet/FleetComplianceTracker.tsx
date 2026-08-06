@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Organization, ComplianceDoc } from '../../types';
-import { MOCK_VEHICLES, MOCK_COMPLIANCE_DOCS } from '../../data/mock-data';
+import { useComplianceDocs, useVehicles } from '../../hooks/useFleetData';
+import { DataState } from '../common/DataState';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -18,15 +19,14 @@ interface FleetComplianceTrackerProps {
   currentOrg: Organization;
 }
 
-export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ currentOrg }) => {
-  const vehicles = useMemo(
-    () => MOCK_VEHICLES.filter(v => v.organizationId === currentOrg.id),
-    [currentOrg.id],
-  );
-  const initialDocs = useMemo(
-    () => MOCK_COMPLIANCE_DOCS.filter(d => d.organizationId === currentOrg.id),
-    [currentOrg.id],
-  );
+export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = () => {
+  const vehiclesQuery = useVehicles();
+  const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
+  const docsQuery = useComplianceDocs();
+  const initialDocs = useMemo(() => docsQuery.data ?? [], [docsQuery.data]);
+
+  const isLoading = vehiclesQuery.isLoading || docsQuery.isLoading;
+  const loadError = vehiclesQuery.error ?? docsQuery.error;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('ALL');
@@ -125,6 +125,21 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = ({ 
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24));
     return d.status === 'EXPIRING_SOON' || (diffDays >= 0 && diffDays <= 30);
   }).length;
+
+  if (isLoading || loadError) {
+    return (
+      <DataState
+        isLoading={isLoading}
+        error={loadError}
+        onRetry={() => {
+          vehiclesQuery.reload();
+          docsQuery.reload();
+        }}
+      >
+        {null}
+      </DataState>
+    );
+  }
 
   return (
     <div className="space-y-6">
