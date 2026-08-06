@@ -1,4 +1,5 @@
 import type {
+  AlertRecord,
   ComplianceDoc,
   Driver,
   DriverScoreConfig,
@@ -56,3 +57,11 @@ export const useTrips = (filters: { vehicleId?: string; limit?: number } = {}) =
 
   return useApiResource<Trip[]>(`/tracking/trips${suffix ? `?${suffix}` : ''}`);
 };
+
+/**
+ * Alertes opérationnelles.
+ *
+ * Le serveur les dérive des faits enregistrés à chaque appel ; l'interface ne
+ * fabrique rien et n'a rien à recalculer.
+ */
+export const useAlerts = () => useApiResource<AlertRecord[]>('/alerts');

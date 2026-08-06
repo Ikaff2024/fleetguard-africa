@@ -86,6 +86,36 @@ export interface Driver {
  * côté serveur. La distance est mesurée point à point, jamais estimée à vol
  * d'oiseau entre le départ et l'arrivée.
  */
+/**
+ * Alerte opérationnelle telle que le serveur la renvoie.
+ *
+ * `sourceType` et `sourceId` désignent le fait qui l'a produite : sans cette
+ * traçabilité, un chiffre affiché ne pourrait fonder aucune décision vis-à-vis
+ * d'un chauffeur.
+ */
+export interface AlertRecord {
+  id: string;
+  organizationId: string;
+  category: 'GEOFENCE' | 'HARSH_DRIVING' | 'FUEL_ANOMALY' | 'MAINTENANCE' | 'COMPLIANCE';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'UNHANDLED' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
+  sourceType: string;
+  sourceId: string;
+  recordedAt: string;
+  title: string;
+  description: string;
+  vehicleId?: string;
+  driverId?: string;
+  locationName?: string;
+  latitude?: number;
+  longitude?: number;
+  metricValue?: string;
+  metricLabel?: string;
+  acknowledgedAt?: string;
+  resolutionNote?: string;
+  resolvedAt?: string;
+}
+
 export interface Trip {
   id: string;
   organizationId: string;

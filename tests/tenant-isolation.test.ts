@@ -495,3 +495,100 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
     expect(all.body.data.some((t: { vehicleId: string }) => t.vehicleId === vehicleId)).toBe(false);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Centre d’alertes', () => {
+  let adminToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+  });
+
+  const list = (token: string) => request(app).get('/api/v1/alerts').set('Authorization', `Bearer ${token}`);
+
+  it('dérive les alertes des faits enregistrés, avec leur source', async () => {
+    const res = await list(adminToken);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+
+    // Une alerte sans source traçable ne peut fonder aucune décision.
+    for (const alert of res.body.data) {
+      expect(alert.sourceType).toBeTruthy();
+      expect(alert.sourceId).toBeTruthy();
+    }
+  });
+
+  it('conserve l’acquittement au rechargement', async () => {
+    const before = await list(adminToken);
+    const target =
+      before.body.data.find((a: { status: string }) => a.status === 'UNHANDLED') ?? before.body.data[0];
+
+    const patched = await request(app)
+      .patch(`/api/v1/alerts/${target.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'IN_REVIEW' });
+
+    expect(patched.status).toBe(200);
+    expect(patched.body.data.acknowledgedAt).toBeTruthy();
+
+    // Le rechargement relance la dérivation : elle ne doit pas rouvrir une
+    // alerte déjà prise en charge.
+    const after = await list(adminToken);
+    const reloaded = after.body.data.find((a: { id: string }) => a.id === target.id);
+
+    expect(reloaded.status).toBe('IN_REVIEW');
+    expect(reloaded.acknowledgedAt).toBeTruthy();
+  });
+
+  it('conserve la note de résolution', async () => {
+    const before = await list(adminToken);
+    const target = before.body.data[0];
+
+    await request(app)
+      .patch(`/api/v1/alerts/${target.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'RESOLVED', resolutionNote: 'Chauffeur reçu, rappel des consignes.' });
+
+    const after = await list(adminToken);
+    const reloaded = after.body.data.find((a: { id: string }) => a.id === target.id);
+
+    expect(reloaded.status).toBe('RESOLVED');
+    expect(reloaded.resolutionNote).toBe('Chauffeur reçu, rappel des consignes.');
+    expect(reloaded.resolvedAt).toBeTruthy();
+  });
+
+  it('ne montre pas les alertes d’une organisation à une autre', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    const mine = await list(adminToken);
+    const theirs = await list(otherToken);
+
+    const myIds = new Set(mine.body.data.map((a: { id: string }) => a.id));
+    expect(theirs.body.data.some((a: { id: string }) => myIds.has(a.id))).toBe(false);
+  });
+
+  it('refuse de traiter une alerte d’une autre organisation', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+    const mine = await list(adminToken);
+
+    const res = await request(app)
+      .patch(`/api/v1/alerts/${mine.body.data[0].id}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ status: 'DISMISSED' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('refuse le traitement à un rôle sans permission', async () => {
+    const techToken = await tokenFor('atelier@transafrik.bj');
+    const mine = await list(adminToken);
+
+    const res = await request(app)
+      .patch(`/api/v1/alerts/${mine.body.data[0].id}`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ status: 'RESOLVED' });
+
+    expect(res.status).toBe(403);
+  });
+});

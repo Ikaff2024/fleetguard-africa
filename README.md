@@ -102,7 +102,7 @@ src/
 │   ├── env.ts           validation fail-fast de la configuration
 │   ├── app.ts           assemblage HTTP
 │   ├── http/            sécurité, erreurs, résolution du tenant
-│   ├── routes/          flotte, scoring, télémétrie, sync, IA
+│   ├── routes/          flotte, scoring, télémétrie, trajets, sync, IA
 │   ├── services/        moteur d'analyse, idempotence, invites
 │   └── repositories/    accès aux données (bascule Prisma en Phase 1)
 ├── components/          interface React par domaine métier
@@ -144,9 +144,9 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 - **Synchronisation hors ligne non persistée.** La file IndexedDB est validée
   et dédoublonnée, mais son contenu n'est pas encore écrit (`persisted: false`
   dans les réponses, volontairement explicite).
-- **Trajets et alertes traçables** : pas de reconstruction de trajet (début,
-  fin, arrêts) ni de table d'alertes ; les alertes affichées sont calculées à
-  l'écran et leur acquittement n'est pas conservé.
+- **Envoi de SMS non raccordé** : le centre d'alertes enregistre la prise en
+  charge, mais aucun message ne part vers un opérateur mobile ; l'écran le dit
+  explicitement plutôt que d'annoncer un envoi.
 - **Pas d'application mobile chauffeur** : la télémétrie s'ingère par l'API,
   mais rien ne l'émet encore depuis le terrain.
 - **Modules hors périmètre du cahier des charges** (primes, fatigue,

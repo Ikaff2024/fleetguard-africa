@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useDrivers, useVehicles } from '../../hooks/useFleetData';
+import { useAlerts, useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
 import { ApiClientError, apiClient } from '../../lib/api-client';
 import type { SafetyCoachingResponse } from '../scoring/ProactiveSafetyTips';
@@ -22,7 +22,6 @@ import {
   FileText,
   X,
   Send,
-  Zap,
   Check,
   ShieldCheck,
   AlertOctagon,
@@ -68,184 +67,59 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
   const orgVehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
   const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
-  // Generate initial unified alerts from mock datasets
-  const initialAlerts = useMemo<UnifiedAlert[]>(() => {
-    const alerts: UnifiedAlert[] = [];
+  /**
+   * Les alertes viennent du serveur, qui les dérive des faits enregistrés :
+   * infractions relevées sur la trace, documents qui expirent, révisions dues,
+   * pleins incohérents. Elles étaient auparavant écrites en dur dans cet
+   * écran — chaque client voyait donc les mêmes, à propos de camions qui ne
+   * lui appartenaient pas.
+   */
+  const alertsQuery = useAlerts();
 
-    // 1. Geofencing Breaches
-    alerts.push({
-      id: 'alt_geo_001',
-      organizationId: currentOrg.id,
-      category: 'GEOFENCE',
-      severity: 'HIGH',
-      status: 'UNHANDLED',
-      recordedAt: '2026-08-04T03:45:00.000Z',
-      title: 'Franchissement Vitesse Port de Cotonou',
-      description:
-        'Dépassement de la limite de vitesse imposée (48 km/h enregistré contre 30 km/h autorisés) dans le périmètre du Port Autonome de Cotonou.',
-      vehicleId: 'veh_actros_01',
-      driverId: 'drv_moussa_04',
-      locationName: 'Port Autonome de Cotonou (Zone Portuaire)',
-      latitude: 6.3533,
-      longitude: 2.4311,
-      metricValue: '48 km/h (Limite 30)',
-      metricLabel: 'Vitesse Zone',
-      actionsTaken: [],
-    });
+  const alerts = useMemo<UnifiedAlert[]>(
+    () =>
+      (alertsQuery.data ?? []).map(alert => ({
+        ...alert,
+        // Le serveur ne conserve pas d'historique d'actions : seul le
+        // traitement (statut, note) fait foi.
+        actionsTaken: [],
+      })),
+    [alertsQuery.data],
+  );
 
-    alerts.push({
-      id: 'alt_geo_002',
-      organizationId: currentOrg.id,
-      category: 'GEOFENCE',
-      severity: 'CRITICAL',
-      status: 'IN_REVIEW',
-      recordedAt: '2026-08-03T22:15:00.000Z',
-      title: 'Sortie de Zone Sécurisée Frontière Malanville',
-      description:
-        'Le camion container a franchi la geofence frontalière sans validation préalable du manifeste douanier.',
-      vehicleId: 'veh_volvo_02',
-      driverId: 'drv_koffi_01',
-      locationName: 'Poste Frontière Malanville (Bénin / Niger)',
-      latitude: 11.8612,
-      longitude: 3.3854,
-      metricValue: 'Secteur Hors Périmètre',
-      metricLabel: 'Alerte Geofence',
-      actionsTaken: ['Agent douane notifié par SMS'],
-    });
-
-    // 2. Harsh Driving Events
-    alerts.push({
-      id: 'alt_drv_001',
-      organizationId: currentOrg.id,
-      category: 'HARSH_DRIVING',
-      severity: 'HIGH',
-      status: 'UNHANDLED',
-      recordedAt: '2026-08-04T02:10:00.000Z',
-      title: 'Excès de Vitesse Prolongé Corridor RNIE 2',
-      description:
-        'Vitesse de 98.5 km/h maintenue pendant plus de 2 minutes sur un axe limité à 80 km/h aux abords de Savè.',
-      vehicleId: 'veh_actros_01',
-      driverId: 'drv_moussa_04',
-      locationName: 'Nationale RNIE 2 (Bohicon - Parakou)',
-      latitude: 7.9124,
-      longitude: 2.1092,
-      metricValue: '98.5 km/h',
-      metricLabel: 'Vitesse Maximale',
-      actionsTaken: [],
-    });
-
-    alerts.push({
-      id: 'alt_drv_002',
-      organizationId: currentOrg.id,
-      category: 'HARSH_DRIVING',
-      severity: 'MEDIUM',
-      status: 'UNHANDLED',
-      recordedAt: '2026-08-03T16:45:00.000Z',
-      title: "Freinage d'Urgence Brutal (-0.45g)",
-      description:
-        'Décélération violente détectée par le boîtier GPS. Risque de détérioration du système de freinage ou perte de chargement.',
-      vehicleId: 'veh_actros_01',
-      driverId: 'drv_moussa_04',
-      locationName: 'Traversée Urbaine Savè',
-      latitude: 8.4102,
-      longitude: 2.2901,
-      metricValue: '-0.45 g',
-      metricLabel: 'Décélération',
-      actionsTaken: [],
-    });
-
-    alerts.push({
-      id: 'alt_drv_003',
-      organizationId: currentOrg.id,
-      category: 'HARSH_DRIVING',
-      severity: 'HIGH',
-      status: 'IN_REVIEW',
-      recordedAt: '2026-08-02T02:15:00.000Z',
-      title: 'Conduite Nocturne Non Autorisée (Risque Fatigue)',
-      description:
-        'Déplacement effectué entre 02h00 et 04h00 du matin, violant les règles de sécurité relatives à la fatigue des chauffeurs.',
-      vehicleId: 'veh_hilux_03',
-      driverId: 'drv_ibrahim_02',
-      locationName: 'Axe Cotonou - Porto-Novo',
-      latitude: 6.891,
-      longitude: 2.31,
-      metricValue: '02h15 AM',
-      metricLabel: 'Horaires Tardifs',
-      actionsTaken: ['Avertissement téléphonique'],
-    });
-
-    // 3. Maintenance & Fuel Anomalies
-    alerts.push({
-      id: 'alt_fuel_001',
-      organizationId: currentOrg.id,
-      category: 'FUEL_ANOMALY',
-      severity: 'CRITICAL',
-      status: 'UNHANDLED',
-      recordedAt: '2026-08-03T18:15:00.000Z',
-      title: 'Anomalie Majeure Consommation Gazole (Siphonnage Présumé)',
-      description:
-        'Ravitaillement de 280L à Parakou affichant un ratio calculé anormal de 48.5 L/100km (+42% par rapport au nominal).',
-      vehicleId: 'veh_actros_01',
-      driverId: 'drv_moussa_04',
-      locationName: 'Station Total Parakou Centre',
-      metricValue: '48.5 L/100km',
-      metricLabel: 'Consommation',
-      actionsTaken: [],
-    });
-
-    alerts.push({
-      id: 'alt_maint_001',
-      organizationId: currentOrg.id,
-      category: 'MAINTENANCE',
-      severity: 'MEDIUM',
-      status: 'UNHANDLED',
-      recordedAt: '2026-08-01T09:00:00.000Z',
-      title: 'Remplacement Plaquettes & Amortisseurs en Cours',
-      description:
-        "Véhicule immobilisé pour maintenance corrective au niveau du système de freinage avant suite à l'usure prématurée.",
-      vehicleId: 'veh_hilux_03',
-      driverId: 'drv_ibrahim_02',
-      locationName: 'Atelier Interne TransAfrik Cotonou',
-      metricValue: '42 100 km',
-      metricLabel: 'Kilométrage',
-      actionsTaken: ['Ordre de réparation émis'],
-    });
-
-    // 4. Compliance Documents Expiry
-    alerts.push({
-      id: 'alt_doc_001',
-      organizationId: currentOrg.id,
-      category: 'COMPLIANCE',
-      severity: 'HIGH',
-      status: 'UNHANDLED',
-      recordedAt: '2026-08-04T01:00:00.000Z',
-      title: 'Échéance Visite Technique CNSR Imminente',
-      description:
-        "La visite technique obligatoire du camion Mercedes Actros expire le 10 août 2026 (dans 6 jours). Risque d'amende et d'immobilisation.",
-      vehicleId: 'veh_actros_01',
-      driverId: 'drv_moussa_04',
-      metricValue: 'Expire le 10/08',
-      metricLabel: 'Échéance CNSR',
-      actionsTaken: [],
-    });
-
-    return alerts;
-  }, [currentOrg.id]);
-
-  // Alert State
-  const [alerts, setAlerts] = useState<UnifiedAlert[]>(initialAlerts);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showDetectorPanel, setShowDetectorPanel] = useState<boolean>(true);
 
-  // Handler for new real-time fuel anomalies detected by telemetry
-  const handleFuelAnomalyTriggered = (newAlert: UnifiedAlert) => {
-    setAlerts(prev => {
-      if (prev.some(a => a.id === newAlert.id)) return prev;
-      return [newAlert, ...prev];
-    });
+  const [pendingAlertId, setPendingAlertId] = useState<string | null>(null);
+  const [writeError, setWriteError] = useState<string | null>(null);
+
+  /**
+   * Enregistre la décision du régulateur.
+   *
+   * L'écriture passe par le serveur avant tout affichage : un acquittement qui
+   * ne vivrait qu'à l'écran disparaîtrait au rechargement, et l'incident
+   * serait cru traité alors qu'il ne l'est pas.
+   */
+  const applyStatus = async (
+    alertId: string,
+    status: UnifiedAlert['status'],
+    resolutionNote?: string,
+  ): Promise<boolean> => {
+    setPendingAlertId(alertId);
+    setWriteError(null);
+    try {
+      await apiClient.patch(`/alerts/${alertId}`, { status, resolutionNote });
+      alertsQuery.reload();
+      return true;
+    } catch {
+      setWriteError("Le traitement n'a pas pu être enregistré. Réessayez.");
+      return false;
+    } finally {
+      setPendingAlertId(null);
+    }
   };
 
   // Modals & Active Action States
@@ -342,32 +216,15 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
     setSmsSuccess(false);
   };
 
-  const handleSendSMS = () => {
+  const handleSendSMS = async () => {
     if (!smsModalAlert) return;
     setSmsSending(true);
-    setTimeout(() => {
-      setSmsSending(false);
-      setSmsSuccess(true);
-      // Mark actions taken
-      setAlerts(prev =>
-        prev.map(a =>
-          a.id === smsModalAlert.id
-            ? {
-                ...a,
-                status: a.status === 'UNHANDLED' ? 'IN_REVIEW' : a.status,
-                actionsTaken: [
-                  ...(a.actionsTaken || []),
-                  `SMS envoyé le ${new Date().toLocaleTimeString('fr-FR')}`,
-                ],
-              }
-            : a,
-        ),
-      );
-      setTimeout(() => {
-        setSmsModalAlert(null);
-        setSmsSuccess(false);
-      }, 1500);
-    }, 800);
+    // Le passage en revue est bien enregistré. L'acheminement du message vers
+    // un opérateur mobile n'est pas encore branché : l'annoncer comme transmis
+    // ferait croire qu'un chauffeur a été prévenu alors qu'il ne l'a pas été.
+    const ok = await applyStatus(smsModalAlert.id, 'IN_REVIEW');
+    setSmsSending(false);
+    if (ok) setSmsSuccess(true);
   };
 
   const handleOpenAiModal = async (alert: UnifiedAlert) => {
@@ -416,21 +273,14 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
     setResolutionNote('');
   };
 
-  const handleConfirmResolution = () => {
+  const handleConfirmResolution = async () => {
     if (!resolveModalAlert) return;
-    setAlerts(prev =>
-      prev.map(a =>
-        a.id === resolveModalAlert.id
-          ? {
-              ...a,
-              status: 'RESOLVED',
-              resolvedAt: new Date().toISOString(),
-              resolutionNote: resolutionNote.trim() || 'Classé résolu par le gestionnaire de flotte.',
-            }
-          : a,
-      ),
+    const ok = await applyStatus(
+      resolveModalAlert.id,
+      'RESOLVED',
+      resolutionNote.trim() || 'Classé résolu par le gestionnaire de flotte.',
     );
-    setResolveModalAlert(null);
+    if (ok) setResolveModalAlert(null);
   };
 
   const handleOpenMaintenanceModal = (alert: UnifiedAlert) => {
@@ -438,53 +288,22 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
     setMaintSuccess(false);
   };
 
-  const handleConfirmMaintenance = () => {
+  const handleConfirmMaintenance = async () => {
     if (!maintModalAlert) return;
-    setAlerts(prev =>
-      prev.map(a =>
-        a.id === maintModalAlert.id
-          ? {
-              ...a,
-              status: 'IN_REVIEW',
-              actionsTaken: [
-                ...(a.actionsTaken || []),
-                `Ordre de service créé chez ${maintProvider} le ${new Date().toLocaleDateString('fr-FR')}`,
-              ],
-            }
-          : a,
-      ),
+    // La prise en charge est enregistrée ; la transmission de l'ordre au
+    // garage n'est pas encore connectée et la note le dit, plutôt que de
+    // laisser croire à un envoi.
+    const ok = await applyStatus(
+      maintModalAlert.id,
+      'IN_REVIEW',
+      `Passage à l'atelier à programmer chez ${maintProvider}.`,
     );
+    if (!ok) return;
     setMaintSuccess(true);
     setTimeout(() => {
       setMaintModalAlert(null);
       setMaintSuccess(false);
     }, 1200);
-  };
-
-  const handleSimulateNewAlert = () => {
-    const randomVehicle = orgVehicles[Math.floor(Math.random() * orgVehicles.length)] || orgVehicles[0];
-    const randomDriver = orgDrivers.find(d => d.assignedVehicleId === randomVehicle?.id) || orgDrivers[0];
-
-    const newSimulatedAlert: UnifiedAlert = {
-      id: `alt_sim_${Date.now()}`,
-      organizationId: currentOrg.id,
-      category: 'GEOFENCE',
-      severity: 'CRITICAL',
-      status: 'UNHANDLED',
-      recordedAt: new Date().toISOString(),
-      title: 'Alerte Entrée Zone Restreinte (Simulée)',
-      description: `Le véhicule ${randomVehicle?.immatriculation || 'RB-4592-A'} vient de franchir le périmètre de sécurité non autorisé à l'entrée de la zone portuaire.`,
-      vehicleId: randomVehicle?.id,
-      driverId: randomDriver?.id,
-      locationName: 'Périmètre Portuaire Cotonou',
-      latitude: 6.3533,
-      longitude: 2.4311,
-      metricValue: 'Entrée Non Autorisée',
-      metricLabel: 'Détection GPS',
-      actionsTaken: [],
-    };
-
-    setAlerts(prev => [newSimulatedAlert, ...prev]);
   };
 
   const getCategoryBadge = (category: AlertCategory) => {
@@ -642,21 +461,35 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
               <Printer className="w-4 h-4" />
               <span>Imprimer Journal d'Incidents</span>
             </button>
-
-            <button
-              onClick={handleSimulateNewAlert}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-3.5 py-2.5 rounded-lg transition flex items-center gap-2 shadow-xs cursor-pointer"
-            >
-              <Zap className="w-4 h-4" />
-              <span>Simuler Alerte GPS</span>
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Real-time Fuel Anomaly Detector Integration */}
-      {showDetectorPanel && (
-        <FuelAnomalyDetector currentOrg={currentOrg} onAlertTriggered={handleFuelAnomalyTriggered} />
+      {/* Analyse des consommations. Le panneau n'injecte plus d'alerte dans la
+          liste : les anomalies de carburant sont dérivées côté serveur à partir
+          des pleins réellement enregistrés, et non d'un calcul d'écran qui ne
+          survivrait pas au rechargement. */}
+      {showDetectorPanel && <FuelAnomalyDetector currentOrg={currentOrg} />}
+
+      {/* Un échec d'enregistrement doit se voir : sans ce bandeau, le
+          régulateur croirait l'alerte traitée alors que rien n'a été écrit. */}
+      {writeError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between gap-3">
+          <span className="text-xs font-bold text-red-700">{writeError}</span>
+          <button
+            onClick={() => {
+              setWriteError(null);
+              alertsQuery.reload();
+            }}
+            className="text-xs font-bold text-red-700 underline cursor-pointer"
+          >
+            Recharger les alertes
+          </button>
+        </div>
+      )}
+
+      {alertsQuery.isLoading && alerts.length === 0 && (
+        <p className="text-xs text-slate-500">Chargement des alertes…</p>
       )}
 
       {/* KPI Cards Overview */}
@@ -1014,7 +847,10 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
             {smsSuccess ? (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Message SMS transmis au réseau mobile !</span>
+                <span>
+                  Alerte marquée « en cours de traitement ». L’envoi du SMS au chauffeur n’est pas encore
+                  raccordé à un opérateur mobile.
+                </span>
               </div>
             ) : (
               <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-3">
@@ -1158,10 +994,13 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
               </button>
               <button
                 onClick={handleConfirmResolution}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                disabled={pendingAlertId === resolveModalAlert.id}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Check className="w-4 h-4" />
-                <span>Confirmer Résolution</span>
+                <span>
+                  {pendingAlertId === resolveModalAlert.id ? 'Enregistrement…' : 'Confirmer Résolution'}
+                </span>
               </button>
             </div>
           </div>

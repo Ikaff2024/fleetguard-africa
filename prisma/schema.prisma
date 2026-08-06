@@ -92,6 +92,7 @@ model Organization {
   telemetryBatches TelemetryBatch[]
   rewardProfiles   DriverRewardProfile[]
   trips            Trip[]
+  alerts           Alert[]
 
   @@index([code])
   @@map("organizations")
@@ -220,6 +221,7 @@ model Vehicle {
   gpsPoints        GpsPoint[]
   telemetryBatches TelemetryBatch[]
   trips            Trip[]
+  alerts           Alert[]
 
   // Une immatriculation est unique au sein d'une organisation, pas mondialement :
   // deux transporteurs de pays différents peuvent porter la même plaque.
@@ -276,6 +278,7 @@ model Driver {
   rewardProfile    DriverRewardProfile?
   unlockedBadges   DriverUnlockedBadge[]
   trips            Trip[]
+  alerts           Alert[]
 
   @@unique([organizationId, licenseNumber])
   @@index([organizationId, status])
@@ -850,4 +853,86 @@ model AuditLog {
   @@index([organizationId, userId, createdAt])
   @@index([organizationId, resource, resourceId])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// ALERTES
+// ============================================================================
+
+enum AlertCategory {
+  GEOFENCE
+  HARSH_DRIVING
+  FUEL_ANOMALY
+  MAINTENANCE
+  COMPLIANCE
+}
+
+enum AlertStatus {
+  UNHANDLED
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+/// Alerte opérationnelle présentée au régulateur.
+///
+/// Deux natures cohabitent volontairement dans cette table.
+///
+/// Le constat — un excès de vitesse, une carte brune qui expire, une révision
+/// dépassée — est *dérivé* de faits déjà enregistrés ailleurs. Il est donc
+/// recalculable, et le sera : les seuils évoluent, les données arrivent en
+/// retard depuis le terrain.
+///
+/// Le traitement — qui a pris connaissance de l'alerte, quand, ce qui a été
+/// décidé — n'est dérivable de rien. C'est le travail d'un régulateur, et il
+/// doit survivre à toute re-dérivation. Un acquittement perdu au rechargement
+/// de la page, c'est un incident qu'on croit traité et qui ne l'est pas.
+///
+/// D'où le couple (sourceType, sourceId) : il identifie le fait à l'origine de
+/// l'alerte et rend la dérivation idempotente. Recalculer met à jour le
+/// constat sans jamais toucher au traitement.
+model Alert {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category AlertCategory
+  severity Severity
+  status   AlertStatus   @default(UNHANDLED)
+
+  /// Fait à l'origine de l'alerte : « SAFETY_EVENT », « COMPLIANCE_DOC »,
+  /// « VEHICLE_SERVICE », « FUEL_LOG ».
+  sourceType String
+  sourceId   String @db.Uuid
+
+  recordedAt  DateTime
+  title       String
+  description String
+
+  vehicleId String?  @db.Uuid
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String?  @db.Uuid
+  driver    Driver?  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  locationName String?
+  latitude     Decimal? @db.Decimal(9, 6)
+  longitude    Decimal? @db.Decimal(9, 6)
+
+  /// Chiffre qui motive l'alerte, tel qu'il doit s'afficher (« 96 km/h »).
+  metricValue String?
+  metricLabel String?
+
+  // --- Traitement : jamais écrasé par une re-dérivation ---
+  acknowledgedAt     DateTime?
+  acknowledgedByUser String?   @db.Uuid
+  resolutionNote     String?
+  resolvedAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, sourceType, sourceId])
+  @@index([organizationId, status, recordedAt])
+  @@index([organizationId, category, recordedAt])
+  @@map("alerts")
 }

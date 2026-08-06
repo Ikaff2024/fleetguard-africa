@@ -3,6 +3,7 @@ import express, { type Express } from 'express';
 import { errorHandler, notFoundHandler } from './http/errors.js';
 import { applySecurity, globalRateLimit } from './http/security.js';
 import { httpLogger } from './logger.js';
+import { alertsRouter } from './routes/alerts.js';
 import { authRouter } from './routes/auth.js';
 import { fleetRouter } from './routes/fleet.js';
 import { fleetWriteRouter } from './routes/fleet-write.js';
@@ -39,6 +40,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   api.use(globalRateLimit);
   api.use(healthRouter);
   api.use(authRouter);
+  api.use(alertsRouter);
   api.use(fleetRouter);
   api.use(fleetWriteRouter);
   api.use(scoringRouter);
