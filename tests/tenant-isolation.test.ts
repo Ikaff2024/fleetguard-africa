@@ -199,3 +199,93 @@ describe.skipIf(!DATABASE_CONFIGURED)('Cycle de vie des sessions', () => {
     expect(afterLogout.status).toBe(401);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Écriture de la flotte', () => {
+  let tokenA: string;
+  let tokenB: string;
+  let createdVehicleId: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    tokenA = await tokenFor(TENANT_A_USER);
+    tokenB = await tokenFor(TENANT_B_USER);
+  });
+
+  const vehiclePayload = (plate: string) => ({
+    immatriculation: plate,
+    vin: `VINTEST${plate.replace(/-/g, '')}`,
+    make: 'Test',
+    model: 'Modèle de test',
+    year: 2024,
+    type: 'HEAVY_TRUCK',
+    fuelType: 'DIESEL',
+    tankCapacityLiters: 400,
+    expectedConsumptionL100km: 35,
+  });
+
+  it('crée un véhicule dans l’organisation du jeton', async () => {
+    const plate = `TS-${Math.floor(1000 + Math.random() * 8999)}-Z`;
+    const res = await request(app)
+      .post('/api/v1/vehicles')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send(vehiclePayload(plate));
+
+    expect(res.status, JSON.stringify(res.body)).toBe(201);
+    expect(res.body.data.immatriculation).toBe(plate);
+    createdVehicleId = res.body.data.id;
+  });
+
+  it('rend le véhicule créé visible à son organisation seulement', async () => {
+    const [a, b] = await Promise.all([
+      request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${tokenA}`),
+      request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${tokenB}`),
+    ]);
+
+    const idsA = a.body.data.map((v: { id: string }) => v.id);
+    const idsB = b.body.data.map((v: { id: string }) => v.id);
+
+    expect(idsA).toContain(createdVehicleId);
+    expect(idsB).not.toContain(createdVehicleId);
+  });
+
+  it('refuse à une autre organisation de modifier ce véhicule', async () => {
+    // Le tenant B connaît l'identifiant exact et tente malgré tout la mise à jour.
+    const res = await request(app)
+      .patch(`/api/v1/vehicles/${createdVehicleId}`)
+      .set('Authorization', `Bearer ${tokenB}`)
+      .send({ status: 'OUT_OF_SERVICE' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('valide les données entrantes', async () => {
+    const res = await request(app)
+      .post('/api/v1/vehicles')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ ...vehiclePayload('TS-0001-Z'), year: 1900, expectedConsumptionL100km: -5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('archive sans détruire, puis le véhicule disparaît des listes', async () => {
+    await request(app)
+      .delete(`/api/v1/vehicles/${createdVehicleId}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(204);
+
+    const after = await request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${tokenA}`);
+    const ids = after.body.data.map((v: { id: string }) => v.id);
+    expect(ids).not.toContain(createdVehicleId);
+  });
+
+  it('refuse la création à un rôle sans permission', async () => {
+    const technicianToken = await tokenFor(TECHNICIAN);
+    const res = await request(app)
+      .post('/api/v1/vehicles')
+      .set('Authorization', `Bearer ${technicianToken}`)
+      .send(vehiclePayload('TS-9999-Z'));
+
+    expect(res.status).toBe(403);
+  });
+});
