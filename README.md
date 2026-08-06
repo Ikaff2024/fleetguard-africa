@@ -6,11 +6,14 @@ d'anomalies carburant, maintenance, conformité réglementaire et travail hors l
 
 **Démonstration en ligne :** https://fleetguard-africa-production.up.railway.app
 
-> **État actuel : Sprint 1 livré.** Authentification, RBAC sur 6 rôles et
-> isolation multi-tenant garantie par PostgreSQL sont en place et vérifiés sur
-> base réelle. La télémétrie GPS n'est en revanche **pas encore persistée**
-> (Sprint 2), et l'instance publique ne contient que des données fictives
-> (TransAfrik, Sahel Express, Kigali Freight).
+> **État actuel : Sprint 1 livré, écrans branchés sur les données réelles.**
+> Authentification, RBAC sur 6 rôles, isolation garantie par PostgreSQL, et
+> saisie de la flotte (création, modification, archivage). Les écrans affichent
+> les données de l'organisation connectée — connectez-vous avec deux comptes
+> différents pour le constater.
+>
+> La télémétrie GPS n'est en revanche **pas encore persistée** (Sprint 2), et
+> l'instance publique ne contient que des données fictives.
 >
 > Feuille de route détaillée : [PRODUCTION_PLAN.md](PRODUCTION_PLAN.md).
 
@@ -78,6 +81,7 @@ docker exec -i fleetguard-postgres psql -U fleetguard -d fleetguard_db \
 | `npm test`                        | Tests unitaires et d'intégration                                        |
 | `npm run test:coverage`           | Tests avec couverture                                                   |
 | `npm run test:smoke <url>`        | Charge la page dans un navigateur et échoue sur toute erreur JavaScript |
+| `npm run test:isolation-ui <url>` | Connecte deux clients et vérifie qu'ils voient des flottes distinctes   |
 | `npm run db:migrate`              | Applique les migrations (développement)                                 |
 | `npm run db:deploy`               | Applique les migrations (production)                                    |
 | `npm run db:seed`                 | Peuple le jeu de démonstration                                          |
@@ -139,9 +143,11 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 - **Distance de scoring fictive.** Le score de sécurité utilise une distance
   constante héritée du jeu de démonstration : il sera faux sur des données
   réelles tant que la télémétrie n'alimente pas ce calcul.
-- **Écrans encore alimentés par le jeu de démonstration.** L'API sert les
-  données réelles de PostgreSQL ; la migration écran par écran vers ces
-  données est en cours.
+- **Trajets et alertes traçables** : pas de reconstruction de trajet ni de
+  table d'alertes ; les alertes affichées sont calculées à l'écran.
+- **Modules hors périmètre du cahier des charges** (primes, fatigue,
+  optimisation d'itinéraires) : conservés, mais alimentés par un jeu de
+  démonstration — l'API ne les expose pas encore.
 - **Pas encore une application installable hors ligne.** La file IndexedDB
   existe, mais sans service worker l'application ne s'ouvre pas sans réseau.
 - **Tuiles cartographiques** : les serveurs OpenStreetMap publics sont interdits

@@ -98,9 +98,13 @@ référentielle du jeu de démonstration.
 - ✅ Journal d'audit sur la consultation des dossiers nominatifs.
 - ✅ Déploiement autonome : le conteneur applique extensions, migrations,
   politiques RLS et peuplement à son démarrage.
-- ⏳ **Reste à faire** : migration écran par écran des 18 composants vers les
-  données réelles de l'API (l'infrastructure est en place, le chemin est
-  démontré de bout en bout).
+- ✅ 15 écrans branchés sur l'API : le cloisonnement est **visible à l'écran**,
+  vérifié en production par un contrôle qui connecte deux clients et compare
+  les flottes affichées.
+- ✅ Saisie de la flotte : création, modification et archivage des véhicules et
+  chauffeurs, plafond de formule vérifié côté serveur, écritures journalisées.
+- ⏳ **Reste** : modules hors cahier des charges (primes, fatigue, itinéraires)
+  encore alimentés par le jeu de démonstration.
 
 **Vérifié sur base réelle et en production** : TransAfrik voit 6 véhicules,
 Sahel Express 1 ; un identifiant de chauffeur connu d'un tenant reste

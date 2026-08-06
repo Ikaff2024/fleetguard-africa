@@ -195,6 +195,27 @@ jobs:
       - name: Tests d'isolation multi-tenant
         run: npx vitest run tests/tenant-isolation.test.ts
 
+      - name: Installation du navigateur de test
+        run: npx playwright install --with-deps chromium
+
+      - name: Cloisonnement visible à l'écran
+        # Les tests ci-dessus prouvent que l'API filtre. Celui-ci répond à une
+        # question différente : l'interface affiche-t-elle bien ces données
+        # filtrées ? Un écran resté sur un jeu de démonstration passerait tous
+        # les tests d'API sans qu'aucun client ne voie jamais sa propre flotte.
+        run: |
+          npm run build:web
+          NODE_ENV=production PORT=3000 node scripts/start-production.mjs &
+          SERVER_PID=$!
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/v1/health > /dev/null && break
+            sleep 2
+          done
+          node scripts/verify-tenant-isolation-ui.mjs http://localhost:3000
+          STATUS=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $STATUS
+
   docker:
     name: Image Docker
     runs-on: ubuntu-latest
