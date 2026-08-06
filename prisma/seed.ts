@@ -26,8 +26,10 @@ import {
   MOCK_SCORE_CONFIG,
   MOCK_VEHICLES,
 } from '../src/data/mock-data.js';
+import type { GpsPoint } from '../src/types/index.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { hashPassword } from '../src/server/services/password.js';
+import { segmentTrips } from '../src/server/services/trip-builder.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -55,6 +57,83 @@ function stableUuid(seed: string): string {
 const toDate = (value: string) => new Date(value);
 
 /** Le domaine utilise '4G'/'3G'/'2G' ; l'enum SQL n'accepte pas d'initiale numérique. */
+/**
+ * Trace GPS de démonstration sur le corridor Cotonou — Parakou.
+ *
+ * Sans positions, l'écran des trajets reste vide et la fonction ne se montre
+ * pas. Plutôt que d'écrire des trajets tout faits, on pose une trace
+ * plausible et on la laisse traverser le même découpage que les données
+ * réelles : ce qui s'affiche est donc bien le produit de l'algorithme, pas une
+ * mise en scène.
+ *
+ * Le parcours comporte une pause de vingt minutes au poste de péage de Bohicon
+ * — assez pour être comptée comme arrêt, trop courte pour rompre la mission.
+ */
+const CORRIDOR = [
+  { lat: 6.3703, lng: 2.3912 }, // Cotonou, port autonome
+  { lat: 6.6, lng: 2.35 },
+  { lat: 6.9, lng: 2.28 },
+  { lat: 7.1782, lng: 2.0667 }, // Bohicon
+  { lat: 7.6, lng: 2.06 },
+  { lat: 8.1, lng: 2.2 },
+  { lat: 8.7, lng: 2.35 },
+  { lat: 9.3372, lng: 2.6303 }, // Parakou
+];
+
+/** Interpole la trace en points espacés d'une minute, vitesse réaliste. */
+function buildCorridorTrace(startedAt: Date): GpsPoint[] {
+  const points: GpsPoint[] = [];
+  let clock = startedAt.getTime();
+
+  for (let leg = 0; leg < CORRIDOR.length - 1; leg++) {
+    const from = CORRIDOR[leg]!;
+    const to = CORRIDOR[leg + 1]!;
+
+    // Un point par minute à ~75 km/h : l'échantillonnage d'un boîtier réel.
+    const legKm = Math.hypot((to.lat - from.lat) * 111, (to.lng - from.lng) * 110);
+    const steps = Math.max(2, Math.round((legKm / 75) * 60));
+
+    for (let step = 0; step < steps; step++) {
+      const ratio = step / steps;
+      // Vitesse variable : la pointe reste sous la limite de 90 km/h.
+      const speedKmH = 68 + ((leg * 7 + step * 13) % 20);
+
+      points.push({
+        latitude: from.lat + (to.lat - from.lat) * ratio,
+        longitude: from.lng + (to.lng - from.lng) * ratio,
+        speedKmH,
+        headingDegree: 20,
+        timestamp: new Date(clock).toISOString(),
+        accuracyMeters: 6,
+        ignitionOn: true,
+        batteryLevelPct: 95,
+        networkType: legKm > 60 ? '2G' : '3G',
+      });
+      clock += 60_000;
+    }
+
+    // Arrêt au péage de Bohicon.
+    if (leg === 2) {
+      for (let minute = 0; minute < 20; minute += 5) {
+        points.push({
+          latitude: to.lat,
+          longitude: to.lng,
+          speedKmH: 0,
+          headingDegree: 20,
+          timestamp: new Date(clock).toISOString(),
+          accuracyMeters: 6,
+          ignitionOn: true,
+          batteryLevelPct: 95,
+          networkType: '3G',
+        });
+        clock += 5 * 60_000;
+      }
+    }
+  }
+
+  return points;
+}
+
 const NETWORK_MAP = { '4G': 'FOURG', '3G': 'THREEG', '2G': 'TWOG', NONE: 'NONE' } as const;
 
 async function main() {
@@ -361,6 +440,83 @@ async function main() {
     });
   }
   console.log(`  ${accounts.length} comptes utilisateurs`);
+
+  // --- Trace GPS et trajets reconstruits ------------------------------------
+  // Deux missions sur les jours précédents, pour que l'historique ne soit pas
+  // vide à la première ouverture.
+  const traceVehicle = MOCK_VEHICLES[0];
+  const traceDriver = MOCK_DRIVERS.find(d => d.assignedVehicleId === traceVehicle?.id);
+
+  if (traceVehicle && traceDriver) {
+    const vehicleId = stableUuid(traceVehicle.id);
+    const driverId = stableUuid(traceDriver.id);
+    const organizationId = stableUuid(traceVehicle.organizationId);
+
+    let pointCount = 0;
+    let tripCount = 0;
+
+    for (const daysAgo of [1, 3]) {
+      const departure = new Date(Date.now() - daysAgo * 86_400_000);
+      departure.setUTCHours(6, 0, 0, 0);
+
+      const trace = buildCorridorTrace(departure);
+      pointCount += trace.length;
+
+      // Rejouable : on efface la trace de cette journée avant de la réécrire.
+      const dayEnd = new Date(departure.getTime() + 86_400_000);
+      await prisma.gpsPoint.deleteMany({
+        where: { vehicleId, recordedAt: { gte: departure, lt: dayEnd } },
+      });
+
+      await prisma.gpsPoint.createMany({
+        data: trace.map(point => ({
+          organizationId,
+          vehicleId,
+          driverId,
+          recordedAt: new Date(point.timestamp),
+          latitude: point.latitude,
+          longitude: point.longitude,
+          speedKmH: point.speedKmH,
+          headingDegree: point.headingDegree,
+          accuracyMeters: point.accuracyMeters,
+          ignitionOn: point.ignitionOn,
+          batteryLevelPct: point.batteryLevelPct,
+          networkType: NETWORK_MAP[point.networkType],
+          eventFlags: [],
+        })),
+      });
+
+      // Le découpage est celui de la production : la démonstration montre le
+      // comportement réel de l'algorithme, pas des trajets écrits à la main.
+      for (const trip of segmentTrips(trace)) {
+        await prisma.trip.upsert({
+          where: { vehicleId_startedAt: { vehicleId, startedAt: new Date(trip.startedAt) } },
+          update: {},
+          create: {
+            organizationId,
+            vehicleId,
+            driverId,
+            startedAt: new Date(trip.startedAt),
+            endedAt: new Date(trip.endedAt),
+            distanceKm: trip.distanceKm,
+            durationSeconds: trip.durationSeconds,
+            stopCount: trip.stopCount,
+            stopSeconds: trip.stopSeconds,
+            maxSpeedKmH: trip.maxSpeedKmH,
+            avgSpeedKmH: trip.avgSpeedKmH,
+            startLatitude: trip.startLatitude,
+            startLongitude: trip.startLongitude,
+            endLatitude: trip.endLatitude,
+            endLongitude: trip.endLongitude,
+            pointCount: trip.pointCount,
+          },
+        });
+        tripCount++;
+      }
+    }
+
+    console.log(`  ${pointCount} positions GPS, ${tripCount} trajet(s) reconstruit(s)`);
+  }
 
   console.log('\nPeuplement terminé.');
   console.log('\nComptes de démonstration :');
