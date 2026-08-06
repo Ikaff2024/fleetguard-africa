@@ -78,6 +78,7 @@ docker exec -i fleetguard-postgres psql -U fleetguard -d fleetguard_db \
 | `npm run build`                   | Compile le front et le serveur                                          |
 | `npm start`                       | Démarre la version compilée                                             |
 | `npm run verify`                  | Types + lint + tests — à lancer avant chaque commit                     |
+| `npm run verify:all`              | Chaîne complète : types, lint, format, tests, build, fumée, isolation   |
 | `npm test`                        | Tests unitaires et d'intégration                                        |
 | `npm run test:coverage`           | Tests avec couverture                                                   |
 | `npm run test:smoke <url>`        | Charge la page dans un navigateur et échoue sur toute erreur JavaScript |
@@ -160,8 +161,15 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 
 ## Contribution
 
-`npm run verify` doit passer avant tout commit. La CI vérifie en plus le
-formatage, construit l'image Docker et audite les dépendances.
+`npm run verify` doit passer avant tout commit, et `npm run verify:all`
+reproduit en local l'intégralité de ce que contrôle l'intégration continue —
+utile avant une livraison, ou quand la CI est indisponible.
+
+Avec une base configurée (`DATABASE_APP_URL` et `JWT_SECRET`), `verify:all`
+exécute en plus les contrôles d'isolation, y compris celui qui connecte deux
+clients et vérifie qu'ils voient des flottes différentes à l'écran. Sans base,
+ces contrôles sont **ignorés et signalés comme tels** : un contrôle sauté doit
+se voir.
 
 Les avertissements de lint sont plafonnés à leur niveau actuel : la dette ne
 peut plus augmenter, et le plafond est abaissé à mesure qu'elle est résorbée.
