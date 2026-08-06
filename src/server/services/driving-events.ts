@@ -215,8 +215,25 @@ export function detectEvents(
   return events;
 }
 
+/** Au-delà, ce n'est plus un déplacement mais un artefact du signal. */
+export const MAX_PLAUSIBLE_SPEED_KMH = 200;
+
+/** Distance entre deux positions, en kilomètres, par la formule de haversine. */
+export function distanceBetweenKm(from: GpsPoint, to: GpsPoint): number {
+  const R = 6371;
+  const dLat = ((to.latitude - from.latitude) * Math.PI) / 180;
+  const dLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((from.latitude * Math.PI) / 180) *
+      Math.cos((to.latitude * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /**
- * Distance parcourue, en kilomètres, par la formule de haversine.
+ * Distance parcourue, en kilomètres.
  *
  * C'est cette distance qui normalise le score : sans elle, un chauffeur
  * parcourant 1 000 km serait pénalisé comme celui qui en fait 100 pour un même
@@ -237,19 +254,10 @@ export function distanceTravelledKm(points: GpsPoint[]): number {
     const elapsedSeconds = (new Date(to.timestamp).getTime() - new Date(from.timestamp).getTime()) / 1000;
     if (elapsedSeconds <= 0) continue;
 
-    const R = 6371;
-    const dLat = ((to.latitude - from.latitude) * Math.PI) / 180;
-    const dLon = ((to.longitude - from.longitude) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((from.latitude * Math.PI) / 180) *
-        Math.cos((to.latitude * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
-    const segment = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const segment = distanceBetweenKm(from, to);
 
-    // Au-delà de 200 km/h, c'est un artefact, pas un déplacement.
     const impliedSpeedKmH = (segment / elapsedSeconds) * 3600;
-    if (impliedSpeedKmH > 200) continue;
+    if (impliedSpeedKmH > MAX_PLAUSIBLE_SPEED_KMH) continue;
 
     total += segment;
   }

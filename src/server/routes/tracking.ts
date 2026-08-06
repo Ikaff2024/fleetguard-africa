@@ -10,6 +10,7 @@ import { findDriver, findVehicle } from '../repositories/fleet-repository.js';
 import {
   ingestTelemetryBatch,
   listRecentSafetyEvents,
+  listTrips,
   listVehiclePoints,
 } from '../repositories/telemetry-repository.js';
 import { registerBatch } from '../services/idempotency.js';
@@ -181,5 +182,42 @@ trackingRouter.get(
     const limit = Math.min(Number(req.query.limit ?? 200) || 200, 500);
 
     res.json({ statusCode: 200, data: await listRecentSafetyEvents(organizationId, limit) });
+  }),
+);
+
+/**
+ * Trajets reconstruits.
+ *
+ * Le terrain n'envoie pas de trajets : ils sont déduits de la trace. Un
+ * gestionnaire y lit ce qu'une suite de points ne montre pas — combien de
+ * temps le camion est resté immobile, à quelle vitesse il a roulé une fois les
+ * arrêts déduits, où la mission a commencé et fini.
+ */
+trackingRouter.get(
+  '/tracking/trips',
+  resolveTenant,
+  requirePermission('tracking:read'),
+  asyncHandler(async (req, res) => {
+    const organizationId = requireTenantId(req);
+
+    const filters = z
+      .object({
+        vehicleId: z.string().min(1).optional(),
+        driverId: z.string().min(1).optional(),
+        limit: z.coerce.number().int().min(1).max(500).optional(),
+      })
+      .parse(req.query);
+
+    // Le filtre est vérifié avant la requête : demander les trajets d'un
+    // véhicule d'une autre organisation doit être refusé, pas répondu par une
+    // liste vide qui laisserait croire à un véhicule sans activité.
+    if (filters.vehicleId && !(await findVehicle(organizationId, filters.vehicleId))) {
+      throw ApiError.notFound('Véhicule introuvable dans cette organisation.');
+    }
+    if (filters.driverId && !(await findDriver(organizationId, filters.driverId))) {
+      throw ApiError.notFound('Chauffeur introuvable dans cette organisation.');
+    }
+
+    res.json({ statusCode: 200, data: await listTrips(organizationId, filters) });
   }),
 );

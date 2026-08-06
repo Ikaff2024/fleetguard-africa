@@ -6,6 +6,7 @@ import type {
   Geofence,
   MaintenanceLog,
   Organization,
+  Trip,
   Vehicle,
 } from '../types';
 import { useApiResource } from './useApiResource';
@@ -38,3 +39,20 @@ export const useComplianceDocs = () => useApiResource<ComplianceDoc[]>('/complia
 
 /** Pondérations en vigueur — nécessaires pour expliquer un score à un chauffeur. */
 export const useScoreConfig = () => useApiResource<DriverScoreConfig>('/scoring/config');
+
+/**
+ * Trajets reconstruits.
+ *
+ * Le filtre par véhicule est passé au serveur plutôt qu'appliqué après coup :
+ * un parc de cinquante camions produit des milliers de trajets, et les
+ * transférer tous pour n'en afficher qu'une poignée coûterait cher sur une
+ * liaison de corridor.
+ */
+export const useTrips = (filters: { vehicleId?: string; limit?: number } = {}) => {
+  const query = new URLSearchParams();
+  if (filters.vehicleId) query.set('vehicleId', filters.vehicleId);
+  if (filters.limit) query.set('limit', String(filters.limit));
+  const suffix = query.toString();
+
+  return useApiResource<Trip[]>(`/tracking/trips${suffix ? `?${suffix}` : ''}`);
+};

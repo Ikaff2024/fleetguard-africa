@@ -79,6 +79,34 @@ export interface Driver {
   createdAt: string;
 }
 
+/**
+ * Trajet reconstruit à partir de la trace GPS.
+ *
+ * Aucun boîtier n'émet de trajet : c'est une lecture du parcours, recalculée
+ * côté serveur. La distance est mesurée point à point, jamais estimée à vol
+ * d'oiseau entre le départ et l'arrivée.
+ */
+export interface Trip {
+  id: string;
+  organizationId: string;
+  vehicleId: string;
+  driverId?: string;
+  startedAt: string;
+  endedAt: string;
+  distanceKm: number;
+  durationSeconds: number;
+  stopCount: number;
+  stopSeconds: number;
+  maxSpeedKmH: number;
+  /** Moyenne hors temps d'arrêt : une pause de chargement ne la fausse pas. */
+  avgSpeedKmH: number;
+  startLatitude: number;
+  startLongitude: number;
+  endLatitude: number;
+  endLongitude: number;
+  pointCount: number;
+}
+
 export interface GpsPoint {
   latitude: number;
   longitude: number;

@@ -77,20 +77,21 @@ model Organization {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  users           User[]
-  vehicles        Vehicle[]
-  drivers         Driver[]
-  geofences       Geofence[]
-  safetyEvents    SafetyEvent[]
-  scoreConfigs    DriverScoreConfig[]
-  dailyScores     DriverDailyScore[]
-  maintenanceLogs MaintenanceLog[]
-  fuelLogs        FuelLog[]
-  complianceDocs  ComplianceDoc[]
-  auditLogs       AuditLog[]
-  gpsPoints       GpsPoint[]
+  users            User[]
+  vehicles         Vehicle[]
+  drivers          Driver[]
+  geofences        Geofence[]
+  safetyEvents     SafetyEvent[]
+  scoreConfigs     DriverScoreConfig[]
+  dailyScores      DriverDailyScore[]
+  maintenanceLogs  MaintenanceLog[]
+  fuelLogs         FuelLog[]
+  complianceDocs   ComplianceDoc[]
+  auditLogs        AuditLog[]
+  gpsPoints        GpsPoint[]
   telemetryBatches TelemetryBatch[]
-  rewardProfiles  DriverRewardProfile[]
+  rewardProfiles   DriverRewardProfile[]
+  trips            Trip[]
 
   @@index([code])
   @@map("organizations")
@@ -107,7 +108,7 @@ model User {
   role     UserRole
 
   // Argon2id de préférence : plus résistant que bcrypt aux attaques par GPU.
-  passwordHash String
+  passwordHash    String
   // Invalide tous les jetons émis avant cette date (changement de mot de passe,
   // révocation d'accès d'un salarié qui quitte l'entreprise).
   tokensValidFrom DateTime @default(now())
@@ -140,12 +141,12 @@ model RefreshToken {
 
   // Seul le condensé est stocké : une fuite de la table ne donne aucun jeton
   // utilisable.
-  tokenHash String   @unique
-  expiresAt DateTime
-  revokedAt DateTime?
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
   // Rotation : le jeton qui a remplacé celui-ci. Une réutilisation d'un jeton
   // déjà tourné signale un vol et doit révoquer toute la chaîne.
-  replacedById String? @db.Uuid
+  replacedById String?   @db.Uuid
 
   userAgent String?
   ipAddress String?
@@ -195,11 +196,11 @@ model Vehicle {
   type            VehicleType
   fuelType        FuelType
 
-  tankCapacityLiters       Decimal @db.Decimal(8, 2)
+  tankCapacityLiters        Decimal @db.Decimal(8, 2)
   // Référence de consommation : l'écart avec le relevé réel est le premier
   // signal de siphonnage.
   expectedConsumptionL100km Decimal @db.Decimal(6, 2)
-  currentOdometerKm        Int     @default(0)
+  currentOdometerKm         Int     @default(0)
 
   status          VehicleStatus @default(ACTIVE)
   speedGovernorId String?
@@ -211,13 +212,14 @@ model Vehicle {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  drivers         Driver[]
-  safetyEvents    SafetyEvent[]
-  maintenanceLogs MaintenanceLog[]
-  fuelLogs        FuelLog[]
-  complianceDocs  ComplianceDoc[]
-  gpsPoints       GpsPoint[]
+  drivers          Driver[]
+  safetyEvents     SafetyEvent[]
+  maintenanceLogs  MaintenanceLog[]
+  fuelLogs         FuelLog[]
+  complianceDocs   ComplianceDoc[]
+  gpsPoints        GpsPoint[]
   telemetryBatches TelemetryBatch[]
+  trips            Trip[]
 
   // Une immatriculation est unique au sein d'une organisation, pas mondialement :
   // deux transporteurs de pays différents peuvent porter la même plaque.
@@ -265,14 +267,15 @@ model Driver {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  safetyEvents   SafetyEvent[]
-  dailyScores    DriverDailyScore[]
-  fuelLogs       FuelLog[]
-  complianceDocs ComplianceDoc[]
-  gpsPoints      GpsPoint[]
+  safetyEvents     SafetyEvent[]
+  dailyScores      DriverDailyScore[]
+  fuelLogs         FuelLog[]
+  complianceDocs   ComplianceDoc[]
+  gpsPoints        GpsPoint[]
   telemetryBatches TelemetryBatch[]
-  rewardProfile  DriverRewardProfile?
-  unlockedBadges DriverUnlockedBadge[]
+  rewardProfile    DriverRewardProfile?
+  unlockedBadges   DriverUnlockedBadge[]
+  trips            Trip[]
 
   @@unique([organizationId, licenseNumber])
   @@index([organizationId, status])
@@ -319,6 +322,53 @@ model TelemetryBatch {
   @@map("telemetry_batches")
 }
 
+/// Trajet reconstruit à partir des points GPS.
+///
+/// Le cahier des charges demande « distance, durée, arrêts et historique ».
+/// Un trajet n'est pas une donnée émise par le terrain : c'est une lecture des
+/// points, matérialisée ici pour que les écrans et les rapports n'aient pas à
+/// la refaire à chaque affichage — sur des dizaines de milliers de points, ce
+/// recalcul permanent serait le premier goulot d'étranglement du produit.
+model Trip {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String? @db.Uuid
+  driver    Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  startedAt DateTime
+  endedAt   DateTime
+
+  distanceKm      Decimal @db.Decimal(10, 2)
+  durationSeconds Int
+  /// Immobilisations de plus de quelques minutes pendant le trajet.
+  stopCount       Int     @default(0)
+  stopSeconds     Int     @default(0)
+
+  maxSpeedKmH Decimal @db.Decimal(6, 2)
+  avgSpeedKmH Decimal @db.Decimal(6, 2)
+
+  startLatitude  Decimal @db.Decimal(9, 6)
+  startLongitude Decimal @db.Decimal(9, 6)
+  endLatitude    Decimal @db.Decimal(9, 6)
+  endLongitude   Decimal @db.Decimal(9, 6)
+
+  pointCount Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // La reconstruction est rejouable : un même départ ne crée qu'un trajet,
+  // quel que soit le nombre de fois où les points sont réanalysés.
+  @@unique([vehicleId, startedAt])
+  @@index([organizationId, startedAt])
+  @@index([organizationId, driverId, startedAt])
+  @@map("trips")
+}
+
 /// Point GPS brut.
 ///
 /// Volumétrie de référence : 500 véhicules × 8 h de roulage × 1 point/10 s
@@ -338,19 +388,19 @@ model GpsPoint {
 
   recordedAt DateTime
 
-  latitude  Decimal @db.Decimal(9, 6)
-  longitude Decimal @db.Decimal(9, 6)
+  latitude  Decimal                                @db.Decimal(9, 6)
+  longitude Decimal                                @db.Decimal(9, 6)
   // Colonne PostGIS alimentée par un trigger à partir de latitude/longitude.
   // C'est elle qui porte l'index spatial utilisé par le moteur de geofencing.
-  location Unsupported("geography(Point, 4326)")?
+  location  Unsupported("geography(Point, 4326)")?
 
-  altitude       Decimal?    @db.Decimal(8, 2)
-  speedKmH       Decimal     @db.Decimal(6, 2)
-  headingDegree  Int
-  accuracyMeters Decimal     @db.Decimal(8, 2)
-  ignitionOn     Boolean
+  altitude        Decimal?    @db.Decimal(8, 2)
+  speedKmH        Decimal     @db.Decimal(6, 2)
+  headingDegree   Int
+  accuracyMeters  Decimal     @db.Decimal(8, 2)
+  ignitionOn      Boolean
   batteryLevelPct Int
-  networkType    NetworkType
+  networkType     NetworkType
 
   eventFlags String[]
 
@@ -397,8 +447,8 @@ model SafetyEvent {
   severity  Severity
 
   recordedAt DateTime
-  latitude   Decimal @db.Decimal(9, 6)
-  longitude  Decimal @db.Decimal(9, 6)
+  latitude   Decimal                                @db.Decimal(9, 6)
+  longitude  Decimal                                @db.Decimal(9, 6)
   location   Unsupported("geography(Point, 4326)")?
 
   speedKmH        Decimal  @db.Decimal(6, 2)
@@ -410,10 +460,10 @@ model SafetyEvent {
 
   // Un chauffeur doit pouvoir contester une infraction, et la contestation
   // doit laisser une trace opposable.
-  isDisputed     Boolean   @default(false)
-  disputeNote    String?
-  reviewedByUserId String? @db.Uuid
-  reviewedAt     DateTime?
+  isDisputed       Boolean   @default(false)
+  disputeNote      String?
+  reviewedByUserId String?   @db.Uuid
+  reviewedAt       DateTime?
 
   createdAt DateTime @default(now())
 
@@ -469,10 +519,10 @@ model DriverDailyScore {
   distanceDrivenKm Decimal  @db.Decimal(10, 2)
   score            Decimal  @db.Decimal(5, 2)
 
-  overspeedCount        Int @default(0)
-  harshBrakingCount     Int @default(0)
-  rapidAccelCount       Int @default(0)
-  geofenceBreachesCount Int @default(0)
+  overspeedCount        Int     @default(0)
+  harshBrakingCount     Int     @default(0)
+  rapidAccelCount       Int     @default(0)
+  geofenceBreachesCount Int     @default(0)
   nightKmDriven         Decimal @default(0) @db.Decimal(10, 2)
 
   // Détail des points perdus, tel qu'affiché au chauffeur. Stocké et non
@@ -572,8 +622,8 @@ model MaintenanceLog {
   odometerKmAtService Int
   // Decimal et non Float : un montant financier ne tolère aucune approximation
   // binaire, surtout en XOF où l'unité n'a pas de décimale.
-  cost     Decimal      @db.Decimal(14, 2)
-  currency CurrencyCode
+  cost                Decimal      @db.Decimal(14, 2)
+  currency            CurrencyCode
 
   serviceProvider String
   technicianName  String?
@@ -603,18 +653,18 @@ model FuelLog {
   driverId  String? @db.Uuid
   driver    Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
 
-  litersAdded   Decimal @db.Decimal(10, 2)
-  totalCost     Decimal @db.Decimal(14, 2)
-  pricePerLiter Decimal @db.Decimal(10, 2)
+  litersAdded   Decimal      @db.Decimal(10, 2)
+  totalCost     Decimal      @db.Decimal(14, 2)
+  pricePerLiter Decimal      @db.Decimal(10, 2)
   currency      CurrencyCode
 
-  odometerKm    Int
-  stationName   String
-  receiptNumber String?
+  odometerKm     Int
+  stationName    String
+  receiptNumber  String?
   receiptFileUrl String?
 
   // Consommation calculée entre deux pleins.
-  calculatedL100km Decimal? @db.Decimal(6, 2)
+  calculatedL100km   Decimal?  @db.Decimal(6, 2)
   // Signalement automatique, à confirmer humainement : une accusation de vol
   // ne peut pas reposer sur un seuil sans contrôle.
   suspectedFuelTheft Boolean   @default(false)
@@ -718,9 +768,9 @@ model DigitalBadge {
 model DriverUnlockedBadge {
   id String @id @default(uuid()) @db.Uuid
 
-  driverId String @db.Uuid
-  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  badgeId  String @db.Uuid
+  driverId String       @db.Uuid
+  driver   Driver       @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  badgeId  String       @db.Uuid
   badge    DigitalBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   unlockedAt  DateTime @default(now())
@@ -748,16 +798,16 @@ model DriverRewardProfile {
   ecoScore      Decimal @default(0) @db.Decimal(5, 2)
   scoreTrend30d Decimal @default(0) @db.Decimal(5, 2)
 
-  fuelEfficiencySavingsL100km Decimal @default(0) @db.Decimal(6, 2)
-  estimatedFuelSavedLiters    Decimal @default(0) @db.Decimal(10, 2)
-  bonusEarned                 Decimal @default(0) @db.Decimal(14, 2)
+  fuelEfficiencySavingsL100km Decimal      @default(0) @db.Decimal(6, 2)
+  estimatedFuelSavedLiters    Decimal      @default(0) @db.Decimal(10, 2)
+  bonusEarned                 Decimal      @default(0) @db.Decimal(14, 2)
   currency                    CurrencyCode
 
-  payoutStatus  PayoutStatus @default(ELIGIBLE)
-  payoutMethod  PayoutMethod @default(FUEL_VOUCHER)
-  lastPayoutAt  DateTime?
+  payoutStatus PayoutStatus @default(ELIGIBLE)
+  payoutMethod PayoutMethod @default(FUEL_VOUCHER)
+  lastPayoutAt DateTime?
 
-  totalPoints   Int @default(0)
+  totalPoints   Int  @default(0)
   rankInCompany Int?
 
   createdAt DateTime @default(now())

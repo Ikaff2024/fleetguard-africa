@@ -202,8 +202,13 @@ describe('Ingestion télémétrique', () => {
     driverId = await firstDriverId(TENANT_A);
   });
 
+  // L'identifiant est unique à chaque exécution : avec une vraie base,
+  // l'idempotence est garantie par une contrainte d'unicité qui survit au
+  // processus. Un identifiant figé ferait échouer la deuxième exécution de la
+  // suite en présentant un lot déjà connu comme un rejeu.
+  const run = Date.now();
   const batch = (batchId: string) => ({
-    batchId,
+    batchId: `${batchId}-${run}`,
     vehicleId,
     driverId,
     points: [point],

@@ -7,7 +7,8 @@ import {
   detectEvents,
   distanceTravelledKm,
 } from '../services/driving-events.js';
-import { mapSafetyEvent } from './mappers.js';
+import { type BuiltTrip, segmentTrips } from '../services/trip-builder.js';
+import { mapSafetyEvent, toNumber } from './mappers.js';
 
 /**
  * Persistance de la télémétrie.
@@ -184,6 +185,11 @@ export async function ingestTelemetryBatch(input: {
       });
     }
 
+    // Les trajets sont reconstruits sur une fenêtre glissante, pas seulement
+    // sur le lot reçu : un trajet commencé dans un lot précédent doit être
+    // prolongé, pas dupliqué.
+    await rebuildTrips(tx, organizationId, vehicleId, driverId);
+
     await tx.telemetryBatch.update({
       where: { id: batch.id },
       data: { processedAt: new Date() },
@@ -197,6 +203,112 @@ export async function ingestTelemetryBatch(input: {
       detectedEvents: detected.length,
       firstSeenAt: batch.receivedAt.toISOString(),
     };
+  });
+}
+
+/**
+ * Reconstruit les trajets récents d'un véhicule.
+ *
+ * L'opération est rejouable : un même départ ne produit qu'un trajet, quel que
+ * soit le nombre de fois où la trace est réanalysée. C'est la contrainte
+ * d'unicité `(vehicleId, startedAt)` qui l'assure.
+ */
+async function rebuildTrips(
+  tx: Parameters<Parameters<typeof withTenant>[1]>[0],
+  organizationId: string,
+  vehicleId: string,
+  driverId: string,
+): Promise<number> {
+  // Fenêtre de 48 h : assez large pour rattacher un trajet entamé la veille,
+  // assez étroite pour ne pas relire tout l'historique à chaque lot.
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+  const rows = await tx.gpsPoint.findMany({
+    where: { vehicleId, recordedAt: { gte: since } },
+    orderBy: { recordedAt: 'asc' },
+    take: 5000,
+  });
+
+  if (rows.length < 2) return 0;
+
+  const points: GpsPoint[] = rows.map(row => ({
+    latitude: toNumber(row.latitude),
+    longitude: toNumber(row.longitude),
+    speedKmH: toNumber(row.speedKmH),
+    headingDegree: row.headingDegree,
+    timestamp: row.recordedAt.toISOString(),
+    accuracyMeters: toNumber(row.accuracyMeters),
+    ignitionOn: row.ignitionOn,
+    batteryLevelPct: row.batteryLevelPct,
+    networkType: '3G',
+  }));
+
+  const trips = segmentTrips(points);
+
+  for (const trip of trips) {
+    await tx.trip.upsert({
+      where: { vehicleId_startedAt: { vehicleId, startedAt: new Date(trip.startedAt) } },
+      update: tripData(trip),
+      create: { organizationId, vehicleId, driverId, ...tripData(trip), startedAt: new Date(trip.startedAt) },
+    });
+  }
+
+  return trips.length;
+}
+
+function tripData(trip: BuiltTrip) {
+  return {
+    endedAt: new Date(trip.endedAt),
+    distanceKm: trip.distanceKm,
+    durationSeconds: trip.durationSeconds,
+    stopCount: trip.stopCount,
+    stopSeconds: trip.stopSeconds,
+    maxSpeedKmH: trip.maxSpeedKmH,
+    avgSpeedKmH: trip.avgSpeedKmH,
+    startLatitude: trip.startLatitude,
+    startLongitude: trip.startLongitude,
+    endLatitude: trip.endLatitude,
+    endLongitude: trip.endLongitude,
+    pointCount: trip.pointCount,
+  };
+}
+
+/** Trajets récents, du plus récent au plus ancien. */
+export async function listTrips(
+  organizationId: string,
+  filters: { vehicleId?: string; driverId?: string; limit?: number } = {},
+) {
+  if (!isDatabaseEnabled()) return [];
+
+  return withTenant(organizationId, async tx => {
+    const rows = await tx.trip.findMany({
+      where: {
+        ...(filters.vehicleId ? { vehicleId: filters.vehicleId } : {}),
+        ...(filters.driverId ? { driverId: filters.driverId } : {}),
+      },
+      orderBy: { startedAt: 'desc' },
+      take: Math.min(filters.limit ?? 100, 500),
+    });
+
+    return rows.map(row => ({
+      id: row.id,
+      organizationId: row.organizationId,
+      vehicleId: row.vehicleId,
+      driverId: row.driverId ?? undefined,
+      startedAt: row.startedAt.toISOString(),
+      endedAt: row.endedAt.toISOString(),
+      distanceKm: toNumber(row.distanceKm),
+      durationSeconds: row.durationSeconds,
+      stopCount: row.stopCount,
+      stopSeconds: row.stopSeconds,
+      maxSpeedKmH: toNumber(row.maxSpeedKmH),
+      avgSpeedKmH: toNumber(row.avgSpeedKmH),
+      startLatitude: toNumber(row.startLatitude),
+      startLongitude: toNumber(row.startLongitude),
+      endLatitude: toNumber(row.endLatitude),
+      endLongitude: toNumber(row.endLongitude),
+      pointCount: row.pointCount,
+    }));
   });
 }
 

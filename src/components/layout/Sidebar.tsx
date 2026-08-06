@@ -1,10 +1,19 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { initials, roleLabel } from '../../lib/roles';
-import { MapPin, Truck, Award, Wrench, Sparkles, ShieldAlert, ChevronRight, Cpu, Gift } from 'lucide-react';
-
-export type NavigationTab =
-  'live-map' | 'alerts' | 'fleet' | 'scoring' | 'rewards' | 'maintenance-fuel' | 'ai-hub';
+import { NAV_PERMISSIONS, NavigationTab } from './navigation';
+import {
+  MapPin,
+  Truck,
+  Award,
+  Wrench,
+  Sparkles,
+  ShieldAlert,
+  ChevronRight,
+  Cpu,
+  Gift,
+  Route,
+} from 'lucide-react';
 
 interface SidebarProps {
   activeTab: NavigationTab;
@@ -19,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingGpsCount = 0,
   alertsCount = 2,
 }) => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const menuItems: {
     id: NavigationTab;
@@ -41,6 +50,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: ShieldAlert,
       badge: 'Directes',
       badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30 animate-pulse',
+    },
+    {
+      id: 'trips',
+      label: 'Historique des trajets',
+      icon: Route,
     },
     {
       id: 'fleet',
@@ -86,44 +100,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <nav className="space-y-1 mt-2">
-          {menuItems.map(item => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+          {menuItems
+            .filter(item => hasPermission(NAV_PERMISSIONS[item.id]))
+            .map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg font-medium text-xs flex items-center justify-between transition-all duration-150 group ${
-                  isActive
-                    ? 'bg-slate-800 text-white border border-slate-700/80 shadow-xs'
-                    : 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon
-                    className={`w-4 h-4 transition-colors ${
-                      isActive ? 'text-orange-500' : 'text-slate-500 group-hover:text-orange-400'
-                    }`}
-                  />
-                  <span>{item.label}</span>
-                </div>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg font-medium text-xs flex items-center justify-between transition-all duration-150 group ${
+                    isActive
+                      ? 'bg-slate-800 text-white border border-slate-700/80 shadow-xs'
+                      : 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon
+                      className={`w-4 h-4 transition-colors ${
+                        isActive ? 'text-orange-500' : 'text-slate-500 group-hover:text-orange-400'
+                      }`}
+                    />
+                    <span>{item.label}</span>
+                  </div>
 
-                <div className="flex items-center gap-1.5">
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'}`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                  <ChevronRight
-                    className={`w-3.5 h-3.5 text-slate-600 transition-transform ${isActive ? 'translate-x-0.5 text-orange-400' : ''}`}
-                  />
-                </div>
-              </button>
-            );
-          })}
+                  <div className="flex items-center gap-1.5">
+                    {item.badge && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${item.badgeColor || 'bg-slate-800 text-slate-300 border-slate-700'}`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                    <ChevronRight
+                      className={`w-3.5 h-3.5 text-slate-600 transition-transform ${isActive ? 'translate-x-0.5 text-orange-400' : ''}`}
+                    />
+                  </div>
+                </button>
+              );
+            })}
         </nav>
       </div>
 

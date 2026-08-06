@@ -438,4 +438,60 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
     // Le tenant B ne possède ni ce véhicule ni ce chauffeur.
     expect([403, 404]).toContain(res.status);
   });
+
+  it('reconstruit le trajet à partir de la trace ingérée', async () => {
+    await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(trip(`trajet-${Date.now()}`));
+
+    const res = await request(app)
+      .get(`/api/v1/tracking/trips?vehicleId=${vehicleId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+
+    const built = res.body.data[0];
+    expect(built.distanceKm).toBeGreaterThan(0);
+    expect(built.durationSeconds).toBeGreaterThan(0);
+    expect(built.pointCount).toBeGreaterThanOrEqual(2);
+    expect(built.maxSpeedKmH).toBeGreaterThan(0);
+  });
+
+  it('ne duplique pas un trajet quand la trace est réanalysée', async () => {
+    // Un boîtier qui rejoue son lot, ou un lot qui prolonge un trajet déjà
+    // reconstruit, ne doit pas faire apparaître deux fois la même mission dans
+    // le rapport d'activité.
+    const before = await request(app)
+      .get(`/api/v1/tracking/trips?vehicleId=${vehicleId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(trip(`rejeu-${Date.now()}`));
+
+    const after = await request(app)
+      .get(`/api/v1/tracking/trips?vehicleId=${vehicleId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(after.body.data.length).toBe(before.body.data.length);
+  });
+
+  it("ne montre pas les trajets d'une organisation à une autre", async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    // Filtrer sur un véhicule qu'on ne possède pas doit être refusé, et non
+    // répondu par une liste vide qui laisserait croire à un parc inactif.
+    const filtered = await request(app)
+      .get(`/api/v1/tracking/trips?vehicleId=${vehicleId}`)
+      .set('Authorization', `Bearer ${otherToken}`);
+    expect(filtered.status).toBe(404);
+
+    // Et la liste non filtrée ne contient aucun trajet du tenant A.
+    const all = await request(app).get('/api/v1/tracking/trips').set('Authorization', `Bearer ${otherToken}`);
+    expect(all.status).toBe(200);
+    expect(all.body.data.some((t: { vehicleId: string }) => t.vehicleId === vehicleId)).toBe(false);
+  });
 });

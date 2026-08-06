@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navbar } from './components/layout/Navbar';
-import { Sidebar, NavigationTab } from './components/layout/Sidebar';
+import { Sidebar } from './components/layout/Sidebar';
+import { NAV_ORDER, NAV_PERMISSIONS, NavigationTab } from './components/layout/navigation';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ModuleLoader } from './components/common/ModuleLoader';
 import { OfflineSyncDrawer } from './components/common/OfflineSyncDrawer';
@@ -32,6 +33,9 @@ const RewardsModule = lazy(() =>
 const FleetManagementView = lazy(() =>
   import('./components/fleet/FleetManagementView').then(m => ({ default: m.FleetManagementView })),
 );
+const TripHistoryView = lazy(() =>
+  import('./components/tracking/TripHistoryView').then(m => ({ default: m.TripHistoryView })),
+);
 const FleetIntelligenceHub = lazy(() =>
   import('./components/ai/FleetIntelligenceHub').then(m => ({ default: m.FleetIntelligenceHub })),
 );
@@ -52,9 +56,10 @@ function AppContent() {
    */
   const [demoOrg, setDemoOrg] = useState<Organization>(MOCK_ORGANIZATIONS[0]);
   const [currentRole, setCurrentRole] = useState<UserRole>('FLEET_MANAGER');
-  // La carte live est l'écran de travail quotidien du régulateur. Le dossier
-  // d'architecture reste accessible dans le menu, mais n'est plus la page
-  // d'accueil : une démonstration client doit ouvrir sur le produit.
+  // La carte live est l'écran de travail quotidien du régulateur, donc l'écran
+  // d'accueil par défaut. Un rôle qui n'y a pas droit — un technicien de
+  // maintenance, par exemple — ouvre sur le premier écran qui lui est ouvert
+  // plutôt que sur une zone vide.
   const [activeTab, setActiveTab] = useState<NavigationTab>('live-map');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
@@ -68,7 +73,14 @@ function AppContent() {
     isSyncing,
   } = useOfflineSync();
   const { isNightDispatcher } = useTheme();
-  const { status, user, logout } = useAuth();
+  const { status, user, logout, hasPermission } = useAuth();
+
+  // L'onglet effectif est déduit au rendu plutôt que corrigé après coup : un
+  // aller-retour par un état intermédiaire afficherait brièvement un écran
+  // interdit avant de le remplacer.
+  const effectiveTab = hasPermission(NAV_PERMISSIONS[activeTab])
+    ? activeTab
+    : (NAV_ORDER.find(tab => hasPermission(NAV_PERMISSIONS[tab])) ?? activeTab);
 
   // L'en-tête d'organisation n'est transmis qu'en démonstration ; avec une
   // session réelle, le tenant vient du jeton signé.
@@ -144,7 +156,7 @@ function AppContent() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Sidebar Navigation */}
         <Sidebar
-          activeTab={activeTab}
+          activeTab={effectiveTab}
           onTabChange={setActiveTab}
           pendingGpsCount={pendingCount}
           alertsCount={2}
@@ -154,17 +166,18 @@ function AppContent() {
         <main className="flex-1 p-4 md:p-6 overflow-y-auto max-w-7xl mx-auto w-full space-y-6">
           {/* La clé sur l'onglet réinitialise la frontière d'erreur à chaque
               changement d'écran : un module en échec ne bloque pas la navigation. */}
-          <ErrorBoundary key={activeTab} moduleName={activeTab}>
+          <ErrorBoundary key={effectiveTab} moduleName={effectiveTab}>
             <Suspense fallback={<ModuleLoader />}>
-              {activeTab === 'live-map' && <LiveFleetMap currentOrg={currentOrg} />}
-              {activeTab === 'alerts' && (
+              {effectiveTab === 'live-map' && <LiveFleetMap currentOrg={currentOrg} />}
+              {effectiveTab === 'alerts' && (
                 <AlertsCenter currentOrg={currentOrg} onNavigateToMap={() => setActiveTab('live-map')} />
               )}
-              {activeTab === 'scoring' && <DriverScoreCalculator currentOrg={currentOrg} />}
-              {activeTab === 'rewards' && <RewardsModule currentOrg={currentOrg} />}
-              {activeTab === 'fleet' && <FleetManagementView currentOrg={currentOrg} />}
-              {activeTab === 'maintenance-fuel' && <FleetManagementView currentOrg={currentOrg} />}
-              {activeTab === 'ai-hub' && <FleetIntelligenceHub currentOrg={currentOrg} />}
+              {effectiveTab === 'scoring' && <DriverScoreCalculator currentOrg={currentOrg} />}
+              {effectiveTab === 'rewards' && <RewardsModule currentOrg={currentOrg} />}
+              {effectiveTab === 'trips' && <TripHistoryView currentOrg={currentOrg} />}
+              {effectiveTab === 'fleet' && <FleetManagementView currentOrg={currentOrg} />}
+              {effectiveTab === 'maintenance-fuel' && <FleetManagementView currentOrg={currentOrg} />}
+              {effectiveTab === 'ai-hub' && <FleetIntelligenceHub currentOrg={currentOrg} />}
             </Suspense>
           </ErrorBoundary>
         </main>
