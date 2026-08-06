@@ -15,10 +15,19 @@ concurrency:
 env:
   NODE_VERSION: '22'
 
+# Le pipeline tient en trois étapes séquentielles plutôt qu'en six jobs
+# parallèles. Deux raisons :
+#   - chaque job réinstalle les dépendances : six installations pour un même
+#     commit consomment des minutes sans rien vérifier de plus ;
+#   - au-delà de la concurrence allouée au dépôt, les jobs excédentaires
+#     attendent en file et sont annulés au bout de quinze minutes — un échec
+#     qui n'a rien à voir avec le code.
+
 jobs:
-  quality:
-    name: Qualité (types, lint, format)
+  verify:
+    name: Qualité, tests et build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -39,44 +48,11 @@ jobs:
       - name: Format
         run: npm run format:check
 
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Installation
-        run: npm ci --no-audit --no-fund
-
       - name: Tests unitaires et d'intégration
         run: npm run test:coverage
 
-      - name: Publication de la couverture
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 7
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Installation
-        run: npm ci --no-audit --no-fund
+      - name: Vulnérabilités élevées et critiques
+        run: npm audit --audit-level=high
 
       - name: Build web + serveur
         run: npm run build
@@ -90,10 +66,10 @@ jobs:
         # répondaient 200, mais la politique CORS bloquait les fichiers de la
         # page. Seule l'exécution du JavaScript dans un navigateur le détecte.
         run: |
-          # NODE_ENV=development : ce job ne dispose pas de base de données, et
-          # la configuration refuse — a raison — de démarrer en production sans
-          # DATABASE_URL ni JWT_SECRET. Le mode production authentifié est
-          # couvert par le job « Isolation multi-tenant ».
+          # NODE_ENV=development : ce job n'a pas de base de données, et la
+          # configuration refuse — à raison — de démarrer en production sans
+          # DATABASE_URL ni JWT_SECRET. Le mode authentifié est couvert par le
+          # job « Isolation multi-tenant ».
           NODE_ENV=development PORT=3000 node dist/server.js &
           SERVER_PID=$!
           for i in $(seq 1 30); do
@@ -135,11 +111,13 @@ jobs:
   isolation:
     name: Isolation multi-tenant (base réelle)
     runs-on: ubuntu-latest
+    needs: [verify]
+    timeout-minutes: 20
     # Exigence du cahier des charges : « les tests démontrent qu'un tenant ne
-    # peut pas lire les données d'un autre ». Ces tests s'exécutent contre une
-    # vraie base PostGIS, avec le rôle applicatif soumis au Row-Level Security.
-    # Les valider sur des données en mémoire ne prouverait que le filtrage
-    # applicatif, pas la défense en profondeur.
+    # peut pas lire les données d'un autre ». Ces contrôles s'exécutent contre
+    # une vraie base PostGIS, avec le rôle applicatif soumis au Row-Level
+    # Security. Les valider sur des données en mémoire ne prouverait que le
+    # filtrage applicatif, pas la défense en profondeur.
     services:
       postgres:
         image: postgis/postgis:16-3.4-alpine
@@ -173,45 +151,33 @@ jobs:
       - name: Installation
         run: npm ci --no-audit --no-fund
 
-      - name: Préparation de la base (extensions, migrations, RLS, comptes)
-        run: |
-          npm run build:server
-          npm run build:seed
-          node -e "
-            import('./scripts/start-production.mjs').catch(e => { console.error(e); process.exit(1); });
-          " &
-          PREP_PID=$!
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:3000/api/v1/health > /dev/null && break
-            sleep 2
-          done
-          kill $PREP_PID 2>/dev/null || true
-
-      - name: Contrôle SQL de l'isolation
-        run: |
-          PGPASSWORD=ci_only_password psql -h localhost -U fleetguard -d fleetguard_db \
-            -v ON_ERROR_STOP=1 -f prisma/sql/999_verify_rls.sql
-
-      - name: Tests d'isolation multi-tenant
-        run: npx vitest run tests/tenant-isolation.test.ts
+      - name: Build
+        run: npm run build
 
       - name: Installation du navigateur de test
         run: npx playwright install --with-deps chromium
 
-      - name: Cloisonnement visible à l'écran
-        # Les tests ci-dessus prouvent que l'API filtre. Celui-ci répond à une
-        # question différente : l'interface affiche-t-elle bien ces données
-        # filtrées ? Un écran resté sur un jeu de démonstration passerait tous
-        # les tests d'API sans qu'aucun client ne voie jamais sa propre flotte.
+      - name: Application complète (migrations, RLS, comptes) puis contrôles
         run: |
-          npm run build:web
           NODE_ENV=production PORT=3000 node scripts/start-production.mjs &
           SERVER_PID=$!
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             curl -sf http://localhost:3000/api/v1/health > /dev/null && break
             sleep 2
           done
+
+          # 1. L'isolation est-elle effective dans PostgreSQL ?
+          PGPASSWORD=ci_only_password psql -h localhost -U fleetguard -d fleetguard_db \
+            -v ON_ERROR_STOP=1 -f prisma/sql/999_verify_rls.sql
+
+          # 2. L'API filtre-t-elle réellement, y compris en écriture ?
+          npx vitest run tests/tenant-isolation.test.ts
+
+          # 3. L'interface affiche-t-elle ces données filtrées ? Un écran resté
+          #    sur un jeu de démonstration passerait les deux contrôles
+          #    précédents sans qu'aucun client ne voie jamais sa propre flotte.
           node scripts/verify-tenant-isolation-ui.mjs http://localhost:3000
+
           STATUS=$?
           kill $SERVER_PID 2>/dev/null || true
           exit $STATUS
@@ -219,7 +185,8 @@ jobs:
   docker:
     name: Image Docker
     runs-on: ubuntu-latest
-    needs: [quality, test]
+    needs: [verify]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -233,20 +200,3 @@ jobs:
           tags: fleetguard-africa:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  security:
-    name: Audit des dépendances
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Installation
-        run: npm ci --no-audit --no-fund
-
-      - name: Vulnérabilités élevées et critiques
-        run: npm audit --audit-level=high
