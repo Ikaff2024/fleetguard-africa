@@ -360,9 +360,19 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
   it('détecte les infractions côté serveur, sans les compter deux fois', async () => {
     const batchId = `idem-${Date.now()}`;
 
-    const before = await request(app)
-      .get('/api/v1/tracking/events')
-      .set('Authorization', `Bearer ${adminToken}`);
+    // La liste est plafonnée côté serveur : comparer sa longueur ne dit plus
+    // rien dès que le plafond est atteint. On compte les événements portant
+    // l'horodatage du lot, ce qui reste vrai quel que soit l'historique.
+    const countBatchEvents = async () => {
+      const res = await request(app)
+        .get('/api/v1/tracking/events?limit=500')
+        .set('Authorization', `Bearer ${adminToken}`);
+      return res.body.data.filter((event: { recordedAt: string }) =>
+        event.recordedAt.startsWith('2026-08-06T14:0'),
+      ).length;
+    };
+
+    const before = await countBatchEvents();
 
     const first = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
@@ -377,13 +387,9 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
     expect(first.body.data.idempotentDuplicate).toBe(false);
     expect(replay.body.data.idempotentDuplicate).toBe(true);
 
-    const after = await request(app)
-      .get('/api/v1/tracking/events')
-      .set('Authorization', `Bearer ${adminToken}`);
-
     // Le rejeu n'ajoute aucun événement : sans cette garantie, le score du
     // chauffeur — donc sa prime — dépendrait de la qualité du réseau.
-    const added = after.body.data.length - before.body.data.length;
+    const added = (await countBatchEvents()) - before;
     expect(added).toBe(first.body.data.detectedEvents);
   });
 
@@ -590,5 +596,139 @@ describe.skipIf(!DATABASE_CONFIGURED)('Centre d’alertes', () => {
       .send({ status: 'RESOLVED' });
 
     expect(res.status).toBe(403);
+  });
+});
+
+describe.skipIf(!DATABASE_CONFIGURED)('Saisies hors ligne', () => {
+  let adminToken: string;
+  let plate: string;
+  let odometerKm: number;
+  let organizationId: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+
+    const org = await request(app)
+      .get('/api/v1/organizations/me')
+      .set('Authorization', `Bearer ${adminToken}`);
+    organizationId = org.body.data.id;
+
+    const vehicles = await request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${adminToken}`);
+    plate = vehicles.body.data[0].immatriculation;
+    odometerKm = vehicles.body.data[0].currentOdometerKm;
+  });
+
+  const send = (token: string, items: unknown[]) =>
+    request(app).post('/api/v1/sync/offline-batch').set('Authorization', `Bearer ${token}`).send({ items });
+
+  const item = (id: string, type: string, payload: Record<string, unknown>) => ({
+    id,
+    type,
+    payload,
+    timestamp: new Date().toISOString(),
+    status: 'PENDING',
+    tenantOrgId: organizationId,
+    retryCount: 0,
+  });
+
+  it('écrit réellement un plein saisi hors ligne', async () => {
+    const id = `off-plein-${Date.now()}`;
+    const res = await send(adminToken, [
+      item(id, 'FUEL_LOG', {
+        vehicleRegistration: plate,
+        litersAdded: 180,
+        pricePerLiter: 650,
+        stationName: 'Station Total Malanville',
+        loggedAt: new Date().toISOString(),
+      }),
+    ]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.persisted).toBe(true);
+    expect(res.body.data.syncedItemIds).toContain(id);
+
+    // La saisie doit se retrouver au bureau, pas seulement être acquittée.
+    const fuel = await request(app).get('/api/v1/fuel').set('Authorization', `Bearer ${adminToken}`);
+    expect(
+      fuel.body.data.some((log: { stationName: string }) => log.stationName.includes('Malanville')),
+    ).toBe(true);
+  });
+
+  it('ne duplique pas un lot rejoué après une coupure', async () => {
+    // Le nom de station est unique à chaque exécution : avec une vraie base,
+    // les pleins écrits par les exécutions précédentes survivent.
+    const station = `Station rejeu ${Date.now()}`;
+    const payload = item(`off-rejeu-${Date.now()}`, 'FUEL_LOG', {
+      vehicleRegistration: plate,
+      litersAdded: 120,
+      pricePerLiter: 650,
+      stationName: station,
+      loggedAt: new Date().toISOString(),
+    });
+
+    await send(adminToken, [payload]);
+    await send(adminToken, [payload]);
+
+    const fuel = await request(app).get('/api/v1/fuel').set('Authorization', `Bearer ${adminToken}`);
+    const matches = fuel.body.data.filter((log: { stationName: string }) => log.stationName === station);
+    expect(matches).toHaveLength(1);
+  });
+
+  it('applique un relevé de compteur', async () => {
+    const target = odometerKm + 500;
+    const res = await send(adminToken, [
+      item(`off-compteur-${Date.now()}`, 'ODOMETER_UPDATE', {
+        vehicleRegistration: plate,
+        newOdometerKm: target,
+      }),
+    ]);
+
+    expect(res.body.data.totalProcessed).toBe(1);
+
+    const vehicles = await request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${adminToken}`);
+    const vehicle = vehicles.body.data.find((v: { immatriculation: string }) => v.immatriculation === plate);
+    expect(vehicle.currentOdometerKm).toBeGreaterThanOrEqual(target);
+  });
+
+  it('refuse un compteur qui recule, sans acquitter', async () => {
+    const id = `off-recul-${Date.now()}`;
+    const res = await send(adminToken, [
+      item(id, 'ODOMETER_UPDATE', { vehicleRegistration: plate, newOdometerKm: 1 }),
+    ]);
+
+    // Un odomètre ne recule pas : l'appliquer fausserait les échéances
+    // d'entretien. L'élément reste dans la file du terrain.
+    expect(res.body.data.syncedItemIds).not.toContain(id);
+    expect(res.body.data.rejectedItemIds).toContain(id);
+  });
+
+  it('n’acquitte pas une saisie visant un véhicule inconnu', async () => {
+    const id = `off-inconnu-${Date.now()}`;
+    const res = await send(adminToken, [
+      item(id, 'FUEL_LOG', {
+        vehicleRegistration: 'ZZ-0000-Z',
+        litersAdded: 100,
+        pricePerLiter: 650,
+      }),
+    ]);
+
+    expect(res.body.data.syncedItemIds).not.toContain(id);
+    const result = res.body.data.results.find((r: { id: string }) => r.id === id);
+    // Le motif doit être exploitable par celui qui devra corriger la saisie.
+    expect(result.serverMessage).toContain('ZZ-0000-Z');
+  });
+
+  it('rejette une saisie rattachée à une autre organisation', async () => {
+    const id = `off-etranger-${Date.now()}`;
+    const res = await send(adminToken, [
+      {
+        ...item(id, 'FUEL_LOG', { vehicleRegistration: plate, litersAdded: 50 }),
+        tenantOrgId: 'org-autre',
+      },
+    ]);
+
+    expect(res.body.data.rejectedItemIds).toContain(id);
+    expect(res.body.data.syncedItemIds).not.toContain(id);
   });
 });

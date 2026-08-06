@@ -64,13 +64,18 @@ export const OfflineSyncProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setLastSyncReport(report);
       await refreshQueueState();
 
-      if (report.syncedCount > 0) {
+      // Un refus n'est pas toujours passager : une plaque inconnue ou un
+      // relevé de compteur incohérent ne se règleront pas en réessayant. Le
+      // motif renvoyé par le serveur est visible sur chaque élément de la file.
+      if (report.syncedCount > 0 && report.failedCount > 0) {
         setSyncNotification(
-          `✅ Synchronisation réussie : ${report.syncedCount} mise(s) à jour transmise(s) au serveur central.`,
+          `${report.syncedCount} saisie(s) enregistrée(s). ${report.failedCount} en attente — voir le motif sur chaque élément.`,
         );
+      } else if (report.syncedCount > 0) {
+        setSyncNotification(`${report.syncedCount} saisie(s) enregistrée(s) sur le serveur.`);
       } else if (report.failedCount > 0) {
         setSyncNotification(
-          `⚠️ Échec de synchronisation de ${report.failedCount} élément(s). Réessayez une fois la connexion rétablie.`,
+          `${report.failedCount} saisie(s) non enregistrée(s), conservées dans la file — voir le motif sur chaque élément.`,
         );
       }
 

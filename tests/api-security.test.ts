@@ -306,11 +306,14 @@ describe('Synchronisation hors-ligne', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.syncedItemIds).toEqual(['q1']);
-    expect(res.body.data.rejectedItemIds).toEqual(['q2']);
+    // L'élément d'un autre tenant est écarté quoi qu'il arrive. Celui du bon
+    // tenant est incomplet (aucune plaque) : il est refusé lui aussi, mais
+    // pour un motif différent, et reste dans la file du terrain.
+    expect(res.body.data.rejectedItemIds).toContain('q2');
+    expect(res.body.data.syncedItemIds).not.toContain('q2');
   });
 
-  it("annonce honnêtement que rien n'est encore persisté", async () => {
+  it("n'acquitte jamais une saisie qu'il n'a pas écrite", async () => {
     // Un acquittement mensonger ferait vider la file locale du terrain et
     // perdrait définitivement les saisies du chauffeur.
     const res = await request(app)
@@ -321,6 +324,7 @@ describe('Synchronisation hors-ligne', () => {
           {
             id: 'q3',
             type: 'ODOMETER_UPDATE',
+            // Aucune plaque : le serveur ne peut rattacher ce relevé à rien.
             payload: { km: 150000 },
             timestamp: '2026-08-05T09:00:00.000Z',
             status: 'PENDING',
@@ -330,7 +334,8 @@ describe('Synchronisation hors-ligne', () => {
         ],
       });
 
-    expect(res.body.data.persisted).toBe(false);
+    expect(res.body.data.syncedItemIds).not.toContain('q3');
+    expect(res.body.data.rejectedItemIds).toContain('q3');
   });
 });
 

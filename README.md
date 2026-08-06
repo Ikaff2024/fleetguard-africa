@@ -141,9 +141,6 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 
 À lire avant toute mise en service :
 
-- **Synchronisation hors ligne non persistée.** La file IndexedDB est validée
-  et dédoublonnée, mais son contenu n'est pas encore écrit (`persisted: false`
-  dans les réponses, volontairement explicite).
 - **Envoi de SMS non raccordé** : le centre d'alertes enregistre la prise en
   charge, mais aucun message ne part vers un opérateur mobile ; l'écran le dit
   explicitement plutôt que d'annoncer un envoi.

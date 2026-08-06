@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../http/errors.js';
+import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import { logger } from '../logger.js';
+import { applyOfflineBatch } from '../repositories/sync-repository.js';
 
 export const syncRouter = Router();
 
@@ -31,14 +33,16 @@ const syncBatchSchema = z.object({
 /**
  * Réconciliation de la file hors-ligne (IndexedDB côté web, Room côté mobile).
  *
- * ⚠️ Cette route acquitte les éléments après validation, mais n'écrit encore
- * rien en base : la persistance arrive en Phase 1. Elle le signale via
- * `persisted: false` — un acquittement mensonger ferait vider la file locale
- * du terrain et **perdrait définitivement** les saisies du chauffeur.
+ * Les saisies sont réellement écrites. Un élément qui ne peut pas l'être —
+ * plaque inconnue, relevé incohérent, type non pris en charge — revient marqué
+ * en échec avec son motif et **reste dans la file du terrain** : acquitter ce
+ * qui n'a pas été écrit ferait disparaître le geste du chauffeur sans que
+ * personne ne s'en aperçoive.
  */
 syncRouter.post(
   '/sync/offline-batch',
   resolveTenant,
+  requirePermission('fleet:write'),
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
     const { items } = syncBatchSchema.parse(req.body);
@@ -55,28 +59,41 @@ syncRouter.post(
 
     const accepted = items.filter(item => item.tenantOrgId === organizationId);
 
-    const results = accepted.map(item => ({
-      id: item.id,
-      type: item.type,
-      status: 'SUCCESS' as const,
-      syncedAt: new Date().toISOString(),
-      serverMessage: `Mise à jour "${item.type}" validée par le serveur.`,
-    }));
+    const applied = await applyOfflineBatch(
+      organizationId,
+      accepted.map(item => ({ id: item.id, type: item.type, payload: item.payload })),
+    );
+
+    const written = applied.filter(result => result.status === 'SUCCESS');
+    const refused = applied.filter(result => result.status === 'FAILED');
 
     logger.info(
-      { organizationId, accepted: accepted.length, rejected: foreign.length },
+      {
+        organizationId,
+        written: written.length,
+        refused: refused.length,
+        foreign: foreign.length,
+      },
       'Lot de synchronisation hors-ligne traité',
     );
 
     res.status(200).json({
       statusCode: 200,
       data: {
-        syncedItemIds: accepted.map(i => i.id),
-        rejectedItemIds: foreign.map(i => i.id),
-        totalProcessed: accepted.length,
+        // Seuls les éléments réellement écrits sont acquittés : le terrain
+        // conserve les autres.
+        syncedItemIds: written.map(result => result.id),
+        rejectedItemIds: [...foreign.map(item => item.id), ...refused.map(result => result.id)],
+        totalProcessed: written.length,
         processedAt: new Date().toISOString(),
-        persisted: false,
-        results,
+        persisted: true,
+        results: applied.map(result => ({
+          id: result.id,
+          type: result.type,
+          status: result.status,
+          syncedAt: new Date().toISOString(),
+          serverMessage: result.message,
+        })),
       },
     });
   }),

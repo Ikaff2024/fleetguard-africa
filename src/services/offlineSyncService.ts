@@ -1,3 +1,5 @@
+import { apiClient } from '../lib/api-client';
+
 export interface OfflineQueueItem {
   id: string;
   type:
@@ -216,30 +218,29 @@ class OfflineSyncService {
     try {
       // Tous les éléments d'un lot appartiennent au même tenant : celui qui les
       // a mis en file. Le serveur rejette ceux qui ne correspondent pas.
-      const organizationId = pendingItems[0]?.tenantOrgId ?? '';
+      // La requête passe par le client HTTP commun : il porte le jeton de
+      // session. L'en-tête d'organisation seul n'est accepté qu'en mode
+      // démonstration — la synchronisation échouait donc en production.
+      const result = await apiClient.post<{
+        syncedItemIds?: string[];
+        results?: { id: string; serverMessage?: string }[];
+      }>('/sync/offline-batch', { items: pendingItems });
 
-      const response = await fetch('/api/v1/sync/offline-batch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Organization-Id': organizationId,
-        },
-        body: JSON.stringify({ items: pendingItems }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Serveur backend inaccessible (${response.status})`);
-      }
-
-      const result = await response.json();
-      const syncedIds: string[] = result.data?.syncedItemIds || [];
+      const syncedIds: string[] = result.syncedItemIds ?? [];
+      const messages = new Map((result.results ?? []).map(entry => [entry.id, entry.serverMessage ?? '']));
 
       // Update statuses in IndexedDB
       for (const item of pendingItems) {
         if (syncedIds.includes(item.id)) {
           await this.updateStatus(item.id, 'SYNCED');
         } else {
-          await this.updateStatus(item.id, 'FAILED', 'Le serveur a rejeté la mise à jour.');
+          // Le motif du serveur est conservé : « Aucun véhicule RB-4592-A dans
+          // cette organisation » se corrige, « échec » ne se corrige pas.
+          await this.updateStatus(
+            item.id,
+            'FAILED',
+            messages.get(item.id) || 'Le serveur a rejeté la mise à jour.',
+          );
         }
       }
 
