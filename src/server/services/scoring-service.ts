@@ -32,6 +32,20 @@ export interface DriverScoreSummary {
   distanceDrivenKm: number;
   /** `false` quand aucune télémétrie n'existe : le score n'a alors aucune valeur probante. */
   basedOnRealTelemetry: boolean;
+  /**
+   * `false` tant que la distance parcourue reste inférieure au seuil de
+   * représentativité.
+   *
+   * Le score est normalisé par tranche de 100 km : sur 12 km, une seule
+   * infraction équivaut à cinq incidents aux 100 km et fait chuter le score à
+   * 40/100. Présenter cela comme « incidents répétés sur 30 jours »
+   * conduirait un gestionnaire à convoquer un chauffeur sur un artefact de
+   * calcul. Tant que ce drapeau est faux, le score s'affiche mais ne remplace
+   * pas la note officielle du chauffeur et n'est pas historisé.
+   */
+  isSignificant: boolean;
+  /** Distance à atteindre pour que le score devienne représentatif. */
+  minimumDistanceKm: number;
   periodFrom: string;
   periodTo: string;
   configVersion: number;
@@ -150,10 +164,16 @@ export async function computeDriverScore(
     config,
   );
 
+  // Une période trop courte ne permet aucun jugement : il faut au moins une
+  // tranche complète de normalisation.
+  const minimumDistanceKm = config.normalizationDistanceKm || 100;
+
   return {
     score: result.score,
     distanceDrivenKm: distanceKm,
     basedOnRealTelemetry: hasTelemetry,
+    isSignificant: hasTelemetry && distanceKm >= minimumDistanceKm,
+    minimumDistanceKm,
     periodFrom: period.from.toISOString(),
     periodTo: period.to.toISOString(),
     configVersion: config.version,

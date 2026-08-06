@@ -67,7 +67,10 @@ scoringRouter.get(
     // score calculé sans télémétrie polluerait la tendance du chauffeur.
     // Elle précède la lecture de l'historique, sinon le score du jour manque à
     // la courbe au premier affichage.
-    if (isDatabaseEnabled() && summary.basedOnRealTelemetry) {
+    // Seul un score représentatif devient la note officielle du chauffeur :
+    // historiser un calcul fait sur quelques kilomètres fausserait sa tendance
+    // et, à terme, sa prime.
+    if (isDatabaseEnabled() && summary.isSignificant) {
       await persistDailyScore(organizationId, driver.id, config.id, summary);
     }
 
@@ -101,6 +104,8 @@ scoringRouter.get(
         },
         period: { from: summary.periodFrom, to: summary.periodTo },
         basedOnRealTelemetry: summary.basedOnRealTelemetry,
+        isSignificant: summary.isSignificant,
+        minimumDistanceKm: summary.minimumDistanceKm,
         configVersion: summary.configVersion,
         history,
         events,

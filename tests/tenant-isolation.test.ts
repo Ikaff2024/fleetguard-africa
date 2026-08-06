@@ -400,14 +400,32 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
     expect(res.body.data.configVersion).toBeGreaterThan(0);
   });
 
-  it('historise le score du jour', async () => {
+  it('ne retient pas un score calculé sur une distance non représentative', async () => {
     const res = await request(app)
       .get(`/api/v1/scoring/drivers/${driverId}`)
       .set('Authorization', `Bearer ${adminToken}`);
 
-    expect(res.body.data.history.length).toBeGreaterThan(0);
+    // Les lots de test totalisent quelques kilomètres : très en deçà du seuil.
+    expect(res.body.data.isSignificant).toBe(false);
+    expect(res.body.data.minimumDistanceKm).toBeGreaterThan(0);
+    expect(res.body.data.scoreResult.distanceDrivenKm).toBeLessThan(res.body.data.minimumDistanceKm);
+
+    // Un score non représentatif ne devient pas la note officielle du
+    // chauffeur : sur 12 km, une seule infraction équivaut à cinq incidents
+    // aux 100 km et ferait chuter la note à 40/100. Un gestionnaire
+    // convoquerait le chauffeur sur un artefact de calcul.
+    expect(res.body.data.driver.currentSafetyScore).toBeGreaterThan(res.body.data.scoreResult.score);
+  });
+
+  it("n'historise pas un score non représentatif", async () => {
+    const res = await request(app)
+      .get(`/api/v1/scoring/drivers/${driverId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    // L'historique alimente la courbe de tendance et, à terme, la prime : y
+    // inscrire un score calculé sur quelques kilomètres la fausserait.
     const today = new Date().toISOString().slice(0, 10);
-    expect(res.body.data.history.some((h: { date: string }) => h.date === today)).toBe(true);
+    expect(res.body.data.history.some((h: { date: string }) => h.date === today)).toBe(false);
   });
 
   it("refuse d'ingérer pour un véhicule d'une autre organisation", async () => {
