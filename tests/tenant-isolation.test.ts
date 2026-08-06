@@ -289,3 +289,135 @@ describe.skipIf(!DATABASE_CONFIGURED)('Écriture de la flotte', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
+  let adminToken: string;
+  let vehicleId: string;
+  let driverId: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    // L'ingestion appartient au terrain : un rôle de bureau ne la porte pas.
+    adminToken = await tokenFor('admin@transafrik.bj');
+
+    const vehicles = await request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${adminToken}`);
+    vehicleId = vehicles.body.data[0].id;
+
+    const drivers = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${adminToken}`);
+    driverId = drivers.body.data[0].id;
+  });
+
+  /** Trajet comportant un excès de vitesse prolongé et un freinage brusque. */
+  const trip = (batchId: string) => {
+    const base = Date.parse('2026-08-06T14:00:00.000Z');
+    const speeds = [60, 70, 96, 98, 97, 62];
+    return {
+      batchId,
+      vehicleId,
+      driverId,
+      points: speeds.map((speedKmH, index) => ({
+        latitude: 7.9124 + index * 0.02,
+        longitude: 2.1092 + index * 0.01,
+        speedKmH,
+        headingDegree: 45,
+        timestamp: new Date(base + index * 60_000).toISOString(),
+        accuracyMeters: 6,
+        ignitionOn: true,
+        batteryLevelPct: 90,
+        networkType: '3G' as const,
+        ...(index === 5 ? { eventFlags: ['HARSH_BRAKE' as const] } : {}),
+      })),
+    };
+  };
+
+  it('enregistre les points et déclare la persistance', async () => {
+    const res = await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(trip(`persist-${Date.now()}`));
+
+    expect(res.status).toBe(202);
+    expect(res.body.data.persisted).toBe(true);
+    expect(res.body.data.distanceKm).toBeGreaterThan(0);
+    expect(res.body.data.detectedEvents).toBeGreaterThan(0);
+  });
+
+  it('restitue la trace du véhicule', async () => {
+    const res = await request(app)
+      .get(`/api/v1/tracking/vehicles/${vehicleId}/points?limit=50`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+
+    // Les points sont rendus du plus ancien au plus récent : c'est l'ordre
+    // dans lequel une trace se lit et se rejoue sur une carte.
+    const timestamps = res.body.data.map((p: { timestamp: string }) => Date.parse(p.timestamp));
+    const sorted = [...timestamps].sort((a, b) => a - b);
+    expect(timestamps).toEqual(sorted);
+  });
+
+  it('détecte les infractions côté serveur, sans les compter deux fois', async () => {
+    const batchId = `idem-${Date.now()}`;
+
+    const before = await request(app)
+      .get('/api/v1/tracking/events')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    const first = await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(trip(batchId));
+
+    const replay = await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(trip(batchId));
+
+    expect(first.body.data.idempotentDuplicate).toBe(false);
+    expect(replay.body.data.idempotentDuplicate).toBe(true);
+
+    const after = await request(app)
+      .get('/api/v1/tracking/events')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    // Le rejeu n'ajoute aucun événement : sans cette garantie, le score du
+    // chauffeur — donc sa prime — dépendrait de la qualité du réseau.
+    const added = after.body.data.length - before.body.data.length;
+    expect(added).toBe(first.body.data.detectedEvents);
+  });
+
+  it('calcule le score sur la distance réellement parcourue', async () => {
+    const res = await request(app)
+      .get(`/api/v1/scoring/drivers/${driverId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.basedOnRealTelemetry).toBe(true);
+    expect(res.body.data.scoreResult.distanceDrivenKm).toBeGreaterThan(0);
+    // La version de configuration accompagne le score : sans elle, il ne peut
+    // pas être défendu ni recalculé à l'identique.
+    expect(res.body.data.configVersion).toBeGreaterThan(0);
+  });
+
+  it('historise le score du jour', async () => {
+    const res = await request(app)
+      .get(`/api/v1/scoring/drivers/${driverId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.body.data.history.length).toBeGreaterThan(0);
+    const today = new Date().toISOString().slice(0, 10);
+    expect(res.body.data.history.some((h: { date: string }) => h.date === today)).toBe(true);
+  });
+
+  it("refuse d'ingérer pour un véhicule d'une autre organisation", async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+    const res = await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send(trip(`vol-${Date.now()}`));
+
+    // Le tenant B ne possède ni ce véhicule ni ce chauffeur.
+    expect([403, 404]).toContain(res.status);
+  });
+});

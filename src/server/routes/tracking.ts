@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { asyncHandler } from '../http/errors.js';
+import { isDatabaseEnabled } from '../db/prisma.js';
+import { ApiError, asyncHandler } from '../http/errors.js';
+import { requirePermission } from '../http/rbac.js';
 import { ingestionRateLimit } from '../http/security.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
-import { requirePermission } from '../http/rbac.js';
 import { logger } from '../logger.js';
-import { findVehicle } from '../repositories/fleet-repository.js';
-import { ApiError } from '../http/errors.js';
+import { findDriver, findVehicle } from '../repositories/fleet-repository.js';
+import {
+  ingestTelemetryBatch,
+  listRecentSafetyEvents,
+  listVehiclePoints,
+} from '../repositories/telemetry-repository.js';
 import { registerBatch } from '../services/idempotency.js';
 
 export const trackingRouter = Router();
@@ -46,13 +51,13 @@ const batchSchema = z.object({
  * Ingestion par lots de la télémétrie.
  *
  * Idempotente : un boîtier qui sort d'une zone blanche rejoue fréquemment le
- * même lot. Sans cette garantie, les événements sont comptés deux fois et le
- * score du chauffeur — donc sa prime — est faussé.
+ * même lot. Sans cette garantie, les infractions sont comptées deux fois et le
+ * score du chauffeur — donc sa prime — est faussé. Avec une base, la garantie
+ * repose sur une contrainte d'unicité, donc survit au redémarrage et vaut
+ * entre plusieurs instances.
  *
- * ⚠️ Les points sont validés et dédoublonnés mais **pas encore persistés** :
- * la file BullMQ et la table PostGIS partitionnée arrivent en Phase 2.
- * La réponse le dit explicitement (`persisted: false`) plutôt que de laisser
- * croire à un stockage effectif.
+ * Les points sont persistés, les événements de conduite détectés côté serveur,
+ * et l'odomètre mis à jour à partir de la distance réellement parcourue.
  */
 trackingRouter.post(
   '/tracking/telemetry/batch',
@@ -68,9 +73,40 @@ trackingRouter.post(
       throw ApiError.forbidden("Ce véhicule n'appartient pas à votre organisation.");
     }
 
-    const duplicate = registerBatch(organizationId, payload.batchId, payload.points.length);
+    const driver = await findDriver(organizationId, payload.driverId);
+    if (!driver) {
+      throw ApiError.forbidden("Ce chauffeur n'appartient pas à votre organisation.");
+    }
 
-    if (duplicate) {
+    // Sans base, l'idempotence reste en mémoire et rien n'est persisté : la
+    // réponse le dit explicitement plutôt que de laisser croire au contraire.
+    if (!isDatabaseEnabled()) {
+      const duplicate = registerBatch(organizationId, payload.batchId, payload.points.length);
+
+      return res.status(duplicate ? 200 : 202).json({
+        statusCode: duplicate ? 200 : 202,
+        data: {
+          accepted: true,
+          batchId: payload.batchId,
+          processedPoints: duplicate?.processedPoints ?? payload.points.length,
+          idempotentDuplicate: Boolean(duplicate),
+          persisted: false,
+          notice: 'Mode démonstration : les points sont validés mais non enregistrés.',
+        },
+      });
+    }
+
+    const result = await ingestTelemetryBatch({
+      organizationId,
+      batchId: payload.batchId,
+      vehicleId: payload.vehicleId,
+      driverId: payload.driverId,
+      deviceId: payload.deviceId,
+      sentAt: payload.sentAt,
+      points: payload.points,
+    });
+
+    if (result.duplicate) {
       logger.info(
         { batchId: payload.batchId, vehicleId: payload.vehicleId },
         'Lot GPS déjà traité — rejeu ignoré',
@@ -79,11 +115,11 @@ trackingRouter.post(
         statusCode: 200,
         data: {
           accepted: true,
-          batchId: payload.batchId,
-          processedPoints: duplicate.processedPoints,
+          batchId: result.batchId,
+          processedPoints: result.processedPoints,
           idempotentDuplicate: true,
-          firstSeenAt: duplicate.firstSeenAt,
-          persisted: false,
+          firstSeenAt: result.firstSeenAt,
+          persisted: true,
         },
       });
     }
@@ -92,23 +128,58 @@ trackingRouter.post(
       {
         organizationId,
         vehicleId: payload.vehicleId,
-        points: payload.points.length,
+        points: result.processedPoints,
+        distanceKm: result.distanceKm,
+        events: result.detectedEvents,
       },
-      'Lot GPS accepté',
+      'Lot GPS enregistré',
     );
 
     return res.status(202).json({
       statusCode: 202,
       data: {
         accepted: true,
-        batchId: payload.batchId,
-        processedPoints: payload.points.length,
+        batchId: result.batchId,
+        processedPoints: result.processedPoints,
         idempotentDuplicate: false,
-        receivedAt: new Date().toISOString(),
-        persisted: false,
-        notice:
-          'Points validés et dédoublonnés. La persistance PostGIS et le traitement asynchrone arrivent en Phase 2.',
+        receivedAt: result.firstSeenAt,
+        persisted: true,
+        distanceKm: result.distanceKm,
+        detectedEvents: result.detectedEvents,
       },
     });
+  }),
+);
+
+/** Trace récente d'un véhicule, pour la carte et la relecture de trajet. */
+trackingRouter.get(
+  '/tracking/vehicles/:id/points',
+  resolveTenant,
+  requirePermission('tracking:read'),
+  asyncHandler(async (req, res) => {
+    const organizationId = requireTenantId(req);
+
+    const vehicle = await findVehicle(organizationId, req.params.id!);
+    if (!vehicle) {
+      throw ApiError.notFound('Véhicule introuvable dans cette organisation.');
+    }
+
+    const limit = Math.min(Number(req.query.limit ?? 500) || 500, 2000);
+    const points = await listVehiclePoints(organizationId, req.params.id!, limit);
+
+    res.json({ statusCode: 200, data: points });
+  }),
+);
+
+/** Événements de conduite détectés, du plus récent au plus ancien. */
+trackingRouter.get(
+  '/tracking/events',
+  resolveTenant,
+  requirePermission('tracking:read'),
+  asyncHandler(async (req, res) => {
+    const organizationId = requireTenantId(req);
+    const limit = Math.min(Number(req.query.limit ?? 200) || 200, 500);
+
+    res.json({ statusCode: 200, data: await listRecentSafetyEvents(organizationId, limit) });
   }),
 );
