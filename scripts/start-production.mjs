@@ -19,6 +19,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 
 const SQL_FILES = [
@@ -165,7 +166,11 @@ async function main() {
   }
 
   log('démarrage du serveur');
-  await import(path.join(process.cwd(), 'dist', 'server.js'));
+  // `pathToFileURL` est indispensable : un chemin absolu Windows
+  // (C:\...) n'est pas une URL de module valide, et l'import échoue avec
+  // ERR_UNSUPPORTED_ESM_URL_SCHEME. Invisible dans le conteneur Linux, bloquant
+  // sur un poste de développement Windows.
+  await import(pathToFileURL(path.join(process.cwd(), 'dist', 'server.js')).href);
 }
 
 main().catch(err => {

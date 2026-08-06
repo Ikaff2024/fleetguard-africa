@@ -36,7 +36,7 @@ import type {
   SafetyEvent,
   Vehicle,
 } from '../../types';
-import { db, isDatabaseEnabled, withTenant } from '../db/prisma.js';
+import { isDatabaseEnabled, withTenant } from '../db/prisma.js';
 import {
   mapComplianceDoc,
   mapDriver,
@@ -54,11 +54,21 @@ export async function findOrganizationById(id: string): Promise<Organization | u
     return MOCK_ORGANIZATIONS.find(o => o.id === id);
   }
 
-  // Lecture hors `withTenant` : c'est la requête qui établit le contexte.
-  const row = await db().organization.findFirst({
-    where: { id, isActive: true, deletedAt: null },
+  /**
+   * Lecture dans le contexte du tenant, comme toutes les autres.
+   *
+   * Une requête hors `withTenant` ne définit pas `app.current_organization_id` :
+   * la politique de la table `organizations` (`id = current_organization_id()`)
+   * ne correspond alors à aucune ligne et la route répond 404 — y compris pour
+   * l'organisation de l'utilisateur connecté. Le RLS ne fait pas d'exception
+   * pour les lectures « inoffensives ».
+   */
+  return withTenant(id, async tx => {
+    const row = await tx.organization.findFirst({
+      where: { isActive: true, deletedAt: null },
+    });
+    return row ? mapOrganization(row) : undefined;
   });
-  return row ? mapOrganization(row) : undefined;
 }
 
 export async function listVehicles(organizationId: string): Promise<Vehicle[]> {

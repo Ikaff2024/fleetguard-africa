@@ -18,7 +18,87 @@ const TENANT_B = 'org_sahel_express';
 const DRIVER_A = 'drv_moussa_04';
 const VEHICLE_A = 'veh_actros_01';
 
+/**
+ * Ces contrôles portent sur la surface HTTP — validation, idempotence,
+ * garde-fous — indépendamment du mode d'identification. Ils doivent donc
+ * fonctionner dans les deux configurations :
+ *   - sans base : l'en-tête d'organisation suffit (mode démonstration) ;
+ *   - avec base : un jeton réel est nécessaire.
+ *
+ * Les cantonner à un seul mode ferait perdre cette couverture précisément
+ * dans la configuration qui compte le plus.
+ */
+const DATABASE_CONFIGURED = Boolean(process.env.DATABASE_APP_URL && process.env.JWT_SECRET);
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'FleetGuard2026!Demo';
+
+const TENANT_ACCOUNTS: Record<string, string> = {
+  [TENANT_A]: 'manager@transafrik.bj',
+  [TENANT_B]: 'manager@sahelexpress.sn',
+};
+
+/**
+ * L'ingestion télémétrique appartient au terrain, pas aux rôles de bureau :
+ * un gestionnaire de flotte ne dispose pas de `tracking:ingest`. Ces contrôles
+ * portent sur le format et l'idempotence des lots, pas sur les permissions —
+ * ils utilisent donc un compte habilité.
+ */
+const INGEST_ACCOUNT = 'admin@transafrik.bj';
+
 let app: Express;
+const tokens = new Map<string, string>();
+
+/** En-têtes désignant l'organisation, selon le mode actif. */
+async function as(tenant: string, account?: string): Promise<Record<string, string>> {
+  if (!DATABASE_CONFIGURED) return { 'X-Organization-Id': tenant };
+
+  const email = account ?? TENANT_ACCOUNTS[tenant]!;
+  if (!tokens.has(email)) {
+    const res = await request(app).post('/api/v1/auth/login').send({ email, password: SEED_PASSWORD });
+    expect(res.status, `connexion ${email} : ${JSON.stringify(res.body)}`).toBe(200);
+    tokens.set(email, res.body.data.accessToken);
+  }
+  return { Authorization: `Bearer ${tokens.get(email)}` };
+}
+
+/**
+ * Identifiants du jeu de démonstration contre identifiants réels : avec une
+ * base, les entités portent des UUID. On résout donc l'identifiant à partir
+ * des données servies.
+ */
+async function firstDriverId(tenant: string): Promise<string> {
+  if (!DATABASE_CONFIGURED) return DRIVER_A;
+  const res = await request(app)
+    .get('/api/v1/drivers')
+    .set(await as(tenant));
+  return res.body.data[0].id;
+}
+
+async function firstVehicleId(tenant: string): Promise<string> {
+  if (!DATABASE_CONFIGURED) return VEHICLE_A;
+  const res = await request(app)
+    .get('/api/v1/vehicles')
+    .set(await as(tenant));
+  return res.body.data[0].id;
+}
+
+const orgIds = new Map<string, string>();
+
+/**
+ * Identifiant réel de l'organisation : jeu de démonstration ou UUID en base.
+ * Mis en cache : ces suites enchaînent de nombreuses requêtes, et le limiteur
+ * de débit finirait par les refuser.
+ */
+async function orgIdOf(tenant: string): Promise<string> {
+  if (!DATABASE_CONFIGURED) return tenant;
+  if (!orgIds.has(tenant)) {
+    const res = await request(app)
+      .get('/api/v1/organizations/me')
+      .set(await as(tenant));
+    expect(res.status, `organisation ${tenant} : ${JSON.stringify(res.body)}`).toBe(200);
+    orgIds.set(tenant, res.body.data.id);
+  }
+  return orgIds.get(tenant)!;
+}
 
 beforeAll(async () => {
   app = await createApp();
@@ -29,37 +109,47 @@ beforeEach(() => {
 });
 
 describe('Résolution du tenant', () => {
-  it('refuse une requête sans organisation', async () => {
+  it('refuse une requête sans organisation ni session', async () => {
     const res = await request(app).get('/api/v1/vehicles');
 
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe('BAD_REQUEST');
+    // 400 en démonstration (organisation non précisée), 401 avec base
+    // (authentification requise) : dans les deux cas, rien n'est servi.
+    expect([400, 401]).toContain(res.status);
+    expect(res.body).not.toHaveProperty('data');
   });
 
   it('refuse une organisation inconnue', async () => {
     const res = await request(app).get('/api/v1/vehicles').set('X-Organization-Id', 'org_inexistant');
 
-    expect(res.status).toBe(403);
+    // Sans session valide, l'en-tête seul ne donne accès à rien.
+    expect([401, 403]).toContain(res.status);
   });
 
   it('sert les véhicules du tenant demandé', async () => {
-    const res = await request(app).get('/api/v1/vehicles').set('X-Organization-Id', TENANT_A);
+    const res = await request(app)
+      .get('/api/v1/vehicles')
+      .set(await as(TENANT_A));
 
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBeGreaterThan(0);
+
+    const expectedOrgId = await orgIdOf(TENANT_A);
     for (const vehicle of res.body.data) {
-      expect(vehicle.organizationId).toBe(TENANT_A);
+      expect(vehicle.organizationId).toBe(expectedOrgId);
     }
   });
 
   it("ne laisse fuir aucune donnée d'un autre tenant sur les listes", async () => {
     const routes = ['/api/v1/vehicles', '/api/v1/drivers', '/api/v1/fuel', '/api/v1/compliance'];
 
+    const expectedOrgId = await orgIdOf(TENANT_B);
     for (const route of routes) {
-      const res = await request(app).get(route).set('X-Organization-Id', TENANT_B);
+      const res = await request(app)
+        .get(route)
+        .set(await as(TENANT_B));
       expect(res.status).toBe(200);
       for (const row of res.body.data) {
-        expect(row.organizationId).toBe(TENANT_B);
+        expect(row.organizationId, route).toBe(expectedOrgId);
       }
     }
   });
@@ -68,11 +158,11 @@ describe('Résolution du tenant', () => {
 describe('Isolation sur accès par identifiant', () => {
   it('sert le score du chauffeur à son organisation', async () => {
     const res = await request(app)
-      .get(`/api/v1/scoring/drivers/${DRIVER_A}`)
-      .set('X-Organization-Id', TENANT_A);
+      .get(`/api/v1/scoring/drivers/${await firstDriverId(TENANT_A)}`)
+      .set(await as(TENANT_A));
 
     expect(res.status).toBe(200);
-    expect(res.body.data.driver.organizationId).toBe(TENANT_A);
+    expect(res.body.data.driver.organizationId).toBe(await orgIdOf(TENANT_A));
     expect(res.body.data.scoreResult.score).toBeGreaterThanOrEqual(0);
   });
 
@@ -81,8 +171,8 @@ describe('Isolation sur accès par identifiant', () => {
     // l'ensemble des tenants, sans filtre. Un identifiant deviné suffisait à
     // lire le dossier d'un chauffeur concurrent.
     const res = await request(app)
-      .get(`/api/v1/scoring/drivers/${DRIVER_A}`)
-      .set('X-Organization-Id', TENANT_B);
+      .get(`/api/v1/scoring/drivers/${await firstDriverId(TENANT_A)}`)
+      .set(await as(TENANT_B));
 
     expect(res.status).toBe(404);
     expect(res.body).not.toHaveProperty('data');
@@ -102,17 +192,27 @@ describe('Ingestion télémétrique', () => {
     networkType: '3G' as const,
   };
 
+  // Le véhicule et le chauffeur sont résolus une fois : avec une base, ce sont
+  // des UUID ; sans base, les identifiants du jeu de démonstration.
+  let vehicleId: string;
+  let driverId: string;
+
+  beforeAll(async () => {
+    vehicleId = await firstVehicleId(TENANT_A);
+    driverId = await firstDriverId(TENANT_A);
+  });
+
   const batch = (batchId: string) => ({
     batchId,
-    vehicleId: VEHICLE_A,
-    driverId: DRIVER_A,
+    vehicleId,
+    driverId,
     points: [point],
   });
 
   it('accepte un lot valide', async () => {
     const res = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A, INGEST_ACCOUNT))
       .send(batch('batch-unique-001'));
 
     expect(res.status).toBe(202);
@@ -127,11 +227,11 @@ describe('Ingestion télémétrique', () => {
 
     const first = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A, INGEST_ACCOUNT))
       .send(payload);
     const replay = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A, INGEST_ACCOUNT))
       .send(payload);
 
     expect(first.body.data.idempotentDuplicate).toBe(false);
@@ -142,7 +242,7 @@ describe('Ingestion télémétrique', () => {
   it('rejette des coordonnées et vitesses impossibles', async () => {
     const res = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A, INGEST_ACCOUNT))
       .send({
         ...batch('batch-aberrant-003'),
         points: [{ ...point, latitude: 999, speedKmH: 900 }],
@@ -156,7 +256,7 @@ describe('Ingestion télémétrique', () => {
   it("refuse d'ingérer pour un véhicule d'une autre organisation", async () => {
     const res = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
-      .set('X-Organization-Id', TENANT_B)
+      .set(await as(TENANT_B))
       .send(batch('batch-vol-004'));
 
     expect(res.status).toBe(403);
@@ -165,7 +265,7 @@ describe('Ingestion télémétrique', () => {
   it('borne la taille des lots', async () => {
     const res = await request(app)
       .post('/api/v1/tracking/telemetry/batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A, INGEST_ACCOUNT))
       .send({ ...batch('batch-enorme-005'), points: Array(501).fill(point) });
 
     expect(res.status).toBe(400);
@@ -176,7 +276,7 @@ describe('Synchronisation hors-ligne', () => {
   it('écarte les éléments rattachés à une autre organisation', async () => {
     const res = await request(app)
       .post('/api/v1/sync/offline-batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A))
       .send({
         items: [
           {
@@ -185,7 +285,7 @@ describe('Synchronisation hors-ligne', () => {
             payload: { liters: 120 },
             timestamp: '2026-08-05T09:00:00.000Z',
             status: 'PENDING',
-            tenantOrgId: TENANT_A,
+            tenantOrgId: await orgIdOf(TENANT_A),
             retryCount: 0,
           },
           {
@@ -194,7 +294,7 @@ describe('Synchronisation hors-ligne', () => {
             payload: { liters: 300 },
             timestamp: '2026-08-05T09:00:00.000Z',
             status: 'PENDING',
-            tenantOrgId: TENANT_B,
+            tenantOrgId: await orgIdOf(TENANT_B),
             retryCount: 0,
           },
         ],
@@ -210,7 +310,7 @@ describe('Synchronisation hors-ligne', () => {
     // perdrait définitivement les saisies du chauffeur.
     const res = await request(app)
       .post('/api/v1/sync/offline-batch')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A))
       .send({
         items: [
           {
@@ -219,7 +319,7 @@ describe('Synchronisation hors-ligne', () => {
             payload: { km: 150000 },
             timestamp: '2026-08-05T09:00:00.000Z',
             status: 'PENDING',
-            tenantOrgId: TENANT_A,
+            tenantOrgId: await orgIdOf(TENANT_A),
             retryCount: 0,
           },
         ],
@@ -236,7 +336,7 @@ describe("Garde-fous de l'IA", () => {
     // indiscernable d'une analyse réelle.
     const res = await request(app)
       .post('/api/v1/intelligence/analyze')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A))
       .send({ prompt: 'Analyse ma flotte' });
 
     expect(res.status).toBe(503);
@@ -247,7 +347,7 @@ describe("Garde-fous de l'IA", () => {
   it('borne la taille des invites pour maîtriser le coût en tokens', async () => {
     const res = await request(app)
       .post('/api/v1/intelligence/analyze')
-      .set('X-Organization-Id', TENANT_A)
+      .set(await as(TENANT_A))
       .send({ prompt: 'a'.repeat(5_000) });
 
     expect(res.status).toBe(400);
