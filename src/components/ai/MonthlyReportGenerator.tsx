@@ -44,6 +44,12 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
   const eventsQuery = useSafetyEvents();
 
   const orgVehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
+
+  /** Véhicules qui ne peuvent pas rouler, comptés et non supposés. */
+  const immobilisedCount = useMemo(
+    () => orgVehicles.filter(vehicle => vehicle.status !== 'ACTIVE').length,
+    [orgVehicles],
+  );
   const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   // Month labels helper
@@ -135,14 +141,25 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
       totalDistanceKm > 0 ? parseFloat(((totalFuelLiters / totalDistanceKm) * 100).toFixed(1)) : 0;
     const avgCostPerKm =
       totalDistanceKm > 0 ? parseFloat((totalFuelCostXOF / totalDistanceKm).toFixed(1)) : 0;
+    /**
+     * Moyenne des scores, sur les seuls véhicules ayant un chauffeur affecté.
+     *
+     * Le calcul divisait par le nombre total de véhicules : chacun sans
+     * conducteur ajoutait 0 au numérateur mais comptait au dénominateur. Avec
+     * cinq camions dont deux confiés à des chauffeurs notés 90, le rapport
+     * annonçait 36/100 — chiffre qui partait ensuite dans le PDF « document
+     * officiel » et dans le CSV.
+     */
+    const scoredRows = vehicleRows.filter(row => row.safetyScore > 0);
     const avgSafetyScore =
-      vehicleRows.length > 0
-        ? parseFloat((vehicleRows.reduce((sum, r) => sum + r.safetyScore, 0) / vehicleRows.length).toFixed(1))
-        : 0;
+      scoredRows.length > 0
+        ? parseFloat((scoredRows.reduce((sum, r) => sum + r.safetyScore, 0) / scoredRows.length).toFixed(1))
+        : null;
 
     return {
       periodLabel: monthOptions.find(m => m.value === selectedMonth)?.label ?? selectedMonth,
       vehicleRows,
+      scoredVehicleCount: scoredRows.length,
       totalDistanceKm,
       totalFuelLiters,
       totalFuelCostXOF,
@@ -213,7 +230,7 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
       reportData.avgCostPerKm,
       reportData.totalMaintAlerts,
       reportData.totalMaintCostXOF,
-      reportData.avgSafetyScore,
+      reportData.avgSafetyScore ?? '',
     ]);
 
     const csvContent =
@@ -384,7 +401,9 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
             <span>
               Alertes: <strong>{reportData.totalMaintAlerts} événements</strong>
             </span>
-            <span className="text-amber-700 font-bold">1 immobilisation</span>
+            {/* « 1 immobilisation » était un littéral : il restait à 1 que la
+                flotte en compte zéro ou six. */}
+            <span className="text-amber-700 font-bold">{immobilisedCount} véhicule(s) hors service</span>
           </div>
         </div>
 
@@ -395,10 +414,16 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
             <Award className="w-4 h-4 text-purple-500" />
           </div>
           <div className="text-2xl font-extrabold text-purple-600 font-mono">
-            {reportData.avgSafetyScore} <span className="text-xs text-slate-400 font-normal">/ 100</span>
+            {reportData.avgSafetyScore === null ? '—' : reportData.avgSafetyScore}{' '}
+            <span className="text-xs text-slate-400 font-normal">/ 100</span>
           </div>
-          <div className="text-[10px] text-emerald-600 font-bold">
-            Excellente conduite générale sur corridors
+          {/* « Excellente conduite générale sur corridors » s'affichait à
+              l'identique avec une moyenne de 31/100 : un satisfecit posé sur
+              n'importe quel résultat. */}
+          <div className="text-[10px] text-slate-500 font-bold">
+            {reportData.avgSafetyScore === null
+              ? 'Aucun véhicule avec chauffeur affecté sur la période'
+              : `Moyenne sur ${reportData.scoredVehicleCount} véhicule(s) avec chauffeur`}
           </div>
         </div>
       </div>

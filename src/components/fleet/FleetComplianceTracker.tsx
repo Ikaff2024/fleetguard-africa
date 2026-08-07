@@ -7,9 +7,7 @@ import {
   AlertTriangle,
   FileText,
   Calendar,
-  Plus,
   Search,
-  Bell,
   Clock,
   FileWarning,
   CheckCircle2,
@@ -152,19 +150,20 @@ export const FleetComplianceTracker: React.FC<FleetComplianceTrackerProps> = () 
             </div>
             <h2 className="text-xl font-bold text-slate-900">Suivi des Documents de la Flotte</h2>
             <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-              Gérez les assurances, visites techniques, et autorisations de transport. Recevez des alertes
-              automatiques avant expiration.
+              Gérez les assurances, visites techniques, et autorisations de transport. Les échéances proches
+              remontent au centre d’alertes ; aucune notification n’est envoyée par message ou par courriel.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-slate-200">
-              <Bell className="w-4 h-4" />
-              <span>Configurer Alertes</span>
-            </button>
-            <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-md transition flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span>Nouveau Document</span>
-            </button>
+          {/* « Configurer Alertes » et « Nouveau Document » n'avaient aucun
+              gestionnaire de clic, aucun formulaire, et aucune route serveur
+              derrière : `/compliance` est en lecture seule et le seuil des
+              trente jours est figé dans le service d'alertes. Deux capacités
+              annoncées dont aucune n'existait — on croyait pouvoir enregistrer
+              une carte brune renouvelée. */}
+          <div className="shrink-0 text-[11px] text-slate-500 max-w-xs leading-relaxed border-l border-slate-200 pl-3">
+            L’ajout de document depuis cet écran n’est pas encore raccordé. Les échéances suivies ici
+            proviennent des pièces déjà enregistrées, et les alertes correspondantes apparaissent au centre
+            d’alertes trente jours avant expiration.
           </div>
         </div>
       </div>

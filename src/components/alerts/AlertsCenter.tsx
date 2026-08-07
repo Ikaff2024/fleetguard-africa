@@ -135,7 +135,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
   const [resolutionNote, setResolutionNote] = useState<string>('');
 
   const [maintModalAlert, setMaintModalAlert] = useState<UnifiedAlert | null>(null);
-  const [maintProvider, setMaintProvider] = useState<string>('Garage Central CFAO Motors');
+  const [maintProvider, setMaintProvider] = useState<string>('');
   const [maintSuccess, setMaintSuccess] = useState<boolean>(false);
 
   // Print State
@@ -431,8 +431,8 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
               )}
             </h2>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Agrégation en temps réel des franchissements de geofence, anomalies de maintenance/carburant, et
-              comportements de conduite à risque avec boutons d'actions directes.
+              Agrégation des franchissements de geofence, anomalies de maintenance/carburant, et comportements
+              de conduite à risque avec boutons d'actions directes.
             </p>
           </div>
 
@@ -1010,24 +1010,31 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
                 <label className="block font-bold text-slate-700 mb-1">
                   Prestataire / Atelier sélectionné :
                 </label>
-                <select
+                {/* Trois commerces réels et nommés étaient présentés comme le
+                    réseau d'ateliers conventionné de l'entreprise connectée, et
+                    « Atelier Interne TransAfrik » désignait l'atelier d'une
+                    autre société chez tous les clients. Aucun modèle de
+                    prestataire n'existe : le nom se saisit. */}
+                <input
+                  type="text"
                   value={maintProvider}
                   onChange={e => setMaintProvider(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs text-slate-800 font-semibold cursor-pointer"
-                >
-                  <option value="Garage Central CFAO Motors Cotonou">
-                    Garage Central CFAO Motors Cotonou
-                  </option>
-                  <option value="Atelier Interne TransAfrik">Atelier Interne TransAfrik</option>
-                  <option value="Station Service Oryx Parakou">Station Service Oryx Parakou</option>
-                </select>
+                  placeholder="Nom de l’atelier ou du garage"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs text-slate-800 font-semibold"
+                />
               </div>
             </div>
 
             {maintSuccess ? (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-xs font-bold flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                <span>Ordre d'intervention planifié avec succès !</span>
+                {/* Rien n'est transmis à aucun garage : aucun ordre de service
+                    n'existe en base, et le prestataire n'est prévenu par rien.
+                    Le seul effet réel est le passage de l'alerte en « en cours ». */}
+                <span>
+                  Alerte passée en « en cours », avec le passage à l’atelier noté. Le garage n’est pas prévenu
+                  par l’application : contactez-le directement.
+                </span>
               </div>
             ) : (
               <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-3">
@@ -1205,7 +1212,16 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
                         Téléphone : <strong className="font-mono">{d?.phone || 'N/A'}</strong>
                       </div>
                       <div>
-                        Score Sécurité : <strong>{d?.currentSafetyScore || 90} / 100</strong>
+                        {/* Le repli « || 90 » se déclenchait aussi bien pour un chauffeur
+                            introuvable que pour un score tombé à zéro : la pièce
+                            destinée à un dossier disciplinaire lui accordait alors
+                            90/100. */}
+                        Score Sécurité :{' '}
+                        <strong>
+                          {typeof d?.currentSafetyScore === 'number'
+                            ? `${d.currentSafetyScore.toFixed(0)} / 100`
+                            : 'non disponible'}
+                        </strong>
                       </div>
                     </div>
                   );

@@ -34,7 +34,8 @@ export interface DriverPerformanceRecord {
   compositeScore: number;
   rank: number;
   tripsCompleted: number;
-  avgConsumptionL100km: number;
+  /** `null` quand la consommation n'est pas mesurable : deux pleins au moins sont nécessaires. */
+  avgConsumptionL100km: number | null;
   expectedConsumptionL100km: number;
   safetyPenaltiesCount: number;
   bonusAmountXof: number;
@@ -109,12 +110,21 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
       const tripsCompleted = trips.filter(t => t.driverId === profile.driverId).length;
       const safetyPenaltiesCount = events.filter(e => e.driverId === profile.driverId).length;
 
+      /**
+       * Consommation constatée du chauffeur — ou rien.
+       *
+       * L'écart vaut exactement zéro quand la consommation n'est pas mesurable
+       * (moins de deux pleins, distance trop courte entre eux). L'addition
+       * affichait alors la référence constructeur comme si c'était la
+       * consommation du conducteur, et le garde-fou « non mesurée » ne se
+       * déclenchait jamais puisque la référence est toujours positive.
+       */
       const expectedConsumptionL100km = vehicle?.expectedConsumptionL100km ?? 0;
-      // L'écart mesuré est négatif quand le chauffeur consomme moins.
+      const consumptionMeasured = profile.eligible || profile.fuelEfficiencySavingsL100km !== 0;
       const avgConsumptionL100km =
-        expectedConsumptionL100km > 0
+        expectedConsumptionL100km > 0 && consumptionMeasured
           ? Math.round((expectedConsumptionL100km + profile.fuelEfficiencySavingsL100km) * 10) / 10
-          : 0;
+          : null;
 
       const badges: DriverPerformanceRecord['badges'] = [];
       if (safetyScore >= 92) {
@@ -394,8 +404,12 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
           {/* Un comptage, pas un score : la ponctualité affichée ici n'était
               adossée à aucune donnée de livraison. */}
           <div className="text-2xl font-bold font-mono text-blue-600">
+            {/* « sur 30 j » était inventé : la source est la liste des
+                dernières infractions de toute la flotte, plafonnée côté serveur
+                et sans borne de date. Sur un parc actif, elle peut ne couvrir
+                que quelques jours. */}
             {performanceRecords.reduce((sum, r) => sum + r.safetyPenaltiesCount, 0)}
-            <span className="text-xs font-normal text-slate-400"> sur 30 j</span>
+            <span className="text-xs font-normal text-slate-400"> relevées récemment</span>
           </div>
         </div>
 
@@ -494,7 +508,7 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     </p>
                     <div className="mt-1 inline-flex items-center gap-1 text-[10px] bg-amber-200/80 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
                       <Sparkles className="w-3 h-3 text-amber-700" />
-                      <span>Leader Indétrônable</span>
+                      <span>Premier du classement</span>
                     </div>
                   </div>
                 </div>
@@ -639,7 +653,7 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                 <th className="py-3 px-3">Chauffeur & Permis</th>
                 <th className="py-3 px-3">Véhicule Assigné</th>
                 <th className="py-3 px-3">Sécurité ({weightSafety}%)</th>
-                <th className="py-3 px-3">Éco-Carburant (30%)</th>
+                <th className="py-3 px-3">Éco-Carburant ({weightFuel}%)</th>
                 <th className="py-3 px-3">Activité relevée</th>
                 <th className="py-3 px-3 text-center">Score Global</th>
                 <th className="py-3 px-3 text-right">Action</th>
@@ -750,7 +764,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                           ></div>
                         </div>
                         <div className="text-[9px] text-slate-400 font-mono">
-                          Moy. {record.avgConsumptionL100km} L/100km
+                          {record.avgConsumptionL100km === null
+                            ? 'Conso. non mesurée'
+                            : `Moy. ${record.avgConsumptionL100km} L/100km`}
                         </div>
                       </div>
                     </td>
@@ -770,9 +786,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                         <div className="flex justify-between">
                           <span className="text-slate-500">Conso.</span>
                           <span className="font-mono font-bold">
-                            {record.avgConsumptionL100km > 0
-                              ? `${record.avgConsumptionL100km} L`
-                              : 'non mesurée'}
+                            {record.avgConsumptionL100km === null
+                              ? 'non mesurée'
+                              : `${record.avgConsumptionL100km} L`}
                           </span>
                         </div>
                       </div>
@@ -891,7 +907,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                   <div className="text-[11px] text-slate-500 flex justify-between">
                     <span>Consommation:</span>
                     <span className="font-mono font-bold">
-                      {selectedPerformance.avgConsumptionL100km} L/100km
+                      {selectedPerformance.avgConsumptionL100km === null
+                        ? 'non mesurée'
+                        : `${selectedPerformance.avgConsumptionL100km} L/100km`}
                     </span>
                   </div>
                   <div className="text-[11px] font-bold">
@@ -953,12 +971,18 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                   </h5>
                   {selectedPerformance.isBonusEligible ? (
                     <p className="text-xs text-emerald-800 font-medium mt-0.5">
-                      Chauffeur éligible à la prime ce mois-ci pour son score global de{' '}
-                      {selectedPerformance.compositeScore}/100.
+                      Chauffeur éligible à la prime sur la période. Le montant et son détail se consultent
+                      dans « Primes &amp; récompenses ».
                     </p>
                   ) : (
+                    /* Le seuil de 85 était écrit en dur, appliqué au score
+                       global de cet écran — que l'utilisateur fait varier avec
+                       les curseurs — et il taisait la seconde condition : un
+                       chauffeur à 96/100 reste inéligible faute de pleins
+                       relevés. Le serveur donne le motif réel. */
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Le chauffeur doit atteindre un score minimum de 85/100 pour débloquer la prime.
+                      {selectedPerformance.ineligibilityReason ??
+                        'Les conditions de la prime ne sont pas réunies sur la période.'}
                     </p>
                   )}
                 </div>

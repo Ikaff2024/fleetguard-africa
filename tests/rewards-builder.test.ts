@@ -5,6 +5,7 @@ import {
   buildLeaderboard,
   computeReward,
   measureConsumption,
+  observedFuelPrice,
 } from '../src/server/services/rewards-builder.js';
 
 /**
@@ -205,5 +206,56 @@ describe('Consommation mesurée d’un plein à l’autre', () => {
 
     expect(reward.bonusEarned).toBe(0);
     expect(reward.ineligibilityReason).toContain('deux pleins');
+  });
+});
+
+/**
+ * Prix du gazole retenu pour la prime.
+ *
+ * La prime se calculait à 750 XOF le litre pendant que tous les pleins
+ * enregistrés étaient à 700 : chaque litre épargné était valorisé 7 % trop
+ * cher, et l'entreprise versait sur un prix qu'elle ne payait pas.
+ */
+describe('Prix du litre retenu', () => {
+  const fill = (litersAdded: number, pricePerLiter: number) => ({
+    litersAdded,
+    totalCost: litersAdded * pricePerLiter,
+  });
+
+  it('retient le prix réellement payé plutôt que celui du produit', () => {
+    const { pricePerLiter, basis } = observedFuelPrice([fill(400, 700), fill(300, 700)]);
+
+    expect(pricePerLiter).toBe(700);
+    expect(basis).toBe('OBSERVED');
+  });
+
+  it('pondère par les volumes, pas par le nombre de pleins', () => {
+    // Dix litres à 800 et mille à 700 ne font pas 750 : une moyenne simple
+    // laisserait un petit plein cher peser autant qu'un plein de tracteur.
+    const { pricePerLiter } = observedFuelPrice([fill(10, 800), fill(1000, 700)]);
+
+    expect(pricePerLiter).toBe(701);
+  });
+
+  it('revient au prix du produit quand rien n’a été relevé', () => {
+    const { pricePerLiter, basis } = observedFuelPrice([]);
+
+    expect(pricePerLiter).toBe(DEFAULT_BONUS_RULES.fuelPricePerLiter);
+    expect(basis).toBe('DEFAULT');
+  });
+
+  it('écarte un relevé aberrant plutôt que de gonfler la masse des primes', () => {
+    // Virgule mal placée ou devise mélangée : 70 000 XOF le litre multiplierait
+    // toutes les primes par cent.
+    const { pricePerLiter, basis } = observedFuelPrice([fill(400, 70_000)]);
+
+    expect(pricePerLiter).toBe(DEFAULT_BONUS_RULES.fuelPricePerLiter);
+    expect(basis).toBe('DEFAULT');
+  });
+
+  it('ignore les pleins sans montant, qui fausseraient la moyenne', () => {
+    const { pricePerLiter } = observedFuelPrice([{ litersAdded: 400, totalCost: 0 }, fill(400, 700)]);
+
+    expect(pricePerLiter).toBe(700);
   });
 });

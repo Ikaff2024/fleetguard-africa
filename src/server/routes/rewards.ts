@@ -6,6 +6,7 @@ import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import {
   AVAILABLE_PAYOUT_METHODS,
   PayoutMethodUnavailable,
+  effectiveBonusRules,
   BadgeNotFound,
   DriverNotFound,
   grantBadge,
@@ -13,7 +14,6 @@ import {
   listRewardProfiles,
   updatePayout,
 } from '../repositories/rewards-repository.js';
-import { DEFAULT_BONUS_RULES } from '../services/rewards-builder.js';
 import { requireResourceId } from '../http/params.js';
 
 export const rewardsRouter = Router();
@@ -32,7 +32,12 @@ rewardsRouter.get(
   requirePermission('scoring:read'),
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
-    res.json({ statusCode: 200, data: await listRewardProfiles(organizationId) });
+    // Le classement doit être calculé au prix affiché par l'écran des règles :
+    // deux prix différents rendraient le montant invérifiable.
+    res.json({
+      statusCode: 200,
+      data: await listRewardProfiles(organizationId, await effectiveBonusRules(organizationId)),
+    });
   }),
 );
 
@@ -57,15 +62,16 @@ rewardsRouter.get(
   '/rewards/rules',
   resolveTenant,
   requirePermission('scoring:read'),
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
     /**
      * Les règles servent à expliquer un montant à un chauffeur : l'écran doit
      * pouvoir refaire l'opération complète, prime de base comprise, et savoir
      * quels moyens de versement sont réellement ouverts.
      */
+    const rules = await effectiveBonusRules(requireTenantId(req));
     res.json({
       statusCode: 200,
-      data: { ...DEFAULT_BONUS_RULES, availablePayoutMethods: AVAILABLE_PAYOUT_METHODS },
+      data: { ...rules, availablePayoutMethods: AVAILABLE_PAYOUT_METHODS },
     });
   }),
 );

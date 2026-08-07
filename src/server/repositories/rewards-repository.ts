@@ -3,6 +3,7 @@ import { isDatabaseEnabled, withTenant } from '../db/prisma.js';
 import {
   type BonusRules,
   DEFAULT_BONUS_RULES,
+  observedFuelPrice,
   type DriverFuelUsage,
   buildLeaderboard,
   measureConsumption,
@@ -99,6 +100,35 @@ async function collectUsage(tx: Tx, since: Date): Promise<DriverFuelUsage[]> {
       distanceKm: measured.measuredDistanceKm,
       measurementIssue: measured.reason,
     };
+  });
+}
+
+/**
+ * Règles de prime effectivement appliquées à une organisation.
+ *
+ * Le prix du litre est celui qu'elle paie réellement, relevé sur ses pleins.
+ * Les autres paramètres restent ceux du produit tant qu'ils ne sont pas
+ * configurables par entreprise.
+ */
+export async function effectiveBonusRules(
+  organizationId: string,
+): Promise<BonusRules & { fuelPriceBasis: 'OBSERVED' | 'DEFAULT' }> {
+  if (!isDatabaseEnabled()) {
+    return { ...DEFAULT_BONUS_RULES, fuelPriceBasis: 'DEFAULT' };
+  }
+
+  return withTenant(organizationId, async tx => {
+    const since = new Date(Date.now() - PERIOD_DAYS * 86_400_000);
+    const fills = await tx.fuelLog.findMany({
+      where: { loggedAt: { gte: since } },
+      select: { litersAdded: true, totalCost: true },
+    });
+
+    const { pricePerLiter, basis } = observedFuelPrice(
+      fills.map(fill => ({ litersAdded: toNumber(fill.litersAdded), totalCost: toNumber(fill.totalCost) })),
+    );
+
+    return { ...DEFAULT_BONUS_RULES, fuelPricePerLiter: pricePerLiter, fuelPriceBasis: basis };
   });
 }
 

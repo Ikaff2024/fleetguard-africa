@@ -38,7 +38,10 @@ export interface BonusRules {
 }
 
 export const DEFAULT_BONUS_RULES: BonusRules = {
-  // Ordre de grandeur du gazole à la pompe en zone UEMOA.
+  /**
+   * Prix de repli, utilisé seulement quand aucun plein n'a encore été
+   * enregistré. Dès qu'il en existe, c'est le prix réellement payé qui sert.
+   */
   fuelPricePerLiter: 750,
   // Moitié-moitié : assez pour motiver, assez pour que l'entreprise y gagne.
   sharedSavingsPercentage: 50,
@@ -256,4 +259,34 @@ export function buildLeaderboard(
 
 export function computeAll(usages: DriverFuelUsage[], rules: BonusRules): ComputedReward[] {
   return usages.map(usage => computeReward(usage, rules));
+}
+
+/**
+ * Prix du litre réellement payé par l'organisation.
+ *
+ * La prime se calculait à 750 XOF le litre pendant que les pleins enregistrés
+ * étaient tous à 700 : chaque litre épargné était valorisé 7 % trop cher, et
+ * l'entreprise versait sur un prix qu'elle ne payait pas. Le gazole ne coûte
+ * pas la même chose à Abidjan et à Nairobi, ni ce trimestre et l'an dernier.
+ *
+ * La moyenne est pondérée par les volumes : dix litres à 800 et mille à 700 ne
+ * font pas 750. À défaut de tout relevé, le prix de repli s'applique — et
+ * l'écran dit lequel des deux a servi.
+ */
+export function observedFuelPrice(
+  fills: { litersAdded: number; totalCost: number }[],
+  fallback = DEFAULT_BONUS_RULES.fuelPricePerLiter,
+): { pricePerLiter: number; basis: 'OBSERVED' | 'DEFAULT' } {
+  const priced = fills.filter(fill => fill.litersAdded > 0 && fill.totalCost > 0);
+  if (priced.length === 0) return { pricePerLiter: fallback, basis: 'DEFAULT' };
+
+  const liters = priced.reduce((sum, fill) => sum + fill.litersAdded, 0);
+  const cost = priced.reduce((sum, fill) => sum + fill.totalCost, 0);
+  const observed = Math.round(cost / liters);
+
+  // Un relevé aberrant — virgule mal placée, devise mélangée — ne doit pas
+  // faire exploser la masse des primes.
+  if (observed < 100 || observed > 5000) return { pricePerLiter: fallback, basis: 'DEFAULT' };
+
+  return { pricePerLiter: observed, basis: 'OBSERVED' };
 }
