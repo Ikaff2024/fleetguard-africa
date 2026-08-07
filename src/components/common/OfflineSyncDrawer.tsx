@@ -37,58 +37,119 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
     clearAllQueue,
   } = useOfflineSync();
 
-  const [activeTab, setActiveTab] = useState<'queue' | 'simulator'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'entry'>('queue');
   const [selectedItemPayload, setSelectedItemPayload] = useState<any | null>(null);
 
-  // Simulation form states
-  const [simType, setSimType] = useState<
-    'FUEL_LOG' | 'ODOMETER_UPDATE' | 'GPS_TELEMETRY' | 'MAINTENANCE_RECORD'
-  >('FUEL_LOG');
-  const [simVehicleReg, setSimVehicleReg] = useState<string>('RB-4592-A');
-  const [simValue, setSimValue] = useState<string>('120');
+  /**
+   * Saisie de terrain.
+   *
+   * Cet onglet était un « simulateur » : il fabriquait la saisie de toutes
+   * pièces — station « Total Parakou Nord », chauffeur « Moussa Diop », prix du
+   * litre à 650 — et l'ajoutait à la file. Or la file écrit réellement en base
+   * depuis qu'elle est raccordée au serveur. Chaque clic créait donc un vrai
+   * plein portant des informations inventées.
+   *
+   * Le plus grave n'était pas les noms : c'est que le relevé du compteur
+   * n'était jamais transmis. Le serveur retombait alors sur le kilométrage
+   * courant du véhicule, si bien que tous les pleins simulés atterrissaient au
+   * même point du compteur. La consommation se mesurant d'un plein à l'autre,
+   * quelques clics suffisaient à la rendre incalculable — et avec elle, la
+   * prime du chauffeur.
+   *
+   * Les champs ci-dessous partent donc vides. Ce qui n'est pas saisi n'est pas
+   * envoyé, et le compteur est exigé parce que sans lui le plein ne mesure
+   * rien.
+   */
+  const [entryType, setEntryType] = useState<'FUEL_LOG' | 'ODOMETER_UPDATE' | 'MAINTENANCE_RECORD'>(
+    'FUEL_LOG',
+  );
+  const [plate, setPlate] = useState<string>('');
+  const [liters, setLiters] = useState<string>('');
+  const [odometerKm, setOdometerKm] = useState<string>('');
+  const [pricePerLiter, setPricePerLiter] = useState<string>('');
+  const [stationName, setStationName] = useState<string>('');
+  const [receiptNumber, setReceiptNumber] = useState<string>('');
+  const [maintenanceLabel, setMaintenanceLabel] = useState<string>('');
+  const [maintenanceCost, setMaintenanceCost] = useState<string>('');
+  const [entryError, setEntryError] = useState<string | null>(null);
+  const [entryDone, setEntryDone] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSimulateOfflineEnqueue = async () => {
-    let payload: Record<string, any> = {};
+  /** Champs obligatoires par type — ce qui manque empêche la mesure, pas seulement l'affichage. */
+  const missingFields = (): string | null => {
+    if (!plate.trim()) return 'L’immatriculation du véhicule est nécessaire.';
 
-    if (simType === 'FUEL_LOG') {
+    if (entryType === 'FUEL_LOG') {
+      if (!Number(liters)) return 'Le volume en litres est nécessaire.';
+      // Sans compteur, le plein ne mesure aucune consommation : il vaut mieux
+      // refuser la saisie que d'enregistrer un plein inexploitable.
+      if (!Number(odometerKm)) return 'Le relevé du compteur est nécessaire pour mesurer la consommation.';
+    }
+
+    if (entryType === 'ODOMETER_UPDATE' && !Number(odometerKm)) {
+      return 'Le relevé du compteur est nécessaire.';
+    }
+
+    if (entryType === 'MAINTENANCE_RECORD' && !maintenanceLabel.trim()) {
+      return 'La nature de l’intervention est nécessaire.';
+    }
+
+    return null;
+  };
+
+  const handleAddEntry = async () => {
+    setEntryDone(null);
+    const missing = missingFields();
+    if (missing) {
+      setEntryError(missing);
+      return;
+    }
+    setEntryError(null);
+
+    let payload: Record<string, any>;
+
+    if (entryType === 'FUEL_LOG') {
+      const litersValue = Number(liters);
+      const price = Number(pricePerLiter) || 0;
       payload = {
-        vehicleRegistration: simVehicleReg,
-        stationName: 'Station Total Parakou Nord',
-        litersAdded: Number(simValue) || 150,
-        pricePerLiter: 650,
-        totalCost: (Number(simValue) || 150) * 650,
-        receiptNumber: `REC_OFFLINE_${Date.now().toString().substr(-5)}`,
-        loggedByOfflineDriver: 'Moussa Diop',
+        vehicleRegistration: plate.trim().toUpperCase(),
+        litersAdded: litersValue,
+        odometerKm: Number(odometerKm),
+        // Le prix et le total ne sont transmis que s'ils ont été saisis : un
+        // prix par défaut fausserait le coût au litre de toute l'organisation.
+        ...(price > 0 ? { pricePerLiter: price, totalCost: litersValue * price } : {}),
+        ...(stationName.trim() ? { stationName: stationName.trim() } : {}),
+        ...(receiptNumber.trim() ? { receiptNumber: receiptNumber.trim() } : {}),
+        loggedAt: new Date().toISOString(),
       };
-    } else if (simType === 'ODOMETER_UPDATE') {
+    } else if (entryType === 'ODOMETER_UPDATE') {
       payload = {
-        vehicleRegistration: simVehicleReg,
-        newOdometerKm: Number(simValue) || 284500,
-        reason: "Contrôle à l'arrivée au dépôt Parakou",
+        vehicleRegistration: plate.trim().toUpperCase(),
+        newOdometerKm: Number(odometerKm),
         recordedAt: new Date().toISOString(),
       };
-    } else if (simType === 'GPS_TELEMETRY') {
+    } else {
       payload = {
-        vehicleRegistration: simVehicleReg,
-        batchPointsCount: 42,
-        gpsCoordinates: [
-          { lat: 9.337, lng: 2.63, speedKmH: 78, timestamp: new Date().toISOString() },
-          { lat: 9.345, lng: 2.64, speedKmH: 82, timestamp: new Date().toISOString() },
-        ],
-      };
-    } else if (simType === 'MAINTENANCE_RECORD') {
-      payload = {
-        vehicleRegistration: simVehicleReg,
-        type: 'Vidange & Filtres Huile Diesel',
-        cost: 145000,
-        currency: 'FCFA',
-        garageName: 'Atelier Central Cotonou',
+        vehicleRegistration: plate.trim().toUpperCase(),
+        type: maintenanceLabel.trim(),
+        ...(Number(maintenanceCost) ? { cost: Number(maintenanceCost) } : {}),
       };
     }
 
-    await enqueueUpdate(simType, payload, currentOrgId);
+    await enqueueUpdate(entryType, payload, currentOrgId);
+
+    setEntryDone(
+      isOnline
+        ? 'Saisie transmise. Le serveur la refusera si le véhicule ou le volume ne correspond pas.'
+        : 'Saisie conservée sur l’appareil. Elle partira au retour du réseau.',
+    );
+    setLiters('');
+    setOdometerKm('');
+    setPricePerLiter('');
+    setReceiptNumber('');
+    setMaintenanceLabel('');
+    setMaintenanceCost('');
   };
 
   const getBadgeColor = (type: string) => {
@@ -201,9 +262,9 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
           </button>
 
           <button
-            onClick={() => setActiveTab('simulator')}
+            onClick={() => setActiveTab('entry')}
             className={`pb-3 border-b-2 transition flex items-center gap-2 cursor-pointer ${
-              activeTab === 'simulator'
+              activeTab === 'entry'
                 ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
@@ -342,66 +403,167 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
               )}
             </div>
           ) : (
-            /* Simulator View */
+            /* Saisie de terrain — les champs partent vides, rien n'est pré-rempli. */
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4 text-xs">
               <div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">
-                  Simulateur de Saisie Chauffeur / Télémétrie Hors-Ligne
-                </h4>
-                <p className="text-slate-500">
-                  Insère directement un événement dans la base local IndexedDB pour vérifier la mise en
-                  attente et la reprise de réseau.
+                <h4 className="font-bold text-slate-900 text-sm mb-1">Enregistrer une saisie du terrain</h4>
+                <p className="text-slate-500 leading-relaxed">
+                  La saisie est conservée sur l’appareil puis écrite sur le serveur au retour du réseau. Rien
+                  n’est pré-rempli : une valeur suggérée finirait enregistrée telle quelle.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Type d'Événement :</label>
+                  <label className="block text-slate-700 font-bold mb-1">Type de saisie :</label>
                   <select
-                    value={simType}
-                    onChange={e => setSimType(e.target.value as any)}
+                    value={entryType}
+                    onChange={e => {
+                      setEntryType(e.target.value as typeof entryType);
+                      setEntryError(null);
+                      setEntryDone(null);
+                    }}
                     className="w-full bg-white border border-slate-200 rounded-lg p-2 font-medium text-slate-800 focus:outline-none"
                   >
-                    <option value="FUEL_LOG">Ravitaillement Carburant (Fuel Log)</option>
-                    <option value="ODOMETER_UPDATE">Relevé Odomètre Camion</option>
-                    <option value="GPS_TELEMETRY">Paquet Télémétrie GPS (Batch)</option>
-                    <option value="MAINTENANCE_RECORD">Intervention Garage / Entretien</option>
+                    <option value="FUEL_LOG">Plein de carburant</option>
+                    <option value="ODOMETER_UPDATE">Relevé de compteur</option>
+                    <option value="MAINTENANCE_RECORD">Passage à l’atelier</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Immatriculation Véhicule :</label>
+                  <label className="block text-slate-700 font-bold mb-1">Immatriculation :</label>
                   <input
                     type="text"
-                    value={simVehicleReg}
-                    onChange={e => setSimVehicleReg(e.target.value)}
+                    value={plate}
+                    onChange={e => setPlate(e.target.value)}
+                    placeholder="Ex : RB-1234-A"
                     className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">
-                    {simType === 'FUEL_LOG'
-                      ? 'Litres Ajoutés (L)'
-                      : simType === 'ODOMETER_UPDATE'
-                        ? 'Nouveau Km Odomètre'
-                        : 'Valeur indicative'}{' '}
-                    :
-                  </label>
-                  <input
-                    type="number"
-                    value={simValue}
-                    onChange={e => setSimValue(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
-                  />
-                </div>
+                {entryType === 'FUEL_LOG' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Litres :</label>
+                        <input
+                          type="number"
+                          value={liters}
+                          onChange={e => setLiters(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Prix au litre :</label>
+                        <input
+                          type="number"
+                          value={pricePerLiter}
+                          onChange={e => setPricePerLiter(e.target.value)}
+                          placeholder="facultatif"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">
+                        Compteur au moment du plein :
+                      </label>
+                      <input
+                        type="number"
+                        value={odometerKm}
+                        onChange={e => setOdometerKm(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        Obligatoire : la consommation se mesure d’un plein à l’autre, donc entre deux relevés
+                        de compteur.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">Station :</label>
+                        <input
+                          type="text"
+                          value={stationName}
+                          onChange={e => setStationName(e.target.value)}
+                          placeholder="facultatif"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">N° de reçu :</label>
+                        <input
+                          type="text"
+                          value={receiptNumber}
+                          onChange={e => setReceiptNumber(e.target.value)}
+                          placeholder="facultatif"
+                          className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {entryType === 'ODOMETER_UPDATE' && (
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      Nouveau relevé de compteur :
+                    </label>
+                    <input
+                      type="number"
+                      value={odometerKm}
+                      onChange={e => setOdometerKm(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                {entryType === 'MAINTENANCE_RECORD' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Intervention :</label>
+                      <input
+                        type="text"
+                        value={maintenanceLabel}
+                        onChange={e => setMaintenanceLabel(e.target.value)}
+                        placeholder="Ex : vidange"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Coût :</label>
+                      <input
+                        type="number"
+                        value={maintenanceCost}
+                        onChange={e => setMaintenanceCost(e.target.value)}
+                        placeholder="facultatif"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono text-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {entryError && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-lg p-2.5 font-semibold">
+                    {entryError}
+                  </div>
+                )}
+
+                {entryDone && (
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-2.5 font-semibold">
+                    {entryDone}
+                  </div>
+                )}
 
                 <button
-                  onClick={handleSimulateOfflineEnqueue}
+                  onClick={handleAddEntry}
                   className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Ajouter dans IndexedDB Local</span>
+                  <span>Enregistrer la saisie</span>
                 </button>
               </div>
             </div>
@@ -412,7 +574,7 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
         <div className="p-4 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Tolérance aux Pannes & Persistance Réseau Garanties</span>
+            <span>Les saisies sont conservées sur l’appareil tant que le réseau manque.</span>
           </div>
           <button onClick={onClose} className="font-bold text-slate-700 hover:underline cursor-pointer">
             Fermer

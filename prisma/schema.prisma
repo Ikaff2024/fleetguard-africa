@@ -111,6 +111,7 @@ model Organization {
   fuelStations     FuelStation[]
   missions         Mission[]
   driverMessages   DriverMessage[]
+  rewardPayouts    RewardPayout[]
 
   @@index([code])
   @@map("organizations")
@@ -300,6 +301,7 @@ model Driver {
   alerts           Alert[]
   missions         Mission[]
   messages         DriverMessage[]
+  rewardPayouts    RewardPayout[]
 
   @@unique([organizationId, licenseNumber])
   @@index([organizationId, status])
@@ -1149,4 +1151,68 @@ model DriverMessage {
   @@index([organizationId, driverId, sentAt])
   @@index([organizationId, sentAt])
   @@map("driver_messages")
+}
+
+// ============================================================================
+// VERSEMENT DES PRIMES
+// ============================================================================
+
+enum RewardPayoutStatus {
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+/// Versement d'une prime, rattaché à une période.
+///
+/// Le profil de récompense ne portait qu'une seule ligne par chauffeur, sans
+/// période : `bonusEarned` était recalculé sur les 30 derniers jours glissants
+/// tandis que `payoutStatus` et `lastPayoutAt` restaient ceux d'un versement
+/// antérieur. L'écran affichait donc « 42 000 XOF — VERSÉ le 5 juillet » : le
+/// montant du mois en cours, certifié payé par une opération du mois d'avant.
+/// Le bouton d'approbation disparaissait par la même occasion, rendant le
+/// nouveau versement impossible.
+///
+/// Une prime est un salaire. Elle se constate donc par une ligne immuable, qui
+/// dit pour quelle période, pour quel montant, par quel moyen et sur décision
+/// de qui. C'est ce qu'un chauffeur qui conteste, ou un inspecteur du travail,
+/// demandera à voir.
+model RewardPayout {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  driverId String @db.Uuid
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  /// Bornes de la période récompensée, incluses dans la clé d'unicité : deux
+  /// versements ne peuvent pas se chevaucher sur la même période.
+  periodStart DateTime
+  periodEnd   DateTime
+
+  amount   Decimal @db.Decimal(14, 2)
+  currency String  @db.VarChar(3)
+
+  /// Moyen retenu. La monnaie électronique reste refusée par l'API tant
+  /// qu'aucun agrégateur agréé BCEAO n'est raccordé : marquer « versé » sans
+  /// transfert produirait une preuve de paiement qui n'a pas eu lieu.
+  method PayoutMethod @default(FUEL_VOUCHER)
+
+  status RewardPayoutStatus @default(APPROVED)
+
+  /// Décision d'approbation : qui, et quand.
+  approvedByUserId String?  @db.Uuid
+  approvedAt       DateTime @default(now())
+
+  /// Renseigné quand le versement a réellement été effectué, hors application.
+  paidAt DateTime?
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([driverId, periodStart])
+  @@index([organizationId, periodStart])
+  @@index([organizationId, driverId, periodStart])
+  @@map("reward_payouts")
 }

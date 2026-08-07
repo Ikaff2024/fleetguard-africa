@@ -69,6 +69,8 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
         fuelEfficiencySavingsL100km: profile.fuelEfficiencySavingsL100km,
         estimatedFuelSavedLiters: profile.estimatedFuelSavedLiters,
         fuelBonusEarnedXOF: profile.bonusEarned,
+        isEligibleForBonus: profile.eligible,
+        paidAmountXOF: profile.paidAmount,
         payoutStatus: profile.payoutStatus,
         payoutMethod: profile.payoutMethod,
         lastPayoutDate: profile.lastPayoutAt?.slice(0, 10),
@@ -105,7 +107,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
                 : profile.currentSafetyScore >= 70
                   ? ('NEUTRAL' as const)
                   : ('WARNING' as const),
-            description: `Seuil d'éligibilité à la prime : 85/100.`,
+            description: `Seuil d'éligibilité à la prime : ${rulesQuery.data?.minSafetyScoreForBonus ?? 85}/100, et une économie mesurable.`,
           },
         ],
         ineligibilityReason: profile.ineligibilityReason,
@@ -209,10 +211,23 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
 
   // KPI Calculations
   const stats = useMemo(() => {
+    /**
+     * Deux totaux, et non un seul.
+     *
+     * Une seule valeur était affichée sous l'étiquette « Reversé aux
+     * conducteurs » : elle additionnait toutes les primes calculées, y compris
+     * celles qui n'avaient jamais été payées. Une entreprise pouvait croire
+     * avoir versé une somme qu'elle devait encore.
+     */
     const totalBonusesXOF = driverProfiles.reduce((acc, p) => acc + p.fuelBonusEarnedXOF, 0);
+    const totalPaidXOF = driverProfiles
+      .filter(p => p.payoutStatus === 'PAID')
+      .reduce((acc, p) => acc + (p.paidAmountXOF ?? p.fuelBonusEarnedXOF), 0);
     const totalFuelSavedL = driverProfiles.reduce((acc, p) => acc + p.estimatedFuelSavedLiters, 0);
     const totalBadgesUnlocked = driverProfiles.reduce((acc, p) => acc + p.unlockedBadges.length, 0);
-    const eligibleCount = driverProfiles.filter(p => p.currentSafetyScore >= 85).length;
+    // L'éligibilité exige aussi une économie mesurable : compter sur le seul
+    // score surestimait le nombre de primes dues.
+    const eligibleCount = driverProfiles.filter(p => p.isEligibleForBonus).length;
     const avgSafetyScore =
       driverProfiles.length > 0
         ? (driverProfiles.reduce((acc, p) => acc + p.currentSafetyScore, 0) / driverProfiles.length).toFixed(
@@ -222,6 +237,7 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
 
     return {
       totalBonusesXOF,
+      totalPaidXOF,
       totalFuelSavedL,
       totalBadgesUnlocked,
       eligibleCount,
@@ -339,14 +355,17 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">
-            <span className="font-medium">Total Primes Générées</span>
+            <span className="font-medium">Primes dues sur la période</span>
             <Coins className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400">
             {stats.totalBonusesXOF.toLocaleString()} XOF
           </div>
+          {/* « Reversé aux conducteurs » affirmait un paiement qui n'avait pas
+              eu lieu. Le montant réellement versé est distinct, et il ne compte
+              que les versements constatés. */}
           <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold mt-1">
-            Reversé aux conducteurs
+            dont {stats.totalPaidXOF.toLocaleString()} XOF constatés versés
           </div>
         </div>
 
@@ -917,19 +936,39 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
                   <span>Formule de Calcul de la Prime Carburant Éco-Sécurité</span>
                 </div>
                 <h3 className="text-base font-bold text-white mt-0.5">
-                  Partage à 50/50 des Économies de Gazole à partir d'un Score Sécurité ≥ 85/100
+                  Prime de base + partage à {bonusConfig.sharedSavingsPercentage}/
+                  {100 - bonusConfig.sharedSavingsPercentage} des économies, à partir d’un score de{' '}
+                  {bonusConfig.minSafetyScoreForBonus}/100
                 </h3>
               </div>
 
               <div className="text-xs font-mono text-emerald-400 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                PRIX BENCHMARK: <strong>750 XOF / Litre</strong>
+                PRIX RETENU : <strong>{bonusConfig.fuelPricePerLiterXOF} XOF / Litre</strong>
               </div>
             </div>
 
+            {/* La formule annoncée ne mentionnait que le partage 50/50 : elle
+                donnait 27 000 XOF là où l'écran affichait 42 000. Les 15 000 XOF
+                de prime de base manquaient, et l'écart était invérifiable. */}
             <p className="text-xs text-slate-400 leading-relaxed max-w-3xl">
-              Si le conducteur consomme moins que la norme constructeur du véhicule (ex: 29.2 L/100km au lieu
-              de 34 L/100km), la valeur financière des litres économisés est partagée à parts égales entre la
-              société et le chauffeur, versée sur Mobile Money.
+              Un conducteur qui consomme moins que la référence de son véhicule touche{' '}
+              <strong className="text-slate-200">
+                {bonusConfig.baseTierBonusXOF.toLocaleString()} XOF de prime de base
+              </strong>
+              , plus {bonusConfig.sharedSavingsPercentage} % de la valeur des litres épargnés (au prix de{' '}
+              {bonusConfig.fuelPricePerLiterXOF} XOF le litre). Le total est plafonné à{' '}
+              {bonusConfig.maxMonthlyBonusCapXOF.toLocaleString()} XOF par cycle.
+            </p>
+            <p className="text-[11px] text-slate-500 leading-relaxed max-w-3xl">
+              Exemple : 72 litres épargnés donnent {bonusConfig.baseTierBonusXOF.toLocaleString()} + 72 ×{' '}
+              {bonusConfig.fuelPricePerLiterXOF} × {bonusConfig.sharedSavingsPercentage} % ={' '}
+              {(
+                bonusConfig.baseTierBonusXOF +
+                Math.round(
+                  72 * bonusConfig.fuelPricePerLiterXOF * (bonusConfig.sharedSavingsPercentage / 100),
+                )
+              ).toLocaleString()}{' '}
+              XOF.
             </p>
           </div>
 
@@ -1054,9 +1093,13 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
                                   : 'bg-amber-500 hover:bg-amber-600 text-white'
                               }`}
                             >
+                              {/* « Verser via Mobile Money » laissait croire que
+                                  l'application effectuait le transfert. Elle ne
+                                  fait que constater une décision : le versement
+                                  a lieu ailleurs. */}
                               {profile.payoutStatus === 'APPROVED'
-                                ? 'Verser via Mobile Money'
-                                : 'Approuver Prime'}
+                                ? 'Constater le versement'
+                                : 'Approuver la prime'}
                             </button>
                           ) : (
                             <span className="text-[10px] text-slate-400 font-medium">

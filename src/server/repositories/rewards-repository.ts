@@ -34,6 +34,11 @@ export interface RewardProfile {
   payoutStatus: string;
   payoutMethod: string;
   lastPayoutAt?: string;
+  /** Bornes de la période récompensée — le montant et le statut s'y rapportent. */
+  periodStart: string;
+  periodEnd: string;
+  /** Montant du versement enregistré pour cette période, s'il a eu lieu. */
+  paidAmount?: number;
   totalPoints: number;
   rankInCompany: number;
   unlockedBadges: { badgeId: string; code: string; title: string; unlockedAt: string }[];
@@ -104,16 +109,35 @@ export async function listRewardProfiles(
   if (!isDatabaseEnabled()) return [];
 
   return withTenant(organizationId, async tx => {
-    const since = new Date(Date.now() - PERIOD_DAYS * 86_400_000);
+    const periodEnd = new Date();
+    const since = new Date(periodEnd.getTime() - PERIOD_DAYS * 86_400_000);
+    // Les bornes sont arrêtées au jour : sans cela, deux consultations à une
+    // minute d'intervalle produiraient deux périodes différentes, et un
+    // versement ne pourrait jamais être rattaché à celle qu'il paie.
+    const periodStart = new Date(since);
+    periodStart.setHours(0, 0, 0, 0);
 
-    const [organization, drivers, existing] = await Promise.all([
+    const [organization, drivers] = await Promise.all([
       tx.organization.findFirst({ where: { id: organizationId } }),
       tx.driver.findMany({
         where: { deletedAt: null },
         include: { assignedVehicle: { select: { immatriculation: true, make: true, model: true } } },
       }),
-      tx.driverRewardProfile.findMany(),
     ]);
+
+    /**
+     * Versements déjà décidés POUR CETTE PÉRIODE.
+     *
+     * C'est tout le correctif : le statut lu auparavant sur le profil datait
+     * d'un versement antérieur et s'affichait à côté du montant du mois en
+     * cours. Un chauffeur voyait « 42 000 XOF — VERSÉ le 5 juillet » alors que
+     * ces 42 000 francs n'avaient jamais été payés, et le bouton d'approbation
+     * avait disparu.
+     */
+    const payouts = await tx.rewardPayout.findMany({
+      where: { periodStart, status: { not: 'CANCELLED' } },
+    });
+    const payoutForPeriod = new Map(payouts.map(payout => [payout.driverId, payout]));
 
     const unlocked = await tx.driverUnlockedBadge.findMany({
       where: { driverId: { in: drivers.map(driver => driver.id) } },
@@ -129,8 +153,6 @@ export async function listRewardProfiles(
           : 'Aucun véhicule affecté',
       ]),
     );
-    // Le versement déjà décidé n'est jamais recalculé.
-    const payoutOf = new Map(existing.map(profile => [profile.driverId, profile]));
 
     const leaderboard = buildLeaderboard(await collectUsage(tx, since), rules);
 
@@ -164,7 +186,6 @@ export async function listRewardProfiles(
     }
 
     return leaderboard.map(reward => {
-      const stored = payoutOf.get(reward.driverId);
       return {
         driverId: reward.driverId,
         driverName: reward.driverName,
@@ -178,9 +199,18 @@ export async function listRewardProfiles(
         currency,
         eligible: reward.eligible,
         ineligibilityReason: reward.ineligibilityReason,
-        payoutStatus: reward.eligible ? (stored?.payoutStatus ?? 'ELIGIBLE') : 'NOT_ELIGIBLE',
-        payoutMethod: stored?.payoutMethod ?? 'FUEL_VOUCHER',
-        lastPayoutAt: stored?.lastPayoutAt?.toISOString(),
+        // Le statut décrit la période affichée, et elle seule.
+        payoutStatus: !reward.eligible
+          ? 'NOT_ELIGIBLE'
+          : (payoutForPeriod.get(reward.driverId)?.status ?? 'ELIGIBLE'),
+        payoutMethod: payoutForPeriod.get(reward.driverId)?.method ?? 'FUEL_VOUCHER',
+        lastPayoutAt: payoutForPeriod.get(reward.driverId)?.paidAt?.toISOString(),
+        periodStart: periodStart.toISOString(),
+        periodEnd: periodEnd.toISOString(),
+        /** Montant réellement enregistré comme versé, s'il existe. */
+        paidAmount: payoutForPeriod.get(reward.driverId)
+          ? toNumber(payoutForPeriod.get(reward.driverId)!.amount)
+          : undefined,
         totalPoints: reward.totalPoints,
         rankInCompany: reward.rankInCompany,
         unlockedBadges: unlocked
@@ -206,28 +236,94 @@ export class BadgeNotFound extends Error {}
  * marquer une prime « versée » dans le seul navigateur, pour l'oublier au
  * rechargement, laisserait croire à un paiement qui n'a pas eu lieu.
  */
+/**
+ * Moyens de versement réellement disponibles.
+ *
+ * Verser une prime en monnaie électronique relève de la réglementation BCEAO
+ * et suppose un agrégateur agréé. Le schéma le dit depuis le premier jour —
+ * et l'interface proposait pourtant « Verser via Mobile Money », qui inscrivait
+ * la prime « versée » sans qu'un franc ne quitte l'entreprise.
+ *
+ * Un chauffeur qui réclame son dû se voit alors opposer un enregistrement de
+ * paiement. Tant qu'aucun transfert n'est techniquement possible, l'API refuse
+ * ces moyens plutôt que d'enregistrer une preuve de paiement sans paiement.
+ */
+export const AVAILABLE_PAYOUT_METHODS: $Enums.PayoutMethod[] = ['FUEL_VOUCHER'];
+
+export class PayoutMethodUnavailable extends Error {
+  constructor(readonly method: string) {
+    super(
+      `Le versement par ${method} suppose un agrégateur de monnaie électronique agréé, qui n'est pas raccordé. ` +
+        'Seul le bon carburant peut être enregistré pour le moment.',
+    );
+  }
+}
+
+/**
+ * Décision de versement, rattachée à la période qu'elle paie.
+ *
+ * `PAID` signifie « le versement a été effectué », pas « l'application l'a
+ * effectué » : le transfert a lieu hors de l'outil, et c'est le gestionnaire
+ * qui le constate ici. La distinction n'est pas rhétorique — c'est elle qui
+ * rend l'enregistrement défendable devant un chauffeur qui conteste.
+ */
 export async function updatePayout(
   organizationId: string,
   driverId: string,
   input: { payoutStatus: $Enums.PayoutStatus; payoutMethod?: $Enums.PayoutMethod },
+  actorUserId?: string,
 ): Promise<void> {
+  if (input.payoutMethod && !AVAILABLE_PAYOUT_METHODS.includes(input.payoutMethod)) {
+    throw new PayoutMethodUnavailable(input.payoutMethod);
+  }
+
   await withTenant(organizationId, async tx => {
-    const { count } = await tx.driverRewardProfile.updateMany({
-      where: { driverId },
-      data: {
-        payoutStatus: input.payoutStatus,
-        ...(input.payoutMethod ? { payoutMethod: input.payoutMethod } : {}),
-        // L'horodatage du versement vient du serveur : une date fournie par
-        // l'appelant n'aurait aucune valeur probante en cas de litige.
-        ...(input.payoutStatus === 'PAID' ? { lastPayoutAt: new Date() } : {}),
+    const driver = await tx.driver.findFirst({ where: { id: driverId, deletedAt: null } });
+    if (!driver) throw new DriverNotFound();
+
+    const periodEnd = new Date();
+    const periodStart = new Date(periodEnd.getTime() - PERIOD_DAYS * 86_400_000);
+    periodStart.setHours(0, 0, 0, 0);
+
+    const profile = await tx.driverRewardProfile.findFirst({ where: { driverId } });
+    const organization = await tx.organization.findFirst({ where: { id: organizationId } });
+
+    // Un retour en arrière efface la décision de la période plutôt que de
+    // laisser une trace « versée » sur une prime qui ne l'est plus. Seuls
+    // APPROVED et PAID constituent une décision ; le reste la retire.
+    if (input.payoutStatus !== 'APPROVED' && input.payoutStatus !== 'PAID') {
+      await tx.rewardPayout.updateMany({
+        where: { driverId, periodStart },
+        data: { status: 'CANCELLED' },
+      });
+      return;
+    }
+
+    await tx.rewardPayout.upsert({
+      where: { driverId_periodStart: { driverId, periodStart } },
+      create: {
+        organizationId,
+        driverId,
+        periodStart,
+        periodEnd,
+        // Le montant est figé au moment de la décision : recalculé plus tard,
+        // il ne correspondrait plus à ce qui a été approuvé.
+        amount: profile?.bonusEarned ?? 0,
+        currency: organization?.currency ?? 'XOF',
+        method: input.payoutMethod ?? 'FUEL_VOUCHER',
+        status: input.payoutStatus === 'PAID' ? 'PAID' : 'APPROVED',
+        approvedByUserId: actorUserId ?? null,
+        paidAt: input.payoutStatus === 'PAID' ? new Date() : null,
+      },
+      update: {
+        method: input.payoutMethod ?? undefined,
+        status: input.payoutStatus === 'PAID' ? 'PAID' : 'APPROVED',
+        paidAt: input.payoutStatus === 'PAID' ? new Date() : null,
       },
     });
-
-    if (count === 0) throw new DriverNotFound();
   });
 }
 
-/** Attribution d'une distinction, tracée et non rejouable. */
 export async function grantBadge(
   organizationId: string,
   driverId: string,

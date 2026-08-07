@@ -1456,7 +1456,8 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     ecoScore: 94,
     fuelEfficiencySavingsL100km: -4.8, // 4.8 L/100km below benchmark
     estimatedFuelSavedLiters: 215, // 215 Liters saved this month
-    fuelBonusEarnedXOF: 80625, // 215L * 750 XOF * 50% = 80,625 XOF
+    fuelBonusEarnedXOF: 80625,
+    isEligibleForBonus: true, // 215L * 750 XOF * 50% = 80,625 XOF
     payoutStatus: 'APPROVED',
     payoutMethod: 'ORANGE_MONEY',
     lastPayoutDate: '2026-08-01',
@@ -1526,7 +1527,8 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     ecoScore: 82,
     fuelEfficiencySavingsL100km: -2.2,
     estimatedFuelSavedLiters: 110,
-    fuelBonusEarnedXOF: 41250, // 110L * 750 * 50%
+    fuelBonusEarnedXOF: 41250,
+    isEligibleForBonus: true, // 110L * 750 * 50%
     payoutStatus: 'CALCULATED',
     payoutMethod: 'MTN_MOMO',
     totalPoints: 1420,
@@ -1589,7 +1591,8 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     ecoScore: 89,
     fuelEfficiencySavingsL100km: -3.5,
     estimatedFuelSavedLiters: 160,
-    fuelBonusEarnedXOF: 60000, // 160L * 750 * 50%
+    fuelBonusEarnedXOF: 60000,
+    isEligibleForBonus: true, // 160L * 750 * 50%
     payoutStatus: 'ELIGIBLE',
     payoutMethod: 'WAVE',
     totalPoints: 1890,
@@ -1648,6 +1651,7 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     fuelEfficiencySavingsL100km: -1.0,
     estimatedFuelSavedLiters: 45,
     fuelBonusEarnedXOF: 16875,
+    isEligibleForBonus: true,
     payoutStatus: 'ELIGIBLE',
     payoutMethod: 'FUEL_VOUCHER',
     totalPoints: 980,
@@ -1682,6 +1686,7 @@ export const MOCK_DRIVER_REWARD_PROFILES: DriverRewardProfile[] = [
     fuelEfficiencySavingsL100km: +1.8, // Overconsuming
     estimatedFuelSavedLiters: 0,
     fuelBonusEarnedXOF: 0,
+    isEligibleForBonus: false,
     payoutStatus: 'ON_HOLD',
     payoutMethod: 'FUEL_VOUCHER',
     totalPoints: 320,

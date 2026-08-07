@@ -115,6 +115,17 @@ export interface RewardProfileRecord {
   payoutStatus: PayoutStatus;
   payoutMethod: 'ORANGE_MONEY' | 'MTN_MOMO' | 'WAVE' | 'FUEL_VOUCHER';
   lastPayoutAt?: string;
+  /**
+   * Bornes de la période récompensée.
+   *
+   * Le statut de versement s'y rapporte, et à elle seule : sans ces bornes,
+   * l'écran affichait le montant du mois en cours sous la mention « versé »
+   * d'une opération du mois précédent.
+   */
+  periodStart: string;
+  periodEnd: string;
+  /** Montant réellement constaté versé pour cette période, s'il l'a été. */
+  paidAmount?: number;
   totalPoints: number;
   rankInCompany: number;
   unlockedBadges: { badgeId: string; code: string; title: string; unlockedAt: string }[];
@@ -563,6 +574,14 @@ export interface DriverRewardProfile {
   payoutStatus: PayoutStatus;
   payoutMethod: 'ORANGE_MONEY' | 'MTN_MOMO' | 'WAVE' | 'FUEL_VOUCHER';
   lastPayoutDate?: string;
+  /**
+   * Éligibilité telle que le serveur la calcule : score suffisant ET économie
+   * mesurable. Compter sur le seul score surestimait les primes dues.
+   */
+  isEligibleForBonus: boolean;
+  /** Montant réellement constaté versé pour la période, s'il l'a été. */
+  paidAmountXOF?: number;
+  ineligibilityReason?: string;
 
   // Gamification Metrics
   totalPoints: number;

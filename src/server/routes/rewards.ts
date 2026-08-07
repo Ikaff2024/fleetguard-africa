@@ -4,6 +4,8 @@ import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import {
+  AVAILABLE_PAYOUT_METHODS,
+  PayoutMethodUnavailable,
   BadgeNotFound,
   DriverNotFound,
   grantBadge,
@@ -12,6 +14,7 @@ import {
   updatePayout,
 } from '../repositories/rewards-repository.js';
 import { DEFAULT_BONUS_RULES } from '../services/rewards-builder.js';
+import { requireResourceId } from '../http/params.js';
 
 export const rewardsRouter = Router();
 
@@ -55,7 +58,15 @@ rewardsRouter.get(
   resolveTenant,
   requirePermission('scoring:read'),
   asyncHandler(async (_req, res) => {
-    res.json({ statusCode: 200, data: DEFAULT_BONUS_RULES });
+    /**
+     * Les règles servent à expliquer un montant à un chauffeur : l'écran doit
+     * pouvoir refaire l'opération complète, prime de base comprise, et savoir
+     * quels moyens de versement sont réellement ouverts.
+     */
+    res.json({
+      statusCode: 200,
+      data: { ...DEFAULT_BONUS_RULES, availablePayoutMethods: AVAILABLE_PAYOUT_METHODS },
+    });
   }),
 );
 
@@ -79,10 +90,20 @@ rewardsRouter.patch(
     const payload = payoutSchema.parse(req.body);
 
     try {
-      await updatePayout(organizationId, req.params.driverId!, payload);
+      await updatePayout(
+        organizationId,
+        requireResourceId(req, 'Chauffeur', 'driverId'),
+        payload,
+        req.auth?.userId,
+      );
     } catch (err) {
       if (err instanceof DriverNotFound) {
         throw ApiError.notFound('Chauffeur introuvable dans cette organisation.');
+      }
+      if (err instanceof PayoutMethodUnavailable) {
+        // 409 plutôt que 400 : la demande est bien formée, c'est l'état du
+        // produit qui s'y oppose — aucun agrégateur n'est raccordé.
+        throw ApiError.conflict(err.message, { availableMethods: AVAILABLE_PAYOUT_METHODS });
       }
       throw err;
     }
