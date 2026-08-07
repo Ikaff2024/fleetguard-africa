@@ -161,6 +161,28 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 
 ---
 
+## Données personnelles
+
+Géolocaliser un salarié en continu est un traitement de données personnelles.
+Les textes des corridors desservis — APDP au Bénin, ARTCI en Côte d'Ivoire,
+NDPR au Nigeria, Data Protection Act au Kenya — imposent les mêmes obligations,
+et une déclaration administrative ne vaut rien si l'application ne sait pas les
+honorer. Trois mécanismes les portent :
+
+- **Conservation bornée** : positions brutes 90 jours, trajets et infractions
+  un an. Chaque durée répond à une finalité publiée par `/privacy/retention`.
+  La purge s'exécute d'elle-même chaque jour — une obligation qui attend qu'on
+  lance un script n'est pas tenue.
+- **Droit d'accès** : un chauffeur obtient ses propres données sans passer par
+  sa hiérarchie. Subordonner l'accès à l'accord du gestionnaire viderait le
+  droit de sa substance.
+- **Effacement** : les traces de déplacement disparaissent à la demande. La
+  fiche du chauffeur est conservée — elle porte des obligations qui survivent
+  au contrat.
+
+La déclaration reste à déposer auprès de l'autorité compétente avant tout
+traitement de données réelles.
+
 ## Contribution
 
 `npm run verify` doit passer avant tout commit, et `npm run verify:all`

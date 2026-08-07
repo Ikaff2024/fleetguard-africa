@@ -5,6 +5,7 @@ import { createApp } from './src/server/app.js';
 import { env, isProduction } from './src/server/env.js';
 import { logger } from './src/server/logger.js';
 import { startIdempotencyPurge, stopIdempotencyPurge } from './src/server/services/idempotency.js';
+import { startRetentionPurge, stopRetentionPurge } from './src/server/services/retention-scheduler.js';
 import { assertRlsEnforced, disconnectDatabase } from './src/server/db/prisma.js';
 
 /** Sert le frontend : middleware Vite en développement, build statique en production. */
@@ -49,6 +50,7 @@ async function startServer() {
   const app = await createApp({ mountFrontend });
 
   startIdempotencyPurge();
+  startRetentionPurge();
 
   const server = app.listen(env.PORT, env.HOST, () => {
     logger.info(
@@ -73,6 +75,7 @@ async function startServer() {
     logger.info({ signal }, 'Arrêt en cours — plus aucune nouvelle connexion acceptée');
 
     stopIdempotencyPurge();
+    stopRetentionPurge();
     void disconnectDatabase();
 
     server.close(err => {

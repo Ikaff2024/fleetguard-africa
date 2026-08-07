@@ -1409,3 +1409,101 @@ describe.skipIf(!DATABASE_CONFIGURED)('Réglages de détection et carte', () => 
     expect(theirs.body.data).toBeTruthy();
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Protection des données personnelles', () => {
+  let adminToken: string;
+  let driverToken: string;
+  let managerToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+    driverToken = await tokenFor('chauffeur@transafrik.bj');
+    managerToken = await tokenFor('manager@transafrik.bj');
+  });
+
+  it('publie la durée de conservation et sa finalité', async () => {
+    const res = await request(app)
+      .get('/api/v1/privacy/retention')
+      .set('Authorization', `Bearer ${driverToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.gpsPointsDays).toBeGreaterThan(0);
+    // Une durée sans finalité déclarée ne se justifie pas devant une autorité.
+    expect(res.body.data.purpose.gpsPoints).toBeTruthy();
+  });
+
+  it('donne au chauffeur accès à ses propres données', async () => {
+    const res = await request(app)
+      .get('/api/v1/privacy/me/data')
+      .set('Authorization', `Bearer ${driverToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.driver.fullName).toBeTruthy();
+    expect(res.body.data.counts).toBeTruthy();
+    expect(res.body.data.retention).toBeTruthy();
+  });
+
+  it('exporte un dossier chauffeur pour répondre à une demande', async () => {
+    const drivers = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${managerToken}`);
+
+    const res = await request(app)
+      .get(`/api/v1/privacy/drivers/${drivers.body.data[0].id}/data`)
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.driver.id).toBe(drivers.body.data[0].id);
+  });
+
+  it('réserve l’effacement à la configuration de l’entreprise', async () => {
+    const drivers = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${managerToken}`);
+
+    // L'opération est irréversible et fait disparaître la base de calcul de
+    // scores déjà attribués : ce n'est pas un geste d'exploitation.
+    const res = await request(app)
+      .delete(`/api/v1/privacy/drivers/${drivers.body.data[0].id}/location-data`)
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it('refuse d’exporter le dossier d’une autre organisation', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+    const mine = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${managerToken}`);
+
+    const res = await request(app)
+      .get(`/api/v1/privacy/drivers/${mine.body.data[0].id}/data`)
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('efface les traces de déplacement sans supprimer la fiche', async () => {
+    // Un chauffeur créé pour ce contrôle : l'effacement est irréversible.
+    const created = await request(app)
+      .post('/api/v1/drivers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        fullName: `Effacement Test ${Date.now()}`,
+        phone: '+229 97 00 00 00',
+        licenseNumber: `EFF-${Date.now()}`,
+        licenseCategory: 'CE',
+        licenseExpiryDate: '2029-01-01',
+      });
+    expect(created.status).toBe(201);
+
+    const erased = await request(app)
+      .delete(`/api/v1/privacy/drivers/${created.body.data.id}/location-data`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(erased.status).toBe(200);
+    expect(erased.body.data.notice).toContain('fiche du chauffeur est conservée');
+
+    // La fiche survit : elle porte des obligations qui dépassent le contrat.
+    const still = await request(app)
+      .get(`/api/v1/privacy/drivers/${created.body.data.id}/data`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(still.status).toBe(200);
+    expect(still.body.data.counts.gpsPoints).toBe(0);
+  });
+});

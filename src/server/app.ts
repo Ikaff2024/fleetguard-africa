@@ -14,6 +14,7 @@ import { intelligenceRouter } from './routes/intelligence.js';
 import { mapConfigRouter } from './routes/map-config.js';
 import { missionsRouter } from './routes/missions.js';
 import { orgSettingsRouter } from './routes/org-settings.js';
+import { personalDataRouter } from './routes/personal-data.js';
 import { rewardsRouter } from './routes/rewards.js';
 import { scoringRouter } from './routes/scoring.js';
 import { stationsRouter } from './routes/stations.js';
@@ -55,6 +56,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   api.use(mapConfigRouter);
   api.use(missionsRouter);
   api.use(orgSettingsRouter);
+  api.use(personalDataRouter);
   api.use(rewardsRouter);
   api.use(scoringRouter);
   api.use(stationsRouter);
