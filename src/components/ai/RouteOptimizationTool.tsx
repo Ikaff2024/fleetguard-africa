@@ -293,10 +293,18 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
     }, 600);
   };
 
-  // Dispatch to driver
+  /**
+   * Transmission de l'itinéraire.
+   *
+   * Le message annonçait un envoi « avec succès sur l'application FleetGuard
+   * Driver du chauffeur Moussa Diop » — un nom écrit en dur, et un envoi qui
+   * n'avait pas lieu. Un régulateur pouvait croire son chauffeur informé avant
+   * un départ. L'itinéraire s'imprime ou se dicte, et la mission se crée depuis
+   * l'écran de planification.
+   */
   const handleDispatchToDriver = () => {
     setDispatchSuccessMessage(
-      `Itinéraire Éco-Optimisé transmis avec succès sur l'application FleetGuard Driver du chauffeur Moussa Diop (Camion RB-4592-A).`,
+      "Itinéraire calculé. Sa transmission au téléphone du chauffeur n'est pas encore raccordée : imprimez-le, ou créez la mission depuis « Planification des missions » pour qu'elle apparaisse dans sa console.",
     );
     setTimeout(() => {
       setDispatchSuccessMessage(null);
