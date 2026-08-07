@@ -32,6 +32,18 @@ const context = await browser.newContext();
 const page = await context.newPage();
 
 try {
+  /**
+   * Une première visite ne doit pas recharger la page.
+   *
+   * Le worker s'installe puis réclame le contrôle, ce qui déclenche
+   * `controllerchange` alors que le code affiché est déjà le bon. Recharger à
+   * ce moment ferait clignoter l'écran de chaque nouvel utilisateur.
+   */
+  let navigations = 0;
+  page.on('framenavigated', frame => {
+    if (frame === page.mainFrame()) navigations++;
+  });
+
   // 1. Première visite en ligne : le service worker s'installe et précache.
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
 
@@ -48,6 +60,12 @@ try {
     await browser.close();
     process.exit(1);
   }
+
+  // La prise de contrôle a lieu pendant cette attente : c'est le moment où un
+  // rechargement intempestif se produirait.
+  await page.waitForTimeout(2000);
+  if (navigations <= 1) ok('Aucun rechargement parasite à la première visite');
+  else fail(`La page s'est rechargée ${navigations - 1} fois à la première visite`);
 
   // Le précache se remplit pendant l'installation ; on attend qu'il contienne
   // le shell plutôt que de temporiser au hasard.
@@ -74,6 +92,25 @@ try {
   } else {
     fail(`Réponses d'API mises en cache : ${cachedApi.join(', ')} — fuite possible entre clients`);
   }
+
+  /**
+   * Le worker doit avoir pris le contrôle de la page avant de couper le réseau.
+   *
+   * Précacher ne suffit pas : tant que `controller` est nul, les requêtes ne
+   * passent pas par le gestionnaire `fetch` et rien ne sera servi depuis le
+   * cache. Attendre cette condition plutôt qu'un délai arbitraire évite un
+   * contrôle qui passerait ou échouerait selon la charge de la machine.
+   */
+  const controlled = await page.evaluate(async () => {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      if (navigator.serviceWorker.controller) return true;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    return false;
+  });
+
+  if (controlled) ok('Page sous contrôle du service worker');
+  else fail('Le service worker ne contrôle pas la page — rien ne sera servi hors réseau');
 
   // 3. Réseau coupé : l'application doit tout de même s'afficher.
   await context.setOffline(true);

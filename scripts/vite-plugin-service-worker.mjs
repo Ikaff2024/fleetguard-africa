@@ -67,6 +67,21 @@ const CACHE = 'fleetguard-shell-' + VERSION;
 
 const SHELL = ${JSON.stringify(assets, null, 2)};
 
+/**
+ * L'en-tête \`Vary\` est ignoré à la lecture du cache.
+ *
+ * Le serveur compresse les réponses, ce qui ajoute
+ * \`Vary: Origin, Accept-Encoding\`. La correspondance de cache honore cet
+ * en-tête par défaut : une ressource précachée devenait introuvable dès que la
+ * requête de la page ne présentait pas exactement les mêmes en-têtes que celle
+ * du préchargement. Le symptôme était trompeur — page blanche hors connexion,
+ * alors que le cache contenait bien tout ce qu'il fallait.
+ *
+ * L'ignorer est sans risque ici : ces ressources portent une empreinte de
+ * contenu dans leur nom, donc une seule représentation existe par URL.
+ */
+const MATCH_OPTIONS = { ignoreVary: true };
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches
@@ -112,7 +127,9 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() =>
-        caches.match('/index.html').then(cached => cached || caches.match('/')),
+        caches
+          .match('/index.html', MATCH_OPTIONS)
+          .then(cached => cached || caches.match('/', MATCH_OPTIONS)),
       ),
     );
     return;
@@ -121,7 +138,7 @@ self.addEventListener('fetch', event => {
   // Ressources versionnées : leur nom contient une empreinte de contenu, donc
   // une réponse en cache ne peut pas être périmée.
   event.respondWith(
-    caches.match(request).then(cached => {
+    caches.match(request, MATCH_OPTIONS).then(cached => {
       if (cached) return cached;
 
       return fetch(request).then(response => {

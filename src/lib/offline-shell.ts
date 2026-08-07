@@ -20,6 +20,17 @@ export function registerOfflineShell(): void {
   // qu'il n'en fait gagner.
   if (import.meta.env.DEV) return;
 
+  /**
+   * Y avait-il déjà un service worker aux commandes ?
+   *
+   * La question décide de tout ce qui suit. Lors de la toute première visite,
+   * le worker s'installe puis réclame le contrôle de la page : cela déclenche
+   * `controllerchange` alors même que le code affiché est déjà le bon.
+   * Recharger à ce moment-là ferait clignoter l'écran de chaque nouvel
+   * utilisateur, sans rien apporter.
+   */
+  const hadController = Boolean(navigator.serviceWorker.controller);
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {
       // Un échec d'enregistrement n'empêche pas l'application de fonctionner
@@ -29,7 +40,7 @@ export function registerOfflineShell(): void {
   });
 
   /**
-   * Une nouvelle version prend la main : la page est rechargée une fois.
+   * Une *nouvelle version* prend la main : la page est rechargée une fois.
    *
    * Sans ce rechargement, l'utilisateur continuerait d'exécuter l'ancien code
    * tout en dialoguant avec la nouvelle API — la source de bogues la plus
@@ -37,7 +48,7 @@ export function registerOfflineShell(): void {
    */
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
+    if (!hadController || reloading) return;
     reloading = true;
     window.location.reload();
   });
