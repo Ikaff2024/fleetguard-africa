@@ -5,6 +5,7 @@ import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { ingestionRateLimit } from '../http/security.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import { logger } from '../logger.js';
 import { findDriver, findVehicle } from '../repositories/fleet-repository.js';
 import { findDriverForUser } from '../repositories/driver-identity.js';
@@ -186,13 +187,13 @@ trackingRouter.get(
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
 
-    const vehicle = await findVehicle(organizationId, req.params.id!);
+    const vehicle = await findVehicle(organizationId, requireResourceId(req, 'Véhicule'));
     if (!vehicle) {
       throw ApiError.notFound('Véhicule introuvable dans cette organisation.');
     }
 
     const limit = Math.min(Number(req.query.limit ?? 500) || 500, 2000);
-    const points = await listVehiclePoints(organizationId, req.params.id!, limit);
+    const points = await listVehiclePoints(organizationId, requireResourceId(req, 'Véhicule'), limit);
 
     res.json({ statusCode: 200, data: points });
   }),

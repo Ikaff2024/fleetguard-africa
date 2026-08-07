@@ -18,6 +18,7 @@ interface MapConfig {
 import { DataState } from '../common/DataState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { mapAnchorFor } from '../../lib/geography';
 import { Organization } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -191,13 +192,12 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
       if (!mapContainerRef.current) return;
 
       // Center map around West Africa / East Africa based on organization country
-      const centerLat =
-        currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
-      const centerLng =
-        currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.1092;
+      const anchor = mapAnchorFor(currentOrg.country);
+      const centerLat = anchor.lat;
+      const centerLng = anchor.lng;
 
       if (!mapInstanceRef.current) {
-        const map = L.map(mapContainerRef.current).setView([centerLat, centerLng], 7);
+        const map = L.map(mapContainerRef.current).setView([centerLat, centerLng], anchor.zoom);
         mapInstanceRef.current = map;
       }
 

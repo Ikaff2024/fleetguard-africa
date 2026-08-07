@@ -4,6 +4,7 @@ import { isDatabaseEnabled } from '../db/prisma.js';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import { AlertNotFound, listAlerts, updateAlertStatus } from '../repositories/alert-repository.js';
 
 export const alertsRouter = Router();
@@ -57,7 +58,7 @@ alertsRouter.patch(
     const payload = statusSchema.parse(req.body);
 
     try {
-      const alert = await updateAlertStatus(organizationId, req.params.id!, {
+      const alert = await updateAlertStatus(organizationId, requireResourceId(req, 'Alerte'), {
         status: payload.status,
         resolutionNote: payload.resolutionNote,
         userId: req.auth?.userId,

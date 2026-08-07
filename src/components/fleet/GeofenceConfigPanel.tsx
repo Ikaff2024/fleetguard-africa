@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAlerts, useGeofences, useVehicles } from '../../hooks/useFleetData';
+import { mapAnchorFor } from '../../lib/geography';
 import { Geofence, Organization } from '../../types';
 import {
   MapPin,
@@ -41,12 +42,8 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
   const [formName, setFormName] = useState<string>('');
   const [formType, setFormType] = useState<Geofence['type']>('WAREHOUSE');
   const [formGeometryType, setFormGeometryType] = useState<'CIRCLE' | 'POLYGON'>('CIRCLE');
-  const [formCenterLat, setFormCenterLat] = useState<number>(
-    currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 6.3533,
-  );
-  const [formCenterLng, setFormCenterLng] = useState<number>(
-    currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.4311,
-  );
+  const [formCenterLat, setFormCenterLat] = useState<number>(mapAnchorFor(currentOrg.country).lat);
+  const [formCenterLng, setFormCenterLng] = useState<number>(mapAnchorFor(currentOrg.country).lng);
   const [formRadius, setFormRadius] = useState<number>(1000);
   const [formSpeedLimit, setFormSpeedLimit] = useState<number>(30);
   const [formNotifyOnEntry, setFormNotifyOnEntry] = useState<boolean>(true);
@@ -85,10 +82,9 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
       L = (window as any).L;
       if (!L) return;
 
-      const defaultLat =
-        currentOrg.country === 'Sénégal' ? 14.6928 : currentOrg.country.includes('Kenya') ? -1.2921 : 7.9124;
-      const defaultLng =
-        currentOrg.country === 'Sénégal' ? -17.4467 : currentOrg.country.includes('Kenya') ? 36.8219 : 2.1092;
+      const anchor = mapAnchorFor(currentOrg.country);
+      const defaultLat = anchor.lat;
+      const defaultLng = anchor.lng;
 
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();

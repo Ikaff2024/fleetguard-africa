@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import request from 'supertest';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/server/app.js';
 
 /**
@@ -224,7 +224,18 @@ describe.skipIf(!DATABASE_CONFIGURED)('Écriture de la flotte', () => {
   });
 
   it('crée un véhicule dans l’organisation du jeton', async () => {
-    const plate = `TS-${Math.floor(1000 + Math.random() * 8999)}-Z`;
+    /**
+     * L'immatriculation tirée sur quatre chiffres finissait par entrer en
+     * collision : `verify:all` exécute cette suite deux fois, et les véhicules
+     * de test n'étaient jamais retirés. Au bout de quelques exécutions,
+     * « un véhicule porte déjà cette immatriculation » faisait échouer le test
+     * sans qu'aucun code applicatif n'ait changé.
+     *
+     * L'horodatage à la milliseconde rend la collision impossible entre deux
+     * exécutions, et l'archivage en fin de suite empêche le parc de démonstration
+     * de se remplir de véhicules de test.
+     */
+    const plate = `TS-${Date.now().toString().slice(-7)}`;
     const res = await request(app)
       .post('/api/v1/vehicles')
       .set('Authorization', `Bearer ${tokenA}`)
@@ -233,6 +244,13 @@ describe.skipIf(!DATABASE_CONFIGURED)('Écriture de la flotte', () => {
     expect(res.status, JSON.stringify(res.body)).toBe(201);
     expect(res.body.data.immatriculation).toBe(plate);
     createdVehicleId = res.body.data.id;
+  });
+
+  afterAll(async () => {
+    if (!createdVehicleId) return;
+    await request(app)
+      .delete(`/api/v1/vehicles/${createdVehicleId}`)
+      .set('Authorization', `Bearer ${tokenA}`);
   });
 
   it('rend le véhicule créé visible à son organisation seulement', async () => {
@@ -1201,6 +1219,37 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
 
   const inDays = (days: number) => new Date(Date.now() + (RUN_OFFSET_DAYS + days) * 86_400_000).toISOString();
 
+  /**
+   * Missions créées par cette suite, annulées à la fin.
+   *
+   * Sans ce nettoyage, chaque exécution laissait des affectations derrière
+   * elle. Le calendrier du chauffeur se remplissait au fil des lancements et
+   * « planifie une mission réalisable » finissait par recevoir un 409 —
+   * l'échec ne venait plus du code mais des traces des exécutions passées.
+   *
+   * Une mission annulée sort des affectations ouvertes : le créneau redevient
+   * libre, et la suite peut tourner indéfiniment.
+   */
+  const createdMissionIds: string[] = [];
+
+  // Générique : la réponse ressort telle quelle, pour que les assertions du
+  // test gardent accès à tout le corps.
+  const remember = <T extends { status: number; body: { data?: { id?: string } } }>(res: T): T => {
+    if (res.status === 201 && res.body.data?.id) createdMissionIds.push(res.body.data.id);
+    return res;
+  };
+
+  afterAll(async () => {
+    await Promise.all(
+      createdMissionIds.map(id =>
+        request(app)
+          .patch(`/api/v1/missions/${id}`)
+          .set('Authorization', `Bearer ${managerToken}`)
+          .send({ status: 'CANCELLED' }),
+      ),
+    );
+  });
+
   const mission = (overrides: Record<string, unknown> = {}) => ({
     vehicleId,
     driverId,
@@ -1228,10 +1277,12 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
   });
 
   it('planifie une mission réalisable', async () => {
-    const res = await request(app)
-      .post('/api/v1/missions')
-      .set('Authorization', `Bearer ${managerToken}`)
-      .send(mission({ scheduledStart: inDays(10), plannedDistanceKm: 200 }));
+    const res = remember(
+      await request(app)
+        .post('/api/v1/missions')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send(mission({ scheduledStart: inDays(10), plannedDistanceKm: 200 })),
+    );
 
     expect(res.status).toBe(201);
     expect(res.body.data.feasibility.feasible).toBe(true);
@@ -1251,16 +1302,18 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
   });
 
   it('accepte le dépassement seulement avec un motif écrit', async () => {
-    const res = await request(app)
-      .post('/api/v1/missions')
-      .set('Authorization', `Bearer ${managerToken}`)
-      .send(
-        mission({
-          scheduledStart: inDays(25),
-          plannedDistanceKm: 4000,
-          overrideReason: 'Relais prévu à Parakou avec un second chauffeur, confirmé par le client.',
-        }),
-      );
+    const res = remember(
+      await request(app)
+        .post('/api/v1/missions')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send(
+          mission({
+            scheduledStart: inDays(25),
+            plannedDistanceKm: 4000,
+            overrideReason: 'Relais prévu à Parakou avec un second chauffeur, confirmé par le client.',
+          }),
+        ),
+    );
 
     expect(res.status).toBe(201);
 
@@ -1274,10 +1327,12 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
   it('refuse d’engager deux fois le même chauffeur sur un créneau', async () => {
     const start = inDays(40);
 
-    const first = await request(app)
-      .post('/api/v1/missions')
-      .set('Authorization', `Bearer ${managerToken}`)
-      .send(mission({ scheduledStart: start, plannedDistanceKm: 200 }));
+    const first = remember(
+      await request(app)
+        .post('/api/v1/missions')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send(mission({ scheduledStart: start, plannedDistanceKm: 200 })),
+    );
     expect(first.status).toBe(201);
 
     const second = await request(app)

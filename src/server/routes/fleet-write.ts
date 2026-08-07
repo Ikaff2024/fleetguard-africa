@@ -5,6 +5,7 @@ import { requireAuthContext } from '../http/auth.js';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import { mapDriver, mapVehicle } from '../repositories/mappers.js';
 import { recordAudit } from '../services/audit.js';
 
@@ -113,17 +114,18 @@ fleetWriteRouter.patch(
     const organizationId = requireTenantId(req);
     const auth = requireAuthContext(req);
     const input = vehicleInput.partial().parse(req.body ?? {});
+    const vehicleId = requireResourceId(req, 'Véhicule');
 
     const updated = await withTenant(organizationId, async tx => {
       // `updateMany` filtré plutôt que `update` par identifiant : la mise à
       // jour ne peut pas toucher une ligne d'un autre tenant, même si le RLS
       // était mal configuré.
       const result = await tx.vehicle.updateMany({
-        where: { id: req.params.id, deletedAt: null },
+        where: { id: vehicleId, deletedAt: null },
         data: input,
       });
       if (result.count === 0) return null;
-      return tx.vehicle.findFirst({ where: { id: req.params.id } });
+      return tx.vehicle.findFirst({ where: { id: vehicleId } });
     });
 
     if (!updated) {
@@ -155,13 +157,14 @@ fleetWriteRouter.delete(
     ensureDatabase();
     const organizationId = requireTenantId(req);
     const auth = requireAuthContext(req);
+    const vehicleId = requireResourceId(req, 'Véhicule');
 
     // Suppression logique : l'historique de maintenance, de carburant et de
     // trajets reste rattaché au véhicule. Une suppression physique
     // effacerait des données comptables et réglementaires.
     const result = await withTenant(organizationId, tx =>
       tx.vehicle.updateMany({
-        where: { id: req.params.id, deletedAt: null },
+        where: { id: vehicleId, deletedAt: null },
         data: { deletedAt: new Date(), status: 'OUT_OF_SERVICE' },
       }),
     );
@@ -177,7 +180,7 @@ fleetWriteRouter.delete(
         userEmail: auth.email,
         action: 'VEHICLE_ARCHIVED',
         resource: 'vehicle',
-        resourceId: req.params.id,
+        resourceId: vehicleId,
       },
       req,
     );
@@ -260,6 +263,8 @@ fleetWriteRouter.patch(
     const auth = requireAuthContext(req);
     const input = driverInput.partial().parse(req.body ?? {});
 
+    const driverId = requireResourceId(req, 'Chauffeur');
+
     const updated = await withTenant(organizationId, async tx => {
       if (input.assignedVehicleId) {
         const vehicle = await tx.vehicle.findFirst({
@@ -271,14 +276,14 @@ fleetWriteRouter.patch(
       }
 
       const result = await tx.driver.updateMany({
-        where: { id: req.params.id, deletedAt: null },
+        where: { id: driverId, deletedAt: null },
         data: {
           ...input,
           ...(input.licenseExpiryDate ? { licenseExpiryDate: new Date(input.licenseExpiryDate) } : {}),
         },
       });
       if (result.count === 0) return null;
-      return tx.driver.findFirst({ where: { id: req.params.id } });
+      return tx.driver.findFirst({ where: { id: driverId } });
     });
 
     if (!updated) {

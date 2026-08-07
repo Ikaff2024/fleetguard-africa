@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import {
   MissionNotFeasible,
   MissionNotFound,
@@ -88,7 +89,7 @@ missionsRouter.patch(
       .parse(req.body);
 
     try {
-      await updateMissionStatus(organizationId, req.params.id!, status);
+      await updateMissionStatus(organizationId, requireResourceId(req, 'Mission'), status);
     } catch (err) {
       if (err instanceof MissionNotFound) throw ApiError.notFound('Mission introuvable.');
       throw err;

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import { findOrganizationById } from '../repositories/fleet-repository.js';
 import {
   StationNotFound,
@@ -65,7 +66,11 @@ stationsRouter.patch(
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
     try {
-      await updateStation(organizationId, req.params.id!, stationInput.partial().parse(req.body));
+      await updateStation(
+        organizationId,
+        requireResourceId(req, 'Station'),
+        stationInput.partial().parse(req.body),
+      );
     } catch (err) {
       if (err instanceof StationNotFound) throw ApiError.notFound('Station introuvable.');
       throw err;
@@ -98,7 +103,12 @@ stationsRouter.patch(
     const organization = await findOrganizationById(organizationId);
 
     try {
-      await updateStationPrices(organizationId, req.params.id!, prices, organization?.currency ?? 'XOF');
+      await updateStationPrices(
+        organizationId,
+        requireResourceId(req, 'Station'),
+        prices,
+        organization?.currency ?? 'XOF',
+      );
     } catch (err) {
       if (err instanceof StationNotFound) throw ApiError.notFound('Station introuvable.');
       throw err;
@@ -115,7 +125,7 @@ stationsRouter.delete(
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
     try {
-      await removeStation(organizationId, req.params.id!);
+      await removeStation(organizationId, requireResourceId(req, 'Station'));
     } catch (err) {
       if (err instanceof StationNotFound) throw ApiError.notFound('Station introuvable.');
       throw err;

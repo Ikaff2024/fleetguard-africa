@@ -4,6 +4,7 @@ import { requireAuthContext } from '../http/auth.js';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import { findDriver, getScoreConfig, listSafetyEvents } from '../repositories/fleet-repository.js';
 import { recordAudit } from '../services/audit.js';
 import { computeDriverScore, listDailyScores, persistDailyScore } from '../services/scoring-service.js';
@@ -44,7 +45,7 @@ scoringRouter.get(
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
     const auth = requireAuthContext(req);
-    const driverId = req.params.id!;
+    const driverId = requireResourceId(req, 'Chauffeur');
 
     const driver = await findDriver(organizationId, driverId);
     if (!driver) {

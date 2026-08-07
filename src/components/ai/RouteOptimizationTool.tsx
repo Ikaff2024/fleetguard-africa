@@ -71,6 +71,60 @@ const PRESET_ROUTES: { [key: string]: { name: string; origin: string; stops: Del
       },
     ],
   },
+  COTE_IVOIRE_NORD: {
+    name: 'Corridor Abidjan - Yamoussoukro - Ouangolodougou (Côte d’Ivoire)',
+    origin: 'Terminal à conteneurs, Port Autonome d’Abidjan (5.283, -4.017)',
+    stops: [
+      {
+        id: 'ci_stop_1',
+        name: 'Port Autonome d’Abidjan',
+        address: 'Terminal à conteneurs, Vridi',
+        cargoWeightTons: 28,
+        timeWindowStart: '06:00',
+        timeWindowEnd: '08:00',
+        lat: 5.2833,
+        lng: -4.0167,
+        trafficRisk: 'HIGH',
+        priority: 'HIGH',
+      },
+      {
+        id: 'ci_stop_2',
+        name: 'Plateforme Yamoussoukro',
+        address: 'Axe A3, Yamoussoukro',
+        cargoWeightTons: 18,
+        timeWindowStart: '10:30',
+        timeWindowEnd: '12:30',
+        lat: 6.8276,
+        lng: -5.2893,
+        trafficRisk: 'MEDIUM',
+        priority: 'NORMAL',
+      },
+      {
+        id: 'ci_stop_3',
+        name: 'Hub Bouaké',
+        address: 'Zone industrielle, Bouaké',
+        cargoWeightTons: 12,
+        timeWindowStart: '13:30',
+        timeWindowEnd: '15:30',
+        lat: 7.6906,
+        lng: -5.0303,
+        trafficRisk: 'MEDIUM',
+        priority: 'NORMAL',
+      },
+      {
+        id: 'ci_stop_4',
+        name: 'Poste frontière Ouangolodougou',
+        address: 'Frontière Burkina Faso / Mali',
+        cargoWeightTons: 0,
+        timeWindowStart: '17:00',
+        timeWindowEnd: '19:00',
+        lat: 9.9614,
+        lng: -5.1461,
+        trafficRisk: 'HIGH',
+        priority: 'HIGH',
+      },
+    ],
+  },
   SENEGAL_MBOUR: {
     name: 'Corridor Dakar - Thiès - Touba (Sénégal)',
     origin: 'Môle 2 Port Autonome de Dakar (14.685, -17.432)',
@@ -166,6 +220,25 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
 }
 
+/**
+ * Corridor proposé par défaut selon le pays.
+ *
+ * Écrit à côté des repères de carte plutôt qu'en cascade dans le composant :
+ * ajouter un marché ne doit demander qu'une ligne, au même endroit.
+ */
+function corridorKeyFor(country: string | undefined): string {
+  const normalized = (country ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u2019']/g, "'")
+    .toLowerCase();
+
+  if (normalized.includes("cote d'ivoire") || normalized.includes('ivoire')) return 'COTE_IVOIRE_NORD';
+  if (normalized.includes('senegal')) return 'SENEGAL_MBOUR';
+  if (normalized.includes('kenya')) return 'KENYA_MOMBASA';
+  return 'BENIN_NORTH';
+}
+
 export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ currentOrg }) => {
   const vehiclesQuery = useVehicles();
   const fuelQuery = useFuelLogs();
@@ -174,21 +247,18 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
   const mapInstanceRef = useRef<any>(null);
 
   // Default Corridor preset according to tenant country
-  const defaultPreset =
-    currentOrg.country === 'Sénégal'
-      ? PRESET_ROUTES.SENEGAL_MBOUR
-      : currentOrg.country.includes('Kenya')
-        ? PRESET_ROUTES.KENYA_MOMBASA
-        : PRESET_ROUTES.BENIN_NORTH;
+  /**
+   * Corridor proposé à l'ouverture, selon le pays de l'organisation.
+   *
+   * Ce sont des exemples de départ, pas les tournées de l'entreprise : les
+   * étapes se modifient et se suppriment, et la distance se recalcule sur ce
+   * qui est réellement saisi.
+   */
+  const presetKeyForCountry = corridorKeyFor(currentOrg.country);
+  const defaultPreset = PRESET_ROUTES[presetKeyForCountry]!;
 
   // Form State
-  const [selectedCorridorKey, setSelectedCorridorKey] = useState<string>(
-    currentOrg.country === 'Sénégal'
-      ? 'SENEGAL_MBOUR'
-      : currentOrg.country.includes('Kenya')
-        ? 'KENYA_MOMBASA'
-        : 'BENIN_NORTH',
-  );
+  const [selectedCorridorKey, setSelectedCorridorKey] = useState<string>(presetKeyForCountry);
   // Un véhicule réel du parc, et non un « gabarit » théorique : c'est sa
   // consommation de référence qui sert au calcul, pas une constante.
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
@@ -480,6 +550,7 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
             onChange={e => handleCorridorChange(e.target.value)}
             className="bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs px-3 py-1.5 rounded-lg focus:outline-none cursor-pointer shadow-2xs"
           >
+            <option value="COTE_IVOIRE_NORD">Côte d’Ivoire : Abidjan ➔ Yamoussoukro ➔ Ouangolodougou</option>
             <option value="BENIN_NORTH">Bénin : Cotonou ➔ Parakou ➔ Malanville</option>
             <option value="SENEGAL_MBOUR">Sénégal : Dakar ➔ Thiès ➔ Touba</option>
             <option value="KENYA_MOMBASA">Kenya : Nairobi ➔ Naivasha ➔ Nakuru</option>

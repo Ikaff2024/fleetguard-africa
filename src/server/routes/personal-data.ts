@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
+import { requireResourceId } from '../http/params.js';
 import { findDriverForUser } from '../repositories/driver-identity.js';
 import {
   DriverNotFoundForExport,
@@ -70,7 +71,10 @@ personalDataRouter.get(
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
     try {
-      res.json({ statusCode: 200, data: await exportDriverData(organizationId, req.params.id!) });
+      res.json({
+        statusCode: 200,
+        data: await exportDriverData(organizationId, requireResourceId(req, 'Chauffeur')),
+      });
     } catch (err) {
       if (err instanceof DriverNotFoundForExport) throw ApiError.notFound('Chauffeur introuvable.');
       throw err;
@@ -91,7 +95,7 @@ personalDataRouter.delete(
   asyncHandler(async (req, res) => {
     const organizationId = requireTenantId(req);
     try {
-      const erased = await eraseDriverLocationData(organizationId, req.params.id!);
+      const erased = await eraseDriverLocationData(organizationId, requireResourceId(req, 'Chauffeur'));
       res.json({
         statusCode: 200,
         data: {
