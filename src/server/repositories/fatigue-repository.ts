@@ -1,6 +1,7 @@
 import { isDatabaseEnabled, withTenant } from '../db/prisma.js';
 import {
   DEFAULT_FRAMEWORK,
+  nightHoursOf,
   type FatigueMetrics,
   LEGAL_FRAMEWORKS,
   type LegalRegion,
@@ -102,7 +103,16 @@ export async function listFatigue(
         endedAt: trip.endedAt.toISOString(),
         drivingHours: Math.round((drivingSeconds / 3600) * 10) / 10,
         stopHours: Math.round((trip.stopSeconds / 3600) * 10) / 10,
-        nightHours: 0,
+        // Le zéro était écrit en dur : un Cotonou-Malanville parti à 22 h
+        // s'affichait comme un trajet de jour, alors que la fonction qui
+        // découpe les heures nocturnes existe et sert déjà au score.
+        nightHours: nightHoursOf({
+          startedAt: trip.startedAt,
+          endedAt: trip.endedAt,
+          durationSeconds: trip.durationSeconds,
+          stopSeconds: trip.stopSeconds,
+          distanceKm: toNumber(trip.distanceKm),
+        }),
         distanceKm: toNumber(trip.distanceKm),
       };
     });

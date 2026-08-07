@@ -223,7 +223,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
           reasons.push(
             `Niveau de fatigue bas (${m.fatigueScore}%) avec ${m.remainingDailyHours}h de marge quotidienne.`,
           );
-          reasons.push(`Repos préalable suffisant (${m.lastRestDurationHours}h de récupération).`);
+          reasons.push(
+            `Repos observé depuis le dernier trajet : (${m.lastRestDurationHours}h de récupération).`,
+          );
         } else if (score >= 50) {
           reasons.push(`Adapté comme conducteur de relais ou sur trajet court.`);
           warnings.push(`Charge de conduite hebdomadaire de ${m.hoursDrivenThisWeek}h.`);
@@ -293,9 +295,9 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
               </span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-3xl leading-relaxed">
-              Algorithme prédictif de rotation des plannings basé sur l'indice de fatigue physiologique, le
-              suivi du temps de conduite quotidien (max 9h) et le repos hebdomadaire obligatoire pour prévenir
-              le surmenage et l'assoupissement au volant.
+              Algorithme prédictif de rotation des plannings basé sur l'indice de charge horaire, le suivi du
+              temps de conduite quotidien (max 9h) et le repos hebdomadaire obligatoire pour prévenir le
+              surmenage et l'assoupissement au volant.
             </p>
           </div>
 
@@ -626,7 +628,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                       <div>
                         <span className="text-slate-400 block text-[10px]">Indice Fatigue:</span>
                         <strong className="text-emerald-600 dark:text-emerald-400">
-                          {activeRotationResult.primary.fatigueScore}% (Très Bon)
+                          {activeRotationResult.primary.fatigueScore}%
                         </strong>
                       </div>
                       <div>
@@ -686,7 +688,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                       <div>
                         <span className="text-slate-400 block text-[10px]">Indice Fatigue:</span>
                         <strong className="text-sky-600 dark:text-sky-400">
-                          {activeRotationResult.relay.fatigueScore}% (Modéré)
+                          {activeRotationResult.relay.fatigueScore}%
                         </strong>
                       </div>
                       <div>
@@ -830,7 +832,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                               {driverName}
                             </h4>
                             <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                              Permis: {driver?.licenseNumber || 'LIC-CEDEAO'}
+                              Permis: {driver?.licenseNumber || 'non renseigné'}
                             </div>
                           </div>
                         </div>
@@ -841,10 +843,23 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                               ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border-rose-300'
                               : isHigh
                                 ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300'
-                                : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300'
+                                : !metric.hasData
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300'
+                                  : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300'
                           }`}
                         >
-                          {isCritical ? '🚨 REPOS FORCÉ' : isHigh ? '⚠️ VIGILANCE' : '🟢 DISPONIBLE'}
+                          {/* « DISPONIBLE » s'affichait aussi pour un chauffeur
+                              dont aucun trajet n'avait été reconstruit : le
+                              serveur renvoie alors un score de 0 et un niveau
+                              LOW, faute de mesure. L'absence de donnée devenait
+                              une autorisation de rouler. */}
+                          {!metric.hasData
+                            ? '❔ NON MESURÉ'
+                            : isCritical
+                              ? '🚨 REPOS FORCÉ'
+                              : isHigh
+                                ? '⚠️ VIGILANCE'
+                                : '🟢 DISPONIBLE'}
                         </span>
                       </div>
 
@@ -852,7 +867,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                       <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2">
                         <div className="flex items-center justify-between text-xs font-bold">
                           <span className="text-slate-600 dark:text-slate-300">
-                            Indice de Fatigue Physio:
+                            Indice de charge horaire :
                           </span>
                           <span
                             className={`font-mono text-sm ${

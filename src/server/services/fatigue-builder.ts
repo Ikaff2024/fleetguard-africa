@@ -117,7 +117,7 @@ export interface FatigueMetrics {
 const HOUR = 3_600_000;
 
 /** Heures de conduite entre 22 h et 6 h, période où la vigilance s'effondre. */
-function nightHoursOf(trip: TripWindow): number {
+export function nightHoursOf(trip: TripWindow): number {
   let night = 0;
 
   // Découpage heure par heure : un trajet peut traverser plusieurs fois la

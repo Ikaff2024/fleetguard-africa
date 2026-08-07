@@ -7,7 +7,11 @@ import { z } from 'zod';
  * manquante en production doit empêcher le boot, pas produire un comportement
  * dégradé silencieux découvert par le client.
  */
-const envSchema = z.object({
+/**
+ * Exporté pour que les seuils de production restent vérifiables par un test,
+ * même lorsque l'environnement de la suite les desserre.
+ */
+export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   // Imposé par la plupart des plateformes (Cloud Run, Render, Scaleway, Fly.io) :

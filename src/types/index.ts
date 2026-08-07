@@ -445,6 +445,15 @@ export interface DriverFatigueMetrics {
   driverId: string;
   organizationId: string;
   fatigueScore: number; // 0 - 100% (Higher = More fatigued)
+  /**
+   * Faux quand aucun trajet n'a été reconstruit pour ce chauffeur.
+   *
+   * Sans ce drapeau, l'écran affichait « DISPONIBLE — prêt pour long-courrier »
+   * pour un conducteur dont rien n'était mesuré : le serveur renvoie alors un
+   * score de 0 et un niveau LOW faute de données, et l'absence de mesure se
+   * lisait comme une autorisation de rouler.
+   */
+  hasData: boolean;
   fatigueLevel: FatigueRiskLevel;
   burnoutRisk: BurnoutRiskCategory;
 
