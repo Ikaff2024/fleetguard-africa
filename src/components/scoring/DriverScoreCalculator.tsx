@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDrivers, useScoreConfig, useVehicles } from '../../hooks/useFleetData';
 import { DataState } from '../common/DataState';
 import {
@@ -13,8 +13,6 @@ import {
   Info,
   CheckCircle2,
   AlertTriangle,
-  Gauge,
-  Zap,
   Trophy,
   Calculator,
   Sparkles,
@@ -64,6 +62,14 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
   const [rapidAccelCount, setRapidAccelCount] = useState<number>(1);
   const [nightHours, setNightHours] = useState<number>(1.5);
   const [geofenceBreaches, setGeofenceBreaches] = useState<number>(0);
+
+  /** Moyenne réelle des scores du parc, ou rien quand aucun chauffeur n'est enregistré. */
+  const fleetAverageScore = useMemo(() => {
+    const drivers = driversQuery.data ?? [];
+    if (drivers.length === 0) return null;
+    const total = drivers.reduce((sum, driver) => sum + driver.currentSafetyScore, 0);
+    return Math.round((total / drivers.length) * 10) / 10;
+  }, [driversQuery.data]);
 
   const isLoading = driversQuery.isLoading || scoreConfigQuery.isLoading;
   const loadError = driversQuery.error ?? scoreConfigQuery.error;
@@ -193,7 +199,7 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
             <div>
               <div className="flex items-center gap-2 text-orange-600 font-bold text-xs uppercase tracking-wider mb-1">
                 <Award className="w-4 h-4 text-orange-500" />
-                <span>Driver Safety Score Engine • Version 1.0 Explicable</span>
+                <span>Moteur de score de conduite • version {scoreConfig?.version ?? '—'}</span>
               </div>
               <h2 className="text-xl font-bold text-slate-900">
                 Score de Sécurité Chauffeur & Analyse des Pénalités
@@ -206,8 +212,13 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
 
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-xs text-slate-500 font-medium">Score Moyen Flotte</div>
-                <div className="text-2xl font-bold text-green-600 font-mono">87.2 / 100</div>
+                {/* « 87.2 / 100 » était écrit en dur : la moyenne réelle était
+                    pourtant à une ligne de code, les chauffeurs étant déjà
+                    chargés au-dessus. */}
+                <div className="text-xs text-slate-500 font-medium">Score moyen de la flotte</div>
+                <div className="text-2xl font-bold text-green-600 font-mono">
+                  {fleetAverageScore === null ? '—' : `${fleetAverageScore} / 100`}
+                </div>
               </div>
             </div>
           </div>
@@ -222,39 +233,38 @@ export const DriverScoreCalculator: React.FC<DriverScoreCalculatorProps> = ({ cu
               <div className="text-4xl font-extrabold font-mono my-2">
                 {scoreResult.score} <span className="text-sm font-normal opacity-70">/ 100</span>
               </div>
+              {/* Le nom d'une personne était accolé à un score et à un
+                  kilométrage de simulation, sans marqueur. On dit maintenant ce
+                  que le chiffre est. */}
               <p className="text-xs opacity-90 font-medium">
-                Chauffeur: <strong>{selectedDriver?.fullName}</strong> ({distanceKm} km parcourus)
+                Simulation sur {distanceKm} km — pondérations de {selectedDriver?.fullName ?? 'la flotte'}
               </p>
             </div>
 
-            <div className="p-5 rounded-xl border bg-white border-slate-200 text-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-blue-600">
-                <span className="text-xs font-bold uppercase tracking-wider">Vehicle Health Score</span>
-                <Gauge className="w-5 h-5" />
-              </div>
-              <div className="text-4xl font-extrabold font-mono my-2 text-slate-900">
-                {vehicleHealthScore} <span className="text-sm text-slate-400 font-normal">/ 100</span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Prochaine vidange dans <strong className="text-green-600 font-bold">6,500 km</strong>
-              </p>
-            </div>
+            {/* Deux cartes ont été retirées ici.
 
-            <div className="p-5 rounded-xl border bg-white border-slate-200 text-slate-800 shadow-xs">
-              <div className="flex items-center justify-between text-orange-600">
-                <span className="text-xs font-bold uppercase tracking-wider">Fuel Efficiency Score</span>
-                <Zap className="w-5 h-5" />
-              </div>
-              <div className="text-4xl font-extrabold font-mono my-2 text-orange-600">
-                {fuelEffResult.score} <span className="text-sm text-slate-400 font-normal">/ 100</span>
-              </div>
-              <p className="text-xs text-red-600 font-semibold">
-                Statut:{' '}
-                <strong>
-                  {fuelEffResult.status === 'SUSPECTED_THEFT'
-                    ? 'Anomalie / Vol Suspecté (48.5L/100km)'
-                    : 'Normal'}
-                </strong>
+                « Vehicle Health Score 100/100 — prochaine vidange dans 6 500 km »
+                et « Fuel Efficiency Score 40/100 — Statut : Anomalie / Vol
+                Suspecté (48.5 L/100km) » étaient calculées sur six nombres
+                écrits en dur dans le composant :
+                calculateVehicleHealthScore(148500, 140000, 155000, 0) et
+                calculateFuelEfficiencyScore(34.0, 48.5).
+
+                L'écran accusait donc en permanence d'un vol de carburant, sur
+                un véhicule qui n'était même pas nommé, à côté du nom d'un
+                chauffeur bien réel. Une suspicion de vol se règle par une
+                convocation : elle ne peut pas naître d'une constante.
+
+                L'état d'entretien réel se lit dans « Échéances d'entretien », et
+                les écarts de consommation constatés dans le centre d'alertes,
+                chacun rattaché au plein qui l'a produit. */}
+            <div className="md:col-span-2 p-5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs leading-relaxed">
+              <p className="font-bold text-slate-900 mb-1">Ce simulateur ne juge personne</p>
+              <p>
+                Les curseurs ci-dessous servent à comprendre comment une infraction pèse sur un score : ils
+                n'affichent pas la conduite réelle du chauffeur sélectionné. Son score constaté figure dans «
+                Flotte &amp; chauffeurs », l'état de son véhicule dans « Échéances d'entretien », et les
+                écarts de consommation relevés au centre d'alertes.
               </p>
             </div>
           </div>

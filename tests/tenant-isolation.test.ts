@@ -1195,17 +1195,54 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
   let vehicleId: string;
   let driverId: string;
 
+  /**
+   * Chauffeur et véhicule créés pour cette suite, et pour elle seule.
+   *
+   * La suite empruntait le premier chauffeur du parc. Ses missions
+   * s'accumulaient donc sur un calendrier partagé — 130 affectations après
+   * quelques semaines — et « planifie une mission réalisable » finissait par
+   * recevoir un conflit d'affectation qui ne devait rien au code vérifié.
+   *
+   * Un chauffeur dédié supprime la contention à la racine : aucune exécution,
+   * passée ou concurrente, ne peut occuper son agenda.
+   */
   beforeAll(async () => {
     app = await createApp();
     managerToken = await tokenFor('manager@transafrik.bj');
 
-    const vehicles = await request(app)
-      .get('/api/v1/vehicles')
-      .set('Authorization', `Bearer ${managerToken}`);
-    vehicleId = vehicles.body.data[0].id;
+    const suffix = `${Date.now()}`.slice(-8);
 
-    const drivers = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${managerToken}`);
-    driverId = drivers.body.data[0].id;
+    const vehicle = await request(app)
+      .post('/api/v1/vehicles')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        immatriculation: `MS-${suffix}`,
+        vin: `VINMISSION${suffix}`,
+        make: 'Test',
+        model: 'Véhicule de planification',
+        year: 2024,
+        type: 'HEAVY_TRUCK',
+        fuelType: 'DIESEL',
+        tankCapacityLiters: 400,
+        expectedConsumptionL100km: 35,
+      });
+    expect(vehicle.status, JSON.stringify(vehicle.body)).toBe(201);
+    vehicleId = vehicle.body.data.id;
+
+    const driver = await request(app)
+      .post('/api/v1/drivers')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        fullName: `Chauffeur de planification ${suffix}`,
+        phone: '+229 90 00 00 00',
+        licenseNumber: `LIC-MS-${suffix}`,
+        licenseCategory: 'CE',
+        // La route attend une date seule : un horodatage complet est refusé.
+        licenseExpiryDate: new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10),
+        assignedVehicleId: vehicleId,
+      });
+    expect(driver.status, JSON.stringify(driver.body)).toBe(201);
+    driverId = driver.body.data.id;
   });
 
   /**
@@ -1240,14 +1277,26 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
   };
 
   afterAll(async () => {
-    await Promise.all(
-      createdMissionIds.map(id =>
-        request(app)
-          .patch(`/api/v1/missions/${id}`)
-          .set('Authorization', `Bearer ${managerToken}`)
-          .send({ status: 'CANCELLED' }),
-      ),
-    );
+    for (const id of createdMissionIds) {
+      const res = await request(app)
+        .patch(`/api/v1/missions/${id}`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ status: 'CANCELLED' });
+      // Un nettoyage silencieusement en échec est pire que pas de nettoyage :
+      // il laisse croire que la base reste propre.
+      expect(res.status, `annulation de la mission ${id} : ${JSON.stringify(res.body)}`).toBe(200);
+    }
+
+    // Le chauffeur et le véhicule dédiés sont archivés : le parc de
+    // démonstration ne doit pas se remplir d'entités de test.
+    if (driverId) {
+      await request(app).delete(`/api/v1/drivers/${driverId}`).set('Authorization', `Bearer ${managerToken}`);
+    }
+    if (vehicleId) {
+      await request(app)
+        .delete(`/api/v1/vehicles/${vehicleId}`)
+        .set('Authorization', `Bearer ${managerToken}`);
+    }
   });
 
   const mission = (overrides: Record<string, unknown> = {}) => ({

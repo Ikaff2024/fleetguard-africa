@@ -27,8 +27,26 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
 }) => {
   const [includeSignatureLine, setIncludeSignatureLine] = useState<boolean>(true);
   const [includeNotes, setIncludeNotes] = useState<boolean>(true);
+
+  /**
+   * Mention portée au bas de chaque document imprimé.
+   *
+   * Elle disait : « Document certifié conforme pour l'exploitation de la flotte
+   * et les contrôles réglementaires (Ministère des Transports / Douanes) », et
+   * le pied de page ajoutait « Copie certifiée conforme ».
+   *
+   * L'application s'auto-délivrait ainsi une conformité auprès de deux
+   * administrations nommées. Aucune de ces deux administrations n'a agréé quoi
+   * que ce soit ici, et une entreprise qui présente une telle pièce à un poste
+   * de contrôle ou en douane s'expose — d'autant que le carnet d'entretien
+   * imprimé pouvait contenir des saisies jamais enregistrées.
+   *
+   * Le remplacement dit ce que le document est réellement : un état extrait des
+   * données saisies dans l'application, à une date donnée. C'est utile, et
+   * c'est vrai.
+   */
   const [customNotes, setCustomNotes] = useState<string>(
-    "Document certifié conforme pour l'exploitation de la flotte et les contrôles réglementaires (Ministère des Transports / Douanes).",
+    "État extrait des données enregistrées dans FleetGuard à la date d'édition. Ce document n'a valeur ni de certificat ni d'attestation officielle : il n'engage que l'entreprise qui l'édite.",
   );
 
   if (!isOpen) return null;
@@ -182,7 +200,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
             {/* Optional Legal Certification Note */}
             {includeNotes && (
               <div className="bg-slate-50 border border-slate-300 p-3 rounded text-[10px] text-slate-600 font-serif leading-relaxed italic">
-                <strong>Certification Régulateur: </strong>
+                <strong>Portée du document : </strong>
                 {customNotes}
               </div>
             )}
@@ -216,8 +234,12 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
 
             {/* Document Footer */}
             <div className="pt-4 border-t border-slate-200 text-[9px] text-slate-400 flex justify-between items-center font-mono">
-              <span>Généré par TransAfrik Fleet AI Ops System</span>
-              <span>Page 1 / 1 — Copie certifiée conforme</span>
+              {/* « Généré par TransAfrik » s'imprimait sur les documents de
+                  toutes les autres organisations, et « Page 1 / 1 » s'affichait
+                  sur des tableaux qui couvrent couramment plusieurs pages A4 :
+                  un destinataire ne pouvait pas voir qu'il en manquait. */}
+              <span>Édité depuis FleetGuard par {currentOrg.name}</span>
+              <span>{currentDateStr}</span>
             </div>
           </div>
         </div>

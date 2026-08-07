@@ -40,6 +40,19 @@ export interface PerformanceBadgeInfo {
   description: string;
 }
 
+/**
+ * Tranche du barème correspondant à un score.
+ *
+ * Les quatre descriptions affirmaient des faits sur la personne — « Zéro
+ * événement critique de survitesse », « freinages brusques sur les 30 derniers
+ * jours » — alors qu'elles n'étaient attachées qu'à une tranche de score.
+ * Un chauffeur à 91/100 était crédité de zéro survitesse même s'il en avait
+ * commis trois ; un autre à 69 se voyait reprocher des « incidents répétés »
+ * jamais constatés. Le serveur compte pourtant les infractions réelles.
+ *
+ * Le texte décrit désormais la tranche, pas la conduite : c'est ce que cette
+ * fonction sait, et rien de plus.
+ */
 export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo => {
   if (score >= 90) {
     return {
@@ -50,7 +63,8 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
       textClass: 'text-amber-700',
       borderClass: 'border-amber-300',
       icon: <Star className="w-4 h-4 fill-amber-950 text-amber-950" />,
-      description: 'Excellence sur 30 jours: Zéro événement critique de survitesse, éco-conduite optimale.',
+      description:
+        'Tranche haute du barème. Le détail des infractions relevées figure sur la fiche du chauffeur.',
     };
   } else if (score >= 80) {
     return {
@@ -61,7 +75,7 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
       textClass: 'text-slate-700',
       borderClass: 'border-slate-300',
       icon: <ShieldCheck className="w-4 h-4 text-slate-800" />,
-      description: 'Conduite maîtrisée: Respect régulier des temps de repos et des vitesses autorisées.',
+      description: 'Tranche « conduite maîtrisée » du barème, sur les 30 derniers jours.',
     };
   } else if (score >= 70) {
     return {
@@ -72,8 +86,7 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
       textClass: 'text-amber-800',
       borderClass: 'border-amber-300',
       icon: <Award className="w-4 h-4 text-amber-900" />,
-      description:
-        'Statut conforme: Quelques écarts mineurs de freinage à corriger lors de la conduite nocturne.',
+      description: 'Tranche « conforme » du barème : le score reste au-dessus du seuil de vigilance.',
     };
   } else {
     return {
@@ -85,7 +98,7 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
       borderClass: 'border-red-300',
       icon: <ShieldAlert className="w-4 h-4 text-white" />,
       description:
-        'Attention requise: Incidents répétés de survitesse ou freinages brusques sur les 30 derniers jours.',
+        'Tranche de vigilance : le score est passé sous le seuil. Le motif se lit dans le détail du score.',
     };
   }
 };
@@ -152,6 +165,19 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
   // KPI Metrics
   const totalKm = useMemo(() => {
     return drivers.reduce((acc, d) => acc + d.totalKmDriven, 0);
+  }, [drivers]);
+
+  /**
+   * Permis dont l'échéance n'est pas dépassée.
+   *
+   * L'écran affirmait « 100 % Permis Vérifiés CEDEAO » sans jamais comparer
+   * `licenseExpiryDate` à quoi que ce soit. Un permis expiré immobilise camion
+   * et marchandise au poste frontière : l'affirmation coûtait plus cher que
+   * l'absence d'information.
+   */
+  const licensesValidCount = useMemo(() => {
+    const today = new Date();
+    return drivers.filter(driver => new Date(driver.licenseExpiryDate) >= today).length;
   }, [drivers]);
 
   const eliteCount = useMemo(() => {
@@ -261,7 +287,7 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
               </div>
               <div className="text-2xl font-bold font-mono text-slate-900">{drivers.length}</div>
               <div className="text-[10px] text-emerald-600 font-semibold mt-1">
-                100% Permis Vérifiés CEDEAO
+                {licensesValidCount} / {drivers.length} permis en cours de validité
               </div>
             </div>
 
@@ -287,13 +313,15 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
 
             <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
               <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                <span className="font-medium">Camions Connectés</span>
+                <span className="font-medium">Chauffeurs avec véhicule affecté</span>
                 <Truck className="w-4 h-4 text-blue-500" />
               </div>
               <div className="text-2xl font-bold font-mono text-slate-900">
                 {drivers.filter(d => d.assignedVehicleId).length} / {drivers.length}
               </div>
-              <div className="text-[10px] text-blue-600 font-semibold mt-1">Télématique active en cabine</div>
+              <div className="text-[10px] text-blue-600 font-semibold mt-1">
+                Affectation administrative, pas un état de connexion
+              </div>
             </div>
           </div>
 
@@ -377,7 +405,7 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
                             </h3>
                             <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 font-medium">
                               <Phone className="w-3 h-3 text-slate-400" />
-                              <span>{driver.phone || '+229 97 00 00 00'}</span>
+                              <span>{driver.phone || 'non renseigné'}</span>
                             </div>
                           </div>
                         </div>
@@ -431,12 +459,17 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
                           </div>
                         </div>
 
+                        {/* « Moy. mensuelle » divisait le kilométrage de toute
+                            la carrière par 12, en supposant douze mois
+                            d'ancienneté pour chacun — aucune date d'embauche
+                            n'existe en base. Le score, lui, est réellement
+                            calculé sur 30 jours. */}
                         <div className="text-right">
                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Moy. Mensuelle
+                            Score sur 30 jours
                           </div>
                           <div className="text-xs font-mono font-bold text-slate-700 mt-0.5">
-                            ~{Math.round(driver.totalKmDriven / 12).toLocaleString()} km / mois
+                            {driver.currentSafetyScore.toFixed(0)} / 100
                           </div>
                         </div>
                       </div>
@@ -445,7 +478,7 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
                       <div className="border-t border-slate-100 pt-3 space-y-2">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                           <span>Camion Assigné Actuel</span>
-                          <span className="text-slate-500 font-mono">Télématique IoT</span>
+                          <span className="text-slate-500 font-mono">Véhicule affecté</span>
                         </div>
 
                         {assignedVehicle ? (
@@ -483,7 +516,7 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
                         <div>
                           <span className="text-slate-400 block text-[10px]">Catégorie</span>
                           <strong className="text-slate-800 font-bold">
-                            {driver.licenseCategory || 'Catégorie CE'}
+                            {driver.licenseCategory || 'non renseignée'}
                           </strong>
                         </div>
                       </div>
@@ -580,30 +613,22 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
 
                   {/* 30-Day Criteria Metrics Grid */}
                   <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-slate-500 font-medium">Distance Parcourue (30J)</div>
-                      <div className="text-base font-bold font-mono text-orange-600 mt-1">
-                        {Math.round(selectedDriverDetail.totalKmDriven / 10).toLocaleString()} km
-                      </div>
-                    </div>
+                    {/* Quatre valeurs ont été retirées ici.
 
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-slate-500 font-medium">Respect Limitateur Vitesse</div>
-                      <div className="text-base font-bold font-mono text-emerald-600 mt-1">
-                        98.2% Conforme
-                      </div>
-                    </div>
+                        « Distance parcourue (30J) » divisait le kilométrage de
+                        toute la carrière par 10. « Respect limitateur 98,2 % »,
+                        « Éco-conduite −4,2 L/100km » et « 0 Incident » étaient
+                        trois littéraux, identiques pour chaque chauffeur : la
+                        fiche d'une personne affichait « 0 incident » alors que
+                        ses freinages brutaux étaient enregistrés.
 
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-slate-500 font-medium">Éco-Conduite Carburant</div>
-                      <div className="text-base font-bold font-mono text-slate-800 mt-1">
-                        -4.2 L / 100km d'économie
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-slate-500 font-medium">Incidents Freinage Brutal</div>
-                      <div className="text-base font-bold font-mono text-emerald-600 mt-1">0 Incident</div>
+                        Ce qui est réellement mesuré sur 30 jours — score,
+                        infractions par type, distance — est calculé par le
+                        serveur et se consulte dans « Score de conduite ». */}
+                    <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] leading-relaxed text-slate-600">
+                      Le détail des 30 derniers jours — infractions par type, distance retenue et poids de
+                      chaque pénalité — se consulte dans « Score de conduite », où chaque déduction est
+                      expliquée. Il n'est pas repris ici pour éviter d'afficher deux versions du même chiffre.
                     </div>
                   </div>
                 </div>
