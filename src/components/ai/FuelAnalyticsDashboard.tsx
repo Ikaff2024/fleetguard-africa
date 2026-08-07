@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Organization } from '../../types';
-import { FuelAnomalyDetector } from '../alerts/FuelAnomalyDetector';
 import {
   BarChart,
   Bar,
@@ -390,7 +389,10 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
       </div>
 
       {/* Real-time Fuel Anomaly & Theft Detector */}
-      <FuelAnomalyDetector currentOrg={currentOrg} />
+      {/* Le détecteur simulait l'arrivée de données d'une « jauge capacitive »
+          qui n'existe sur aucun de ces camions. Les anomalies de consommation
+          sont dérivées des pleins réellement enregistrés et remontent au
+          centre d'alertes. */}
 
       {/* Main Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

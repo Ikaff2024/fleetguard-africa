@@ -174,7 +174,9 @@ export const DriverMessagingModule: React.FC<DriverMessagingModuleProps> = ({ de
     }));
 
     setInputText('');
-    setSendToast(`Message transmis au terminal mobile de ${selectedDriver?.fullName}`);
+    setSendToast(
+      `Consigne enregistrée pour ${selectedDriver?.fullName}. L’acheminement vers son téléphone n’est pas encore raccordé.`,
+    );
     setTimeout(() => setSendToast(null), 3500);
 
     // Simulate auto-receipt / driver acknowledgement after 3 seconds

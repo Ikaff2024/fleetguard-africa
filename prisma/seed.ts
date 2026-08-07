@@ -549,52 +549,85 @@ async function main() {
   }
   console.log(`  ${MOCK_FUEL_STATIONS.length} stations conventionnées`);
 
-  // --- Un plein récent et cohérent par véhicule -----------------------------
-  // Le planificateur de ravitaillement estime le niveau à partir du dernier
-  // plein : sans plein, il affiche honnêtement qu'il ne peut rien estimer. Pour
-  // que la démonstration montre la fonction, chaque camion en a un — borné par
-  // la contenance de son réservoir, sinon le chiffre affiché contredirait la
-  // fiche du véhicule.
-  for (const vehicle of MOCK_VEHICLES) {
-    const capacity = Number(vehicle.tankCapacityLiters);
-    const consumption = Number(vehicle.expectedConsumptionL100km);
-    if (!capacity || !consumption) continue;
-
-    // Plein aux trois quarts, effectué 300 km avant le relevé actuel : le
-    // véhicule apparaît en cours de mission, pas à sec ni fraîchement rempli.
-    const liters = Math.round(capacity * 0.75);
-    const odometerAtFill = Math.max(0, vehicle.currentOdometerKm - 300);
-
-    await prisma.fuelLog.upsert({
-      where: { id: stableUuid(`fuel-base-${vehicle.id}`) },
-      update: { litersAdded: liters, odometerKm: odometerAtFill },
-      create: {
-        id: stableUuid(`fuel-base-${vehicle.id}`),
-        organizationId: stableUuid(vehicle.organizationId),
-        vehicleId: stableUuid(vehicle.id),
-        litersAdded: liters,
-        pricePerLiter: 700,
-        totalCost: liters * 700,
-        currency: 'XOF',
-        odometerKm: odometerAtFill,
-        stationName: 'TotalEnergies Bohicon Carrefour RNIE2',
-        receiptNumber: `BASE-${vehicle.immatriculation}`,
-        calculatedL100km: consumption,
-        loggedAt: new Date(Date.now() - 3 * 86_400_000),
-      },
-    });
-  }
-  console.log(`  ${MOCK_VEHICLES.length} pleins de référence`);
-
-  // --- Trace GPS et trajets reconstruits ------------------------------------
-  // Deux missions sur les jours précédents, pour que l'historique ne soit pas
-  // vide à la première ouverture.
   // Le chauffeur le mieux noté porte la trace : la démonstration doit montrer
   // le cas nominal du partage de gain, où la conduite économe se traduit
   // réellement en prime. Les autres profils, eux, exposent chacun un motif
   // d'inéligibilité — c'est aussi ce qu'un transporteur doit voir.
   const traceDriver = [...MOCK_DRIVERS].sort((a, b) => b.currentSafetyScore - a.currentSafetyScore)[0];
   const traceVehicle = MOCK_VEHICLES.find(v => v.id === traceDriver?.assignedVehicleId);
+
+  // --- Deux pleins cohérents par véhicule -----------------------------------
+  /**
+   * La consommation se mesure d'un plein à l'autre : chaque véhicule en reçoit
+   * donc deux, espacés d'une distance que son réservoir permet réellement de
+   * couvrir. Un plein isolé ne permettrait rien, et deux pleins mal espacés
+   * produiraient une consommation absurde — c'est exactement ce qui faisait
+   * apparaître un semi-remorque à 14 L/100 km.
+   *
+   * Le volume du second plein est celui effectivement brûlé sur la distance :
+   * les chiffres se recalculent à la main, ce qui est la seule façon de les
+   * défendre devant un exploitant.
+   */
+  for (const vehicle of MOCK_VEHICLES) {
+    const capacity = Number(vehicle.tankCapacityLiters);
+    const consumption = Number(vehicle.expectedConsumptionL100km);
+    if (!capacity || !consumption) continue;
+
+    // Le plein appartient au chauffeur affecté : le calcul de prime raisonne
+    // par chauffeur, un plein sans conducteur ne compterait pour personne.
+    const assigned = MOCK_DRIVERS.find(d => d.assignedVehicleId === vehicle.id);
+
+    // Distance qu'un réservoir aux quatre cinquièmes permet de couvrir.
+    const spanKm = Math.round(((capacity * 0.8) / consumption) * 100);
+
+    /**
+     * Le meilleur chauffeur conduit économe : c'est le cas nominal du partage
+     * de gain, celui qu'une démonstration doit montrer. Les autres restent à la
+     * référence, et n'ouvrent donc aucun droit — ce qui est aussi instructif.
+     */
+    const economical = assigned?.id === traceDriver?.id;
+    const actualConsumption = economical ? consumption * 0.82 : consumption;
+    const burnt = Math.round((actualConsumption * spanKm) / 100);
+
+    const fills = [
+      {
+        suffix: 'a',
+        odometer: vehicle.currentOdometerKm - spanKm,
+        liters: Math.round(capacity * 0.8),
+        daysAgo: 12,
+      },
+      { suffix: 'b', odometer: vehicle.currentOdometerKm, liters: burnt, daysAgo: 2 },
+    ];
+
+    for (const [index, fill] of fills.entries()) {
+      await prisma.fuelLog.upsert({
+        where: { id: stableUuid(`fuel-base-${vehicle.id}-${fill.suffix}`) },
+        update: { litersAdded: fill.liters, odometerKm: Math.max(0, fill.odometer) },
+        create: {
+          id: stableUuid(`fuel-base-${vehicle.id}-${fill.suffix}`),
+          organizationId: stableUuid(vehicle.organizationId),
+          vehicleId: stableUuid(vehicle.id),
+          driverId: assigned ? stableUuid(assigned.id) : null,
+          litersAdded: fill.liters,
+          pricePerLiter: 700,
+          totalCost: fill.liters * 700,
+          currency: 'XOF',
+          odometerKm: Math.max(0, fill.odometer),
+          stationName: 'TotalEnergies Bohicon Carrefour RNIE2',
+          receiptNumber: `BASE-${vehicle.immatriculation}-${fill.suffix}`,
+          // Seul le second plein porte une consommation : le premier n'a pas
+          // de référence antérieure.
+          calculatedL100km: index === 1 ? Math.round(actualConsumption * 10) / 10 : null,
+          loggedAt: new Date(Date.now() - fill.daysAgo * 86_400_000),
+        },
+      });
+    }
+  }
+  console.log(`  ${MOCK_VEHICLES.length * 2} pleins de référence`);
+
+  // --- Trace GPS et trajets reconstruits ------------------------------------
+  // Deux missions sur les jours précédents, pour que l'historique ne soit pas
+  // vide à la première ouverture.
 
   if (traceVehicle && traceDriver) {
     const vehicleId = stableUuid(traceVehicle.id);
@@ -664,42 +697,7 @@ async function main() {
       }
     }
 
-    // Pleins cohérents avec la distance parcourue. Sans eux, la prime resterait
-    // à zéro faute d'économie mesurable : le module de partage de gain se
-    // calcule sur les pleins réels, jamais sur une estimation.
-    const referenceL100km = Number(traceVehicle.expectedConsumptionL100km);
-    const distanceKm = 348.4 * 2;
-    // Conduite économe : environ 22 % sous la référence du véhicule.
-    // Le volume est borné par la capacité du réservoir — un plein de 120 L dans
-    // un réservoir de 80 L ferait douter de tout le reste de l'écran.
-    const litersUsed = Math.min(
-      Number(traceVehicle.tankCapacityLiters),
-      Math.round((referenceL100km * 0.78 * distanceKm) / 100),
-    );
-
-    await prisma.fuelLog.upsert({
-      where: { id: stableUuid(`fuel-demo-${traceVehicle.id}`) },
-      update: { litersAdded: litersUsed },
-      create: {
-        id: stableUuid(`fuel-demo-${traceVehicle.id}`),
-        organizationId,
-        vehicleId,
-        driverId,
-        litersAdded: litersUsed,
-        pricePerLiter: 750,
-        totalCost: litersUsed * 750,
-        currency: 'XOF',
-        odometerKm: traceVehicle.currentOdometerKm,
-        stationName: 'Station Total Parakou Centre',
-        receiptNumber: `DEMO-${traceVehicle.immatriculation}`,
-        calculatedL100km: Math.round((litersUsed / distanceKm) * 100 * 10) / 10,
-        loggedAt: new Date(Date.now() - 86_400_000),
-      },
-    });
-
-    console.log(
-      `  ${pointCount} positions GPS, ${tripCount} trajet(s) reconstruit(s), ${litersUsed} L relevés`,
-    );
+    console.log(`  ${pointCount} positions GPS, ${tripCount} trajet(s) reconstruit(s)`);
   }
 
   console.log('\nPeuplement terminé.');

@@ -10,13 +10,9 @@ import {
   Trash2,
   Edit3,
   Maximize2,
-  Radio,
   Zap,
-  Clock,
-  AlertTriangle,
   BellRing,
   Sliders,
-  Send,
   Eye,
   MousePointer,
 } from 'lucide-react';
@@ -782,81 +778,25 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
               </form>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-orange-500" />
-                  Testeur de Notifications Instantanées
-                </span>
-                <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 font-bold px-2 py-0.5 rounded">
-                  Système Live
+                  Franchissements de zone
                 </span>
               </div>
 
-              <p className="text-xs text-slate-600">
-                Simulez le franchissement d'un camion sur une zone configurée pour vérifier l'envoi immédiat
-                de notification push et SMS.
+              {/* Le panneau proposait de « simuler » un franchissement et
+                  affichait deux déclenchements écrits en dur. Sur un écran de
+                  surveillance, une notification fabriquée est indiscernable
+                  d'une vraie — un régulateur y aurait cru. */}
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Les franchissements sont détectés à l’ingestion des positions : chaque point est confronté aux
+                zones actives, et l’écart constaté remonte au centre d’alertes.
               </p>
-
-              <div className="space-y-2">
-                <button
-                  onClick={() => handleSimulateAlert('ENTRÉE')}
-                  className="w-full py-2 px-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-orange-300 hover:bg-orange-50 text-slate-800 font-bold text-xs flex items-center justify-between transition cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <Radio className="w-3.5 h-3.5 text-green-600" />
-                    Simuler Entrée Véhicule (Geofence Enter)
-                  </span>
-                  <Send className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  onClick={() => handleSimulateAlert('SORTIE')}
-                  className="w-full py-2 px-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-orange-300 hover:bg-orange-50 text-slate-800 font-bold text-xs flex items-center justify-between transition cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <Radio className="w-3.5 h-3.5 text-blue-600" />
-                    Simuler Sortie Véhicule (Geofence Exit)
-                  </span>
-                  <Send className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  onClick={() => handleSimulateAlert('EXCÈS DE VITESSE')}
-                  className="w-full py-2 px-3 rounded-lg bg-slate-50 border border-slate-200 hover:border-red-300 hover:bg-red-50 text-slate-800 font-bold text-xs flex items-center justify-between transition cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-                    Simuler Excès de Vitesse dans Zone
-                  </span>
-                  <Send className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-
-              {/* Log History */}
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>Historique Récent des Déclenchements ({alertLogs.length})</span>
-                  <Clock className="w-3 h-3 text-slate-400" />
-                </div>
-
-                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
-                  {alertLogs.map(log => (
-                    <div
-                      key={log.id}
-                      className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[11px] flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-800">
-                          {log.vehiclePlate} • {log.action}
-                        </div>
-                        <div className="text-[10px] text-slate-500">{log.geofenceName}</div>
-                      </div>
-                      <span className="text-[10px] font-mono text-slate-400">{log.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <p className="text-[11px] text-slate-500">
+                Aucun franchissement n’apparaît ici tant qu’aucun véhicule n’a traversé une zone configurée.
+              </p>
             </div>
           )}
         </div>

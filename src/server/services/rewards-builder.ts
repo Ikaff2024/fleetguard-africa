@@ -48,17 +48,115 @@ export const DEFAULT_BONUS_RULES: BonusRules = {
   bonusPayoutCycle: 'MONTHLY',
 };
 
+/**
+ * Un plein, tel qu'il est relevé sur le terrain.
+ *
+ * Le compteur au moment du plein est la donnée décisive : c'est lui qui borne
+ * la distance réellement couverte par les litres versés.
+ */
+export interface FuelFill {
+  loggedAt: Date;
+  odometerKm: number;
+  litersAdded: number;
+}
+
+export interface MeasuredConsumption {
+  /** Consommation constatée, en L/100 km. Absente si non mesurable. */
+  actualL100km?: number;
+  measuredDistanceKm: number;
+  measuredLiters: number;
+  fillCount: number;
+  /** Pourquoi la mesure est impossible, quand elle l'est. */
+  reason?: string;
+}
+
+/** En deçà, l'écart de remplissage du réservoir domine la mesure. */
+const MIN_MEASURED_DISTANCE_KM = 200;
+
+/** Bornes de plausibilité pour un poids lourd ou un utilitaire. */
+const MIN_PLAUSIBLE_L100KM = 5;
+const MAX_PLAUSIBLE_L100KM = 120;
+
+/**
+ * Consommation mesurée d'un plein à l'autre.
+ *
+ * C'est la méthode des transporteurs, et la seule défendable. Diviser le
+ * carburant enregistré par la distance totale parcourue paraît naturel et
+ * donne un résultat faux : la distance est exhaustive — elle vient des trajets
+ * reconstruits — alors que les pleins ne le sont pas. Un chauffeur qui roule
+ * mille kilomètres et ne fait qu'un seul plein apparaît alors deux fois plus
+ * sobre qu'il ne l'est, et l'entreprise lui verse une prime sur cet écart.
+ *
+ * Le premier plein ne compte pas dans les litres : le carburant déjà présent
+ * dans le réservoir à ce moment-là n'a jamais été mesuré. Seule la distance
+ * qu'il borne est retenue.
+ */
+export function measureConsumption(fills: FuelFill[]): MeasuredConsumption {
+  const ordered = [...fills].sort((a, b) => a.odometerKm - b.odometerKm);
+
+  if (ordered.length < 2) {
+    return {
+      measuredDistanceKm: 0,
+      measuredLiters: 0,
+      fillCount: ordered.length,
+      reason: 'Au moins deux pleins sont nécessaires : la consommation se mesure d’un plein au suivant.',
+    };
+  }
+
+  const first = ordered[0]!;
+  const last = ordered[ordered.length - 1]!;
+  const measuredDistanceKm = last.odometerKm - first.odometerKm;
+
+  // Les litres du premier plein sont exclus : ils ont servi avant la mesure.
+  const measuredLiters = ordered.slice(1).reduce((sum, fill) => sum + fill.litersAdded, 0);
+
+  if (measuredDistanceKm < MIN_MEASURED_DISTANCE_KM) {
+    return {
+      measuredDistanceKm,
+      measuredLiters,
+      fillCount: ordered.length,
+      reason: `Seulement ${Math.round(measuredDistanceKm)} km entre le premier et le dernier plein : trop court pour une mesure fiable.`,
+    };
+  }
+
+  const actualL100km = (measuredLiters / measuredDistanceKm) * 100;
+
+  if (actualL100km < MIN_PLAUSIBLE_L100KM || actualL100km > MAX_PLAUSIBLE_L100KM) {
+    // Un relevé de compteur erroné ou un plein oublié, pas un exploit.
+    return {
+      measuredDistanceKm,
+      measuredLiters,
+      fillCount: ordered.length,
+      reason: `Consommation calculée de ${actualL100km.toFixed(1)} L/100 km, hors de toute plausibilité : vérifier les relevés de compteur et les pleins manquants.`,
+    };
+  }
+
+  return {
+    actualL100km: Math.round(actualL100km * 10) / 10,
+    measuredDistanceKm: Math.round(measuredDistanceKm),
+    measuredLiters: Math.round(measuredLiters),
+    fillCount: ordered.length,
+  };
+}
+
 export interface DriverFuelUsage {
   driverId: string;
   driverName: string;
   safetyScore: number;
   scoreTrend30d: number;
-  /** Consommation constatée sur la période, L/100 km. */
+  /** Consommation constatée entre pleins, L/100 km. */
   actualL100km?: number;
   /** Consommation de référence du véhicule affecté, L/100 km. */
   expectedL100km?: number;
-  /** Distance parcourue sur la période, en kilomètres. */
+  /**
+   * Distance couverte par la mesure, en kilomètres.
+   *
+   * C'est celle bornée par les pleins, pas la distance totale parcourue :
+   * l'économie ne peut être créditée que sur ce qui a été mesuré.
+   */
   distanceKm: number;
+  /** Motif d'impossibilité de mesure, le cas échéant. */
+  measurementIssue?: string;
 }
 
 export interface ComputedReward {
@@ -112,7 +210,8 @@ export function computeReward(usage: DriverFuelUsage, rules: BonusRules): Comput
   } else if (!measurable) {
     // Le dire plutôt que de verser sur une estimation : la prime doit
     // s'expliquer devant le chauffeur comme devant le comptable.
-    ineligibilityReason = 'Aucun plein enregistré sur la période : économie non mesurable.';
+    ineligibilityReason =
+      usage.measurementIssue ?? 'Aucun plein enregistré sur la période : économie non mesurable.';
   } else if (litersSaved <= 0) {
     ineligibilityReason = 'Consommation au-dessus de la référence du véhicule.';
   } else {

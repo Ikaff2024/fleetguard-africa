@@ -4,6 +4,7 @@ import {
   type DriverFuelUsage,
   buildLeaderboard,
   computeReward,
+  measureConsumption,
 } from '../src/server/services/rewards-builder.js';
 
 /**
@@ -103,5 +104,88 @@ describe('Primes de conduite économe', () => {
     expect(DEFAULT_BONUS_RULES.sharedSavingsPercentage).toBe(50);
     expect(DEFAULT_BONUS_RULES.minSafetyScoreForBonus).toBe(85);
     expect(DEFAULT_BONUS_RULES.maxMonthlyBonusCap).toBe(150_000);
+  });
+});
+
+/**
+ * Mesure de la consommation.
+ *
+ * Le défaut corrigé ici a été trouvé en production : un Volvo FH16 de
+ * 40 tonnes affiché à 14,2 L/100 km, et 131 962 XOF versés sur cet écart.
+ */
+describe('Consommation mesurée d’un plein à l’autre', () => {
+  const fill = (odometerKm: number, litersAdded: number) => ({
+    loggedAt: new Date('2026-08-01T08:00:00.000Z'),
+    odometerKm,
+    litersAdded,
+  });
+
+  it('mesure entre le premier et le dernier plein', () => {
+    // 1 000 km entre les deux pleins, 340 L versés au second.
+    const result = measureConsumption([fill(100_000, 300), fill(101_000, 340)]);
+
+    expect(result.actualL100km).toBe(34);
+    expect(result.measuredDistanceKm).toBe(1000);
+    // Les litres du premier plein ont servi avant la mesure : ils ne comptent
+    // pas, sinon la consommation serait surestimée de moitié.
+    expect(result.measuredLiters).toBe(340);
+  });
+
+  it('refuse de mesurer sur un seul plein', () => {
+    // C'était l'erreur : diviser un plein isolé par toute la distance
+    // parcourue faisait passer un 40 tonnes pour une citadine.
+    const result = measureConsumption([fill(100_000, 198)]);
+
+    expect(result.actualL100km).toBeUndefined();
+    expect(result.reason).toContain('deux pleins');
+  });
+
+  it('refuse une distance trop courte pour être fiable', () => {
+    const result = measureConsumption([fill(100_000, 300), fill(100_050, 20)]);
+
+    expect(result.actualL100km).toBeUndefined();
+    expect(result.reason).toContain('trop court');
+  });
+
+  it('écarte une consommation hors de toute plausibilité', () => {
+    // Un plein oublié ou un compteur mal relevé : 2 L/100 km sur un poids
+    // lourd signale une donnée manquante, pas une performance.
+    const result = measureConsumption([fill(100_000, 300), fill(110_000, 200)]);
+
+    expect(result.actualL100km).toBeUndefined();
+    expect(result.reason).toContain('plausibilité');
+  });
+
+  it('additionne les pleins intermédiaires', () => {
+    const result = measureConsumption([fill(100_000, 300), fill(100_500, 170), fill(101_000, 170)]);
+
+    expect(result.measuredLiters).toBe(340);
+    expect(result.measuredDistanceKm).toBe(1000);
+    expect(result.actualL100km).toBe(34);
+  });
+
+  it('ordonne les pleins par compteur, pas par saisie', () => {
+    // Une saisie hors ligne peut remonter dans le désordre.
+    const result = measureConsumption([fill(101_000, 340), fill(100_000, 300)]);
+    expect(result.actualL100km).toBe(34);
+  });
+
+  it('ne verse aucune prime quand la mesure est impossible', () => {
+    const reward = computeReward(
+      {
+        driverId: 'drv-1',
+        driverName: 'Koffi Mensah',
+        safetyScore: 96,
+        scoreTrend30d: 0,
+        actualL100km: undefined,
+        expectedL100km: 36.5,
+        distanceKm: 0,
+        measurementIssue: 'Au moins deux pleins sont nécessaires.',
+      },
+      DEFAULT_BONUS_RULES,
+    );
+
+    expect(reward.bonusEarned).toBe(0);
+    expect(reward.ineligibilityReason).toContain('deux pleins');
   });
 });

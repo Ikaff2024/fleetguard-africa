@@ -5,6 +5,7 @@ import {
   DEFAULT_BONUS_RULES,
   type DriverFuelUsage,
   buildLeaderboard,
+  measureConsumption,
 } from '../services/rewards-builder.js';
 import { toNumber } from './mappers.js';
 
@@ -56,21 +57,27 @@ async function collectUsage(tx: Tx, since: Date): Promise<DriverFuelUsage[]> {
     include: { assignedVehicle: { select: { expectedConsumptionL100km: true, immatriculation: true } } },
   });
 
-  const [fuelLogs, trips] = await Promise.all([
-    tx.fuelLog.findMany({ where: { loggedAt: { gte: since } } }),
-    tx.trip.findMany({ where: { startedAt: { gte: since } } }),
-  ]);
+  const fuelLogs = await tx.fuelLog.findMany({ where: { loggedAt: { gte: since } } });
 
   return drivers.map(driver => {
-    const driverTrips = trips.filter(trip => trip.driverId === driver.id);
-    const distanceKm = driverTrips.reduce((sum, trip) => sum + toNumber(trip.distanceKm), 0);
+    /**
+     * La consommation se mesure d'un plein à l'autre.
+     *
+     * La version précédente divisait le carburant enregistré par la distance
+     * totale des trajets. La distance était exhaustive, les pleins ne l'étaient
+     * pas : un chauffeur ayant parcouru 1 397 km avec un seul plein de 198 L
+     * apparaissait à 14 L/100 km sur un semi-remorque de 40 tonnes, et
+     * l'entreprise lui versait 131 962 XOF sur cet écart.
+     */
+    const fills = fuelLogs
+      .filter(log => log.driverId === driver.id)
+      .map(log => ({
+        loggedAt: log.loggedAt,
+        odometerKm: log.odometerKm,
+        litersAdded: toNumber(log.litersAdded),
+      }));
 
-    const driverFuel = fuelLogs.filter(log => log.driverId === driver.id);
-    const litersUsed = driverFuel.reduce((sum, log) => sum + toNumber(log.litersAdded), 0);
-
-    // La consommation n'a de sens qu'avec les deux mesures : des litres sans
-    // distance, ou l'inverse, ne prouvent rien.
-    const actualL100km = distanceKm > 0 && litersUsed > 0 ? (litersUsed / distanceKm) * 100 : undefined;
+    const measured = measureConsumption(fills);
 
     return {
       driverId: driver.id,
@@ -79,11 +86,13 @@ async function collectUsage(tx: Tx, since: Date): Promise<DriverFuelUsage[]> {
       // La tendance suppose un historique de scores ; tant qu'il n'est pas
       // constitué, mieux vaut zéro qu'une variation inventée.
       scoreTrend30d: 0,
-      actualL100km,
+      actualL100km: measured.actualL100km,
       expectedL100km: driver.assignedVehicle
         ? toNumber(driver.assignedVehicle.expectedConsumptionL100km)
         : undefined,
-      distanceKm,
+      // Seule la distance bornée par les pleins ouvre droit à une économie.
+      distanceKm: measured.measuredDistanceKm,
+      measurementIssue: measured.reason,
     };
   });
 }

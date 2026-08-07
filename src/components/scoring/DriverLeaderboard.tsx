@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { useDrivers, useVehicles } from '../../hooks/useFleetData';
+import {
+  useDrivers,
+  useRewardProfiles,
+  useSafetyEvents,
+  useTrips,
+  useVehicles,
+} from '../../hooks/useFleetData';
 import { Organization, Driver } from '../../types';
 import {
   Trophy,
@@ -7,9 +13,6 @@ import {
   ShieldCheck,
   Fuel,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Sliders,
   Search,
   ChevronRight,
@@ -26,20 +29,18 @@ export interface DriverPerformanceRecord {
   driver: Driver;
   assignedVehicleName: string;
   safetyScore: number;
+  /** Score écologique : sobriété et sécurité combinées, calculé côté serveur. */
   fuelScore: number;
-  punctualityScore: number;
   compositeScore: number;
   rank: number;
-  previousRank: number;
-  rankTrend: 'UP' | 'DOWN' | 'STABLE';
-  rankChange: number;
   tripsCompleted: number;
-  onTimePct: number;
   avgConsumptionL100km: number;
   expectedConsumptionL100km: number;
   safetyPenaltiesCount: number;
   bonusAmountXof: number;
   isBonusEligible: boolean;
+  /** Motif quand aucune prime n'est due — il doit pouvoir être expliqué. */
+  ineligibilityReason?: string;
   badges: {
     id: string;
     label: string;
@@ -51,71 +52,71 @@ export interface DriverPerformanceRecord {
 export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg }) => {
   const driversQuery = useDrivers();
   const vehiclesQuery = useVehicles();
+
+  /**
+   * Le classement s'appuie sur les profils calculés côté serveur.
+   *
+   * Cet écran fabriquait ses chiffres : le score carburant et la ponctualité
+   * étaient dérivés du score de sécurité et des caractères de l'identifiant du
+   * chauffeur, et la prime suivait une formule locale. Deux écrans annonçaient
+   * donc deux primes différentes pour le même chauffeur — 62 000 XOF ici,
+   * 131 962 XOF sur l'écran Primes.
+   *
+   * La ponctualité a disparu : aucune donnée ne la renseigne. Les délais de
+   * livraison n'existent pas dans le système, et un critère sans source ne
+   * peut ni classer un chauffeur ni fonder une prime.
+   */
+  const profilesQuery = useRewardProfiles();
+  const tripsQuery = useTrips({ limit: 500 });
+  const eventsQuery = useSafetyEvents();
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'COMPOSITE' | 'SAFETY' | 'FUEL' | 'PUNCTUALITY'>('COMPOSITE');
+  const [sortBy, setSortBy] = useState<'COMPOSITE' | 'SAFETY' | 'FUEL'>('COMPOSITE');
   const [timePeriod, setTimePeriod] = useState<'THIS_MONTH' | 'QUARTER' | 'YEAR'>('THIS_MONTH');
 
   // Custom Weights state
   const [showWeightSliders, setShowWeightSliders] = useState<boolean>(false);
-  const [weightSafety, setWeightSafety] = useState<number>(50); // 50%
-  const [weightFuel, setWeightFuel] = useState<number>(30); // 30%
-  const [weightPunctuality, setWeightPunctuality] = useState<number>(20); // 20%
+  // Deux critères mesurés, et deux seulement.
+  const [weightSafety, setWeightSafety] = useState<number>(60);
+  const [weightFuel, setWeightFuel] = useState<number>(40);
 
   // Selected driver for detailed comparison modal
   const [selectedPerformance, setSelectedPerformance] = useState<DriverPerformanceRecord | null>(null);
 
   const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
-  // Compute detailed performance records for drivers
   const performanceRecords = useMemo(() => {
-    const rawList = orgDrivers.map((driver, index) => {
-      const vehicle = (vehiclesQuery.data ?? []).find(v => v.id === driver.assignedVehicleId);
+    const profiles = profilesQuery.data ?? [];
+    const trips = tripsQuery.data ?? [];
+    const events = eventsQuery.data ?? [];
+
+    const rawList = profiles.map(profile => {
+      const driver = orgDrivers.find(d => d.id === profile.driverId);
+      const vehicle = (vehiclesQuery.data ?? []).find(v => v.id === driver?.assignedVehicleId);
       const vehicleName = vehicle
         ? `${vehicle.immatriculation} (${vehicle.make} ${vehicle.model})`
-        : 'Véhicule Flotte';
+        : 'Aucun véhicule affecté';
 
-      // Base scores
-      const safetyScore = driver.currentSafetyScore || 85;
+      const safetyScore = profile.currentSafetyScore;
+      // Le score écologique combine sobriété et sécurité : il est calculé par
+      // le serveur sur les pleins et les distances réellement mesurés.
+      const fuelScore = profile.ecoScore;
 
-      // Deterministic calculation for demo consistency based on driver id
-      const seed = driver.id.charCodeAt(driver.id.length - 1) + driver.fullName.length;
-
-      const fuelScore = Math.min(100, Math.max(55, Math.round(safetyScore * 0.92 + (seed % 11) - 4)));
-      const punctualityScore = Math.min(
-        100,
-        Math.max(60, Math.round(safetyScore * 0.95 + ((seed * 3) % 9) - 3)),
-      );
-
-      // Calculate composite score based on active weights
-      const totalWeight = weightSafety + weightFuel + weightPunctuality || 100;
+      const totalWeight = weightSafety + weightFuel || 100;
       const compositeScore =
-        Math.round(
-          ((safetyScore * weightSafety + fuelScore * weightFuel + punctualityScore * weightPunctuality) /
-            totalWeight) *
-            10,
-        ) / 10;
+        Math.round(((safetyScore * weightSafety + fuelScore * weightFuel) / totalWeight) * 10) / 10;
 
-      // Mock previous rank & trend
-      const previousRank = ((index + 2) % (orgDrivers.length || 1)) + 1;
-      const rankChange = previousRank - (index + 1);
-      const rankTrend: 'UP' | 'DOWN' | 'STABLE' = rankChange > 0 ? 'UP' : rankChange < 0 ? 'DOWN' : 'STABLE';
+      // Comptages réels, jamais dérivés d'une graine.
+      const tripsCompleted = trips.filter(t => t.driverId === profile.driverId).length;
+      const safetyPenaltiesCount = events.filter(e => e.driverId === profile.driverId).length;
 
-      // Derived metrics
-      const tripsCompleted = 12 + (seed % 35);
-      const onTimePct = Math.min(100, Math.max(70, Math.round(punctualityScore * 0.98)));
+      const expectedConsumptionL100km = vehicle?.expectedConsumptionL100km ?? 0;
+      // L'écart mesuré est négatif quand le chauffeur consomme moins.
+      const avgConsumptionL100km =
+        expectedConsumptionL100km > 0
+          ? Math.round((expectedConsumptionL100km + profile.fuelEfficiencySavingsL100km) * 10) / 10
+          : 0;
 
-      const baseLiters = vehicle?.expectedConsumptionL100km || 34.0;
-      const fuelEfficiencyFactor = 1 + ((100 - fuelScore) / 100) * 0.25 - 0.08;
-      const avgConsumptionL100km = Math.round(baseLiters * fuelEfficiencyFactor * 10) / 10;
-
-      const safetyPenaltiesCount = Math.max(0, Math.round((100 - safetyScore) / 4));
-
-      // Safety bonus eligibility
-      const isBonusEligible = compositeScore >= 85 && safetyScore >= 85;
-      const bonusAmountXof = isBonusEligible ? Math.round(35000 + (compositeScore - 85) * 3000) : 0;
-
-      // Badges
-      const badges = [];
+      const badges: DriverPerformanceRecord['badges'] = [];
       if (safetyScore >= 92) {
         badges.push({
           id: 'safety',
@@ -124,67 +125,58 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
           icon: '🛡️',
         });
       }
-      if (fuelScore >= 90) {
+      if (profile.eligible && profile.estimatedFuelSavedLiters > 0) {
         badges.push({
           id: 'eco',
-          label: "Éco-Conducteur d'Or",
+          label: `${profile.estimatedFuelSavedLiters} L économisés`,
           color: 'bg-amber-100 text-amber-800 border-amber-300',
           icon: '🌿',
-        });
-      }
-      if (punctualityScore >= 94) {
-        badges.push({
-          id: 'time',
-          label: 'Horloger Suisse',
-          color: 'bg-blue-100 text-blue-800 border-blue-300',
-          icon: '⏱️',
         });
       }
       if (safetyPenaltiesCount === 0) {
         badges.push({
           id: 'zero',
-          label: 'Zéro Infraction',
+          label: 'Aucune infraction relevée',
           color: 'bg-purple-100 text-purple-800 border-purple-300',
           icon: '✨',
         });
       }
 
       return {
-        driver,
+        driver: driver ?? ({ id: profile.driverId, fullName: profile.driverName } as Driver),
         assignedVehicleName: vehicleName,
         safetyScore,
         fuelScore,
-        punctualityScore,
         compositeScore,
-        rank: 0, // Assigned after sorting
-        previousRank,
-        rankTrend,
-        rankChange: Math.abs(rankChange),
+        rank: 0,
         tripsCompleted,
-        onTimePct,
         avgConsumptionL100km,
-        expectedConsumptionL100km: baseLiters,
+        expectedConsumptionL100km,
         safetyPenaltiesCount,
-        bonusAmountXof,
-        isBonusEligible,
+        bonusAmountXof: profile.bonusEarned,
+        isBonusEligible: profile.eligible,
+        ineligibilityReason: profile.ineligibilityReason,
         badges,
       };
     });
 
-    // Sort according to active sort option
     const sorted = [...rawList].sort((a, b) => {
       if (sortBy === 'SAFETY') return b.safetyScore - a.safetyScore;
       if (sortBy === 'FUEL') return b.fuelScore - a.fuelScore;
-      if (sortBy === 'PUNCTUALITY') return b.punctualityScore - a.punctualityScore;
-      return b.compositeScore - a.compositeScore; // Default COMPOSITE
+      return b.compositeScore - a.compositeScore;
     });
 
-    // Assign rank positions
-    return sorted.map((record, idx) => ({
-      ...record,
-      rank: idx + 1,
-    }));
-  }, [orgDrivers, weightSafety, weightFuel, weightPunctuality, sortBy]);
+    return sorted.map((record, idx) => ({ ...record, rank: idx + 1 }));
+  }, [
+    profilesQuery.data,
+    tripsQuery.data,
+    eventsQuery.data,
+    orgDrivers,
+    vehiclesQuery.data,
+    weightSafety,
+    weightFuel,
+    sortBy,
+  ]);
 
   // Filter records by search term
   const filteredRecords = useMemo(() => {
@@ -201,18 +193,16 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
   // Fleet Average Statistics
   const fleetAverages = useMemo(() => {
     if (performanceRecords.length === 0) {
-      return { safety: 0, fuel: 0, punctuality: 0, composite: 0, bonusRate: 0 };
+      return { safety: 0, fuel: 0, composite: 0, bonusRate: 0 };
     }
     const sumSafety = performanceRecords.reduce((acc, r) => acc + r.safetyScore, 0);
     const sumFuel = performanceRecords.reduce((acc, r) => acc + r.fuelScore, 0);
-    const sumPunctuality = performanceRecords.reduce((acc, r) => acc + r.punctualityScore, 0);
     const sumComposite = performanceRecords.reduce((acc, r) => acc + r.compositeScore, 0);
     const eligibleCount = performanceRecords.filter(r => r.isBonusEligible).length;
 
     return {
       safety: Math.round((sumSafety / performanceRecords.length) * 10) / 10,
       fuel: Math.round((sumFuel / performanceRecords.length) * 10) / 10,
-      punctuality: Math.round((sumPunctuality / performanceRecords.length) * 10) / 10,
       composite: Math.round((sumComposite / performanceRecords.length) * 10) / 10,
       bonusRate: Math.round((eligibleCount / performanceRecords.length) * 100),
     };
@@ -290,7 +280,7 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
           >
             <Sliders className="w-4 h-4 text-orange-500" />
             <span>
-              Pondération ({weightSafety}% / {weightFuel}% / {weightPunctuality}%)
+              Pondération ({weightSafety}% / {weightFuel}%)
             </span>
           </button>
         </div>
@@ -307,11 +297,11 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
               </h4>
             </div>
             <span className="text-[11px] font-mono font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded border border-orange-300">
-              Total = {weightSafety + weightFuel + weightPunctuality}%
+              Total = {weightSafety + weightFuel}%
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
             {/* Safety Weight Slider */}
             <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
               <div className="flex justify-between font-bold text-slate-800">
@@ -353,28 +343,15 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
               />
               <p className="text-[10px] text-slate-500">Rendement L/100km & détection d'anomalies.</p>
             </div>
-
-            {/* Punctuality Weight Slider */}
-            <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200">
-              <div className="flex justify-between font-bold text-slate-800">
-                <span className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  Ponctualité Livraisons
-                </span>
-                <span className="font-mono text-blue-600">{weightPunctuality}%</span>
-              </div>
-              <input
-                type="range"
-                min="10"
-                max="80"
-                step="5"
-                value={weightPunctuality}
-                onChange={e => setWeightPunctuality(Number(e.target.value))}
-                className="w-full accent-blue-600 cursor-pointer"
-              />
-              <p className="text-[10px] text-slate-500">Respect des délais clients & créneaux horaires.</p>
-            </div>
           </div>
+
+          {/* La ponctualité a été retirée : aucun délai de livraison n'existe
+              dans le système, et un critère sans source ne peut ni classer un
+              chauffeur ni fonder une prime. */}
+          <p className="text-[10px] text-slate-500">
+            Deux critères seulement, parce que deux seulement sont mesurés : la sécurité, depuis les
+            infractions relevées sur la trace, et l’éco-conduite, depuis les pleins et les distances.
+          </p>
         </div>
       )}
 
@@ -412,10 +389,13 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-2xs">
           <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span>Ponctualité</span>
+            <span>Infractions relevées</span>
           </div>
+          {/* Un comptage, pas un score : la ponctualité affichée ici n'était
+              adossée à aucune donnée de livraison. */}
           <div className="text-2xl font-bold font-mono text-blue-600">
-            {fleetAverages.punctuality} <span className="text-xs font-normal text-slate-400">/100</span>
+            {performanceRecords.reduce((sum, r) => sum + r.safetyPenaltiesCount, 0)}
+            <span className="text-xs font-normal text-slate-400"> sur 30 j</span>
           </div>
         </div>
 
@@ -476,8 +456,8 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     <div>{top2.fuelScore}</div>
                   </div>
                   <div className="bg-blue-50 text-blue-800 p-1.5 rounded-lg border border-blue-200">
-                    <div className="text-slate-500 font-normal">Ponctuel</div>
-                    <div>{top2.punctualityScore}</div>
+                    <div className="text-slate-500 font-normal">Trajets</div>
+                    <div>{top2.tripsCompleted}</div>
                   </div>
                 </div>
 
@@ -542,8 +522,8 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     <div className="text-xs font-mono">{top1.fuelScore}</div>
                   </div>
                   <div className="bg-blue-100 text-blue-900 p-1.5 rounded-lg border border-blue-300">
-                    <div className="text-slate-600 font-normal">Ponctuel</div>
-                    <div className="text-xs font-mono">{top1.punctualityScore}</div>
+                    <div className="text-slate-600 font-normal">Trajets</div>
+                    <div className="text-xs font-mono">{top1.tripsCompleted}</div>
                   </div>
                 </div>
 
@@ -593,8 +573,8 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                     <div>{top3.fuelScore}</div>
                   </div>
                   <div className="bg-blue-50 text-blue-800 p-1.5 rounded-lg border border-blue-200">
-                    <div className="text-slate-500 font-normal">Ponctuel</div>
-                    <div>{top3.punctualityScore}</div>
+                    <div className="text-slate-500 font-normal">Trajets</div>
+                    <div>{top3.tripsCompleted}</div>
                   </div>
                 </div>
 
@@ -645,7 +625,6 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                 <option value="COMPOSITE">Score Global Combiné</option>
                 <option value="SAFETY">Sécurité Routière</option>
                 <option value="FUEL">Économie Carburant</option>
-                <option value="PUNCTUALITY">Ponctualité Livraisons</option>
               </select>
             </div>
           </div>
@@ -659,9 +638,9 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                 <th className="py-3 px-3 w-16 text-center">Rang</th>
                 <th className="py-3 px-3">Chauffeur & Permis</th>
                 <th className="py-3 px-3">Véhicule Assigné</th>
-                <th className="py-3 px-3">Sécurité (50%)</th>
+                <th className="py-3 px-3">Sécurité ({weightSafety}%)</th>
                 <th className="py-3 px-3">Éco-Carburant (30%)</th>
-                <th className="py-3 px-3">Ponctualité (20%)</th>
+                <th className="py-3 px-3">Activité relevée</th>
                 <th className="py-3 px-3 text-center">Score Global</th>
                 <th className="py-3 px-3 text-right">Action</th>
               </tr>
@@ -692,24 +671,6 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                         >
                           #{record.rank}
                         </span>
-
-                        <div className="mt-1 flex items-center gap-0.5 text-[10px]">
-                          {record.rankTrend === 'UP' && (
-                            <span className="text-emerald-600 font-bold flex items-center">
-                              <TrendingUp className="w-3 h-3" />+{record.rankChange}
-                            </span>
-                          )}
-                          {record.rankTrend === 'DOWN' && (
-                            <span className="text-red-500 font-bold flex items-center">
-                              <TrendingDown className="w-3 h-3" />-{record.rankChange}
-                            </span>
-                          )}
-                          {record.rankTrend === 'STABLE' && (
-                            <span className="text-slate-400 font-bold flex items-center">
-                              <Minus className="w-3 h-3" />
-                            </span>
-                          )}
-                        </div>
                       </div>
                     </td>
 
@@ -794,27 +755,25 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                       </div>
                     </td>
 
-                    {/* Punctuality Score Bar */}
+                    {/* Activité mesurée, à la place d'une ponctualité que rien
+                        ne renseigne. */}
                     <td className="py-3.5 px-3">
-                      <div className="space-y-1 w-28">
-                        <div className="flex justify-between text-[10px] font-bold">
-                          <span className="text-blue-700">Ponctualité</span>
-                          <span className="font-mono">{record.punctualityScore}/100</span>
+                      <div className="space-y-0.5 w-32 text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Trajets</span>
+                          <span className="font-mono font-bold">{record.tripsCompleted}</span>
                         </div>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              record.punctualityScore >= 85
-                                ? 'bg-blue-500'
-                                : record.punctualityScore >= 70
-                                  ? 'bg-indigo-400'
-                                  : 'bg-red-500'
-                            }`}
-                            style={{ width: `${record.punctualityScore}%` }}
-                          ></div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Infractions</span>
+                          <span className="font-mono font-bold">{record.safetyPenaltiesCount}</span>
                         </div>
-                        <div className="text-[9px] text-slate-400 font-mono">
-                          {record.onTimePct}% à l'heure
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Conso.</span>
+                          <span className="font-mono font-bold">
+                            {record.avgConsumptionL100km > 0
+                              ? `${record.avgConsumptionL100km} L`
+                              : 'non mesurée'}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -944,25 +903,30 @@ export const DriverLeaderboard: React.FC<DriverLeaderboardProps> = ({ currentOrg
                   </div>
                 </div>
 
-                {/* Punctuality Comparison */}
+                {/* Activité mesurée. La ponctualité figurait ici sans qu'aucun
+                    délai de livraison n'existe dans le système. */}
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
                   <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
                     <span className="flex items-center gap-1 text-blue-700">
-                      <Clock className="w-3.5 h-3.5" /> Ponctualité
+                      <Clock className="w-3.5 h-3.5" /> Activité relevée
                     </span>
                     <span className="font-mono text-blue-700 font-extrabold">
-                      {selectedPerformance.punctualityScore}/100
+                      {selectedPerformance.tripsCompleted} trajet(s)
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-500 flex justify-between">
-                    <span>Taux Livraisons à l'Heure:</span>
-                    <span className="font-mono font-bold">{selectedPerformance.onTimePct}%</span>
+                    <span>Infractions relevées :</span>
+                    <span className="font-mono font-bold">{selectedPerformance.safetyPenaltiesCount}</span>
                   </div>
                   <div className="text-[11px] font-bold">
-                    {selectedPerformance.punctualityScore >= fleetAverages.punctuality ? (
-                      <span className="text-emerald-600">Respect parfait des délais</span>
+                    {selectedPerformance.isBonusEligible ? (
+                      <span className="text-emerald-600">
+                        Prime due : {selectedPerformance.bonusAmountXof.toLocaleString()} XOF
+                      </span>
                     ) : (
-                      <span className="text-red-500">Retards occasionnels enregistrés</span>
+                      <span className="text-slate-500">
+                        {selectedPerformance.ineligibilityReason ?? 'Aucune prime due.'}
+                      </span>
                     )}
                   </div>
                 </div>

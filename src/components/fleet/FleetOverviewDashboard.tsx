@@ -52,13 +52,22 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () 
 
   const activeVehicles = vehicles.filter(v => v.status === 'ACTIVE').length;
 
-  // Calculate today's fuel (mock data calculation)
+  // Aucun plein aujourd'hui donne zéro, pas une valeur de repli : afficher
+  // 450 L un jour sans ravitaillement fausserait le suivi des coûts.
   const today = new Date().toISOString().split('T')[0];
-  const totalFuelToday =
-    fuelLogs.filter(log => log.loggedAt.startsWith(today)).reduce((sum, log) => sum + log.litersAdded, 0) ||
-    450; // Fallback mock value
+  const totalFuelToday = fuelLogs
+    .filter(log => log.loggedAt.startsWith(today))
+    .reduce((sum, log) => sum + log.litersAdded, 0);
 
-  const healthScore = 94; // Mock score
+  /**
+   * Part du parc en état de rouler.
+   *
+   * Le chiffre affiché était `94` en dur. Un « score de santé » constant ne dit
+   * rien et masque précisément ce qu'il prétend surveiller : un camion
+   * immobilisé n'y changeait rien.
+   */
+  const healthScore = vehicles.length > 0 ? Math.round((activeVehicles / vehicles.length) * 100) : 0;
+  const immobilised = vehicles.filter(v => v.status !== 'ACTIVE').length;
 
   if (isLoading || loadError) {
     return (
@@ -120,13 +129,15 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () 
             <div>
               <div className="flex items-center gap-1.5 text-slate-500 mb-1">
                 <Activity className="w-4 h-4" />
-                <span className="text-xs font-bold uppercase tracking-wider">Score de Santé</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Parc disponible</span>
               </div>
               <div className="text-3xl font-extrabold text-slate-900 font-mono">{healthScore}%</div>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-emerald-600 bg-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> +2.1%
+              {/* La tendance « +2,1 % » était écrite en dur. Ce qui compte est
+                  le nombre de camions hors service, pas une variation. */}
+              <span className="text-slate-600 bg-slate-50 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {immobilised === 0 ? 'Parc complet' : `${immobilised} hors service`}
               </span>
             </div>
           </div>

@@ -12,6 +12,7 @@ import type {
   DigitalBadge,
   GpsPoint,
   Organization,
+  SafetyEvent,
   RewardProfileRecord,
   Trip,
   Vehicle,
@@ -125,3 +126,6 @@ export const useFatigue = (region?: string) =>
 /** Cadres réglementaires applicables — références documentées côté serveur. */
 export const useFatigueFrameworks = () =>
   useApiResource<LegalDrivingFrameworkConfig[]>('/fatigue/frameworks');
+
+/** Infractions relevées sur la trace, du plus récent au plus ancien. */
+export const useSafetyEvents = () => useApiResource<SafetyEvent[]>('/tracking/events');

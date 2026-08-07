@@ -3,7 +3,6 @@ import { useAlerts, useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization } from '../../types';
 import { ApiClientError, apiClient } from '../../lib/api-client';
 import type { SafetyCoachingResponse } from '../scoring/ProactiveSafetyTips';
-import { FuelAnomalyDetector } from './FuelAnomalyDetector';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -25,7 +24,6 @@ import {
   Check,
   ShieldCheck,
   AlertOctagon,
-  Flame,
   Printer,
 } from 'lucide-react';
 import { PrintableReportModal } from '../common/PrintableReportModal';
@@ -63,7 +61,7 @@ interface AlertsCenterProps {
 export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNavigateToMap }) => {
   const driversQuery = useDrivers();
   const vehiclesQuery = useVehicles();
-  // Filter mock data for active organization
+  // Parc et conducteurs de l'organisation, servis par l'API.
   const orgVehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
   const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
@@ -91,7 +89,6 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
   const [selectedSeverity, setSelectedSeverity] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [showDetectorPanel, setShowDetectorPanel] = useState<boolean>(true);
 
   const [pendingAlertId, setPendingAlertId] = useState<string | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
@@ -441,20 +438,6 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => setShowDetectorPanel(!showDetectorPanel)}
-              className={`font-bold text-xs px-3.5 py-2.5 rounded-lg transition flex items-center gap-2 shadow-xs cursor-pointer ${
-                showDetectorPanel
-                  ? 'bg-orange-500 text-white hover:bg-orange-600'
-                  : 'bg-slate-800 text-orange-400 hover:bg-slate-700 border border-slate-700'
-              }`}
-            >
-              <Flame className="w-4 h-4" />
-              <span>
-                {showDetectorPanel ? 'Masquer Détecteur Siphonnage' : 'Détecteur Siphonnage Temps Réel'}
-              </span>
-            </button>
-
-            <button
               onClick={() => setShowPrintIncidentLogsModal(true)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-lg transition flex items-center gap-2 shadow-xs cursor-pointer"
             >
@@ -464,12 +447,6 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ currentOrg, onNaviga
           </div>
         </div>
       </div>
-
-      {/* Analyse des consommations. Le panneau n'injecte plus d'alerte dans la
-          liste : les anomalies de carburant sont dérivées côté serveur à partir
-          des pleins réellement enregistrés, et non d'un calcul d'écran qui ne
-          survivrait pas au rechargement. */}
-      {showDetectorPanel && <FuelAnomalyDetector currentOrg={currentOrg} />}
 
       {/* Un échec d'enregistrement doit se voir : sans ce bandeau, le
           régulateur croirait l'alerte traitée alors que rien n'a été écrit. */}

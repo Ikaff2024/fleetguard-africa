@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { useDrivers, useVehicles } from '../../hooks/useFleetData';
+import {
+  useDrivers,
+  useFuelLogs,
+  useMaintenanceLogs,
+  useSafetyEvents,
+  useTrips,
+  useVehicles,
+} from '../../hooks/useFleetData';
 import { Organization } from '../../types';
 import {
   Printer,
@@ -22,52 +29,83 @@ interface MonthlyReportGeneratorProps {
 export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ currentOrg }) => {
   const driversQuery = useDrivers();
   const vehiclesQuery = useVehicles();
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [selectedScope, setSelectedScope] = useState<string>('ALL'); // ALL or vehicleId
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   // Filter vehicles and drivers for current organization
+  const tripsQuery = useTrips({ limit: 500 });
+  const fuelQuery = useFuelLogs();
+  const maintenanceQuery = useMaintenanceLogs();
+  const eventsQuery = useSafetyEvents();
+
   const orgVehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
   const orgDrivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
   // Month labels helper
-  const monthLabels: Record<string, string> = {
-    '2026-08': 'Août 2026 (En cours)',
-    '2026-07': 'Juillet 2026',
-    '2026-06': 'Juin 2026',
-    '2026-05': 'Mai 2026',
-  };
+  /**
+   * Les douze derniers mois, calculés à partir d'aujourd'hui.
+   *
+   * La liste était figée sur quatre mois de 2026 : elle serait devenue fausse
+   * au premier changement d'année, et proposait des périodes antérieures à
+   * toute donnée.
+   */
+  const monthOptions = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 12 }, (_, offset) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      return { value, label: offset === 0 ? `${label} (en cours)` : label };
+    });
+  }, []);
 
-  // Mock performance data generator based on selected month & vehicle
+  /**
+   * Le bilan est établi sur ce qui a été enregistré.
+   *
+   * Cet écran générait ses chiffres — le commentaire du code disait lui-même
+   * « Mock performance data generator ». Il annonçait 27 700 km quand les
+   * trajets réels en totalisaient 2 093, et « +8,4 % vs mois précédent » était
+   * écrit en dur. Un bilan mensuel sert à décider d'un investissement ou d'une
+   * renégociation de contrat : il ne peut pas être inventé.
+   *
+   * Chaque ligne se recalcule : distance depuis les trajets reconstruits,
+   * carburant et coûts depuis les pleins enregistrés, entretien depuis les
+   * interventions, sécurité depuis les infractions relevées.
+   */
   const reportData = useMemo(() => {
-    const isAugust = selectedMonth === '2026-08';
-    const isJuly = selectedMonth === '2026-07';
+    const trips = tripsQuery.data ?? [];
+    const fuelLogs = fuelQuery.data ?? [];
+    const maintenance = maintenanceQuery.data ?? [];
+    const events = eventsQuery.data ?? [];
+
+    const inMonth = (iso: string) => iso.slice(0, 7) === selectedMonth;
 
     const vehicleRows = orgVehicles
       .filter(v => selectedScope === 'ALL' || v.id === selectedScope)
       .map(v => {
-        const driver = orgDrivers.find(d => d.assignedVehicleId === v.id || d.id === v.currentDriverId);
+        const driver = orgDrivers.find(d => d.assignedVehicleId === v.id);
 
-        // Calculate dynamic mock distance & fuel metrics per vehicle
-        let distanceKm = v.type === 'HEAVY_TRUCK' ? 4850 : v.type === 'CONTAINER_CARRIER' ? 5200 : 3100;
-        if (isJuly) distanceKm = Math.round(distanceKm * 1.12);
+        const vehicleTrips = trips.filter(t => t.vehicleId === v.id && inMonth(t.startedAt));
+        const distanceKm = Math.round(vehicleTrips.reduce((sum, t) => sum + t.distanceKm, 0));
 
-        let fuelLiters = Math.round((distanceKm * v.expectedConsumptionL100km) / 100);
-        if (v.id === 'veh_actros_01' && isAugust) {
-          fuelLiters += 120; // Anomaly excess
-        }
+        const vehicleFuel = fuelLogs.filter(f => f.vehicleId === v.id && inMonth(f.loggedAt));
+        const fuelLiters = Math.round(vehicleFuel.reduce((sum, f) => sum + f.litersAdded, 0));
+        const fuelCostXOF = Math.round(vehicleFuel.reduce((sum, f) => sum + f.totalCost, 0));
 
-        const fuelCostXOF = fuelLiters * 700; // 700 XOF/L nominal
-        const avgConsumptionL100km = parseFloat(((fuelLiters / distanceKm) * 100).toFixed(1));
-        const costPerKmXOF = parseFloat((fuelCostXOF / distanceKm).toFixed(1));
+        // Sans les deux mesures, la consommation ne veut rien dire.
+        const avgConsumptionL100km =
+          distanceKm > 0 && fuelLiters > 0 ? parseFloat(((fuelLiters / distanceKm) * 100).toFixed(1)) : 0;
+        const costPerKmXOF = distanceKm > 0 ? parseFloat((fuelCostXOF / distanceKm).toFixed(1)) : 0;
 
-        // Maintenance & Safety metrics
-        const maintenanceCount = v.status === 'MAINTENANCE' ? 2 : 1;
-        const maintenanceCostXOF =
-          v.type === 'HEAVY_TRUCK' ? 280000 : v.type === 'CONTAINER_CARRIER' ? 350000 : 120000;
-        const safetyScore = driver ? driver.currentSafetyScore : 90.0;
-        const alertCount = v.id === 'veh_actros_01' ? 4 : 1;
+        const vehicleMaint = maintenance.filter(m => m.vehicleId === v.id && inMonth(m.performedAt));
+        const maintenanceCostXOF = Math.round(vehicleMaint.reduce((sum, m) => sum + m.cost, 0));
+
+        const alertCount = events.filter(e => e.vehicleId === v.id && inMonth(e.recordedAt)).length;
 
         return {
           vehicleId: v.id,
@@ -80,9 +118,9 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
           expectedL100km: v.expectedConsumptionL100km,
           avgConsumptionL100km,
           costPerKmXOF,
-          maintenanceCount,
+          maintenanceCount: vehicleMaint.length,
           maintenanceCostXOF,
-          safetyScore,
+          safetyScore: driver ? driver.currentSafetyScore : 0,
           alertCount,
         };
       });
@@ -103,7 +141,7 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
         : 0;
 
     return {
-      periodLabel: monthLabels[selectedMonth] || selectedMonth,
+      periodLabel: monthOptions.find(m => m.value === selectedMonth)?.label ?? selectedMonth,
       vehicleRows,
       totalDistanceKm,
       totalFuelLiters,
@@ -115,7 +153,17 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
       avgSafetyScore,
       totalCostXOF: totalFuelCostXOF + totalMaintCostXOF,
     };
-  }, [selectedMonth, selectedScope, orgVehicles, orgDrivers]);
+  }, [
+    selectedMonth,
+    selectedScope,
+    orgVehicles,
+    orgDrivers,
+    monthOptions,
+    tripsQuery.data,
+    fuelQuery.data,
+    maintenanceQuery.data,
+    eventsQuery.data,
+  ]);
 
   // Export CSV Handler
   const handleExportCSV = () => {
@@ -246,10 +294,11 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
               onChange={e => setSelectedMonth(e.target.value)}
               className="w-full bg-slate-50 text-xs font-semibold text-slate-800 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 cursor-pointer"
             >
-              <option value="2026-08">Août 2026 (Mois en cours)</option>
-              <option value="2026-07">Juillet 2026</option>
-              <option value="2026-06">Juin 2026</option>
-              <option value="2026-05">Mai 2026</option>
+              {monthOptions.map(month => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -294,7 +343,10 @@ export const MonthlyReportGenerator: React.FC<MonthlyReportGeneratorProps> = ({ 
           </div>
           <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
             <TrendingDown className="w-3 h-3 rotate-180" />
-            <span>+8.4% vs mois précédent</span>
+            {/* La comparaison au mois précédent était écrite en dur. Elle
+                demande un historique que le premier mois d'exploitation n'a
+                pas : mieux vaut ne rien dire que d'inventer une tendance. */}
+            <span>Sur les trajets reconstruits de la période</span>
           </div>
         </div>
 

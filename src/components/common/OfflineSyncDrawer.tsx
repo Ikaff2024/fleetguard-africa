@@ -175,7 +175,9 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
             ) : (
               <Wifi className="w-3.5 h-3.5 text-emerald-600" />
             )}
-            <span>{isOnline ? 'Simuler Mode Hors-Ligne' : 'Rétablir Connexion (Online)'}</span>
+            {/* Bascule d'essai : elle coupe l'usage du réseau par
+                l'application, sans toucher à la connexion du poste. */}
+            <span>{isOnline ? 'Passer en mode hors-ligne' : 'Rétablir la connexion'}</span>
           </button>
         </div>
 
@@ -207,7 +209,9 @@ export const OfflineSyncDrawer: React.FC<OfflineSyncDrawerProps> = ({ isOpen, on
             }`}
           >
             <Plus className="w-4 h-4" />
-            <span>Simuler Saisie Hors-Ligne</span>
+            {/* La saisie est réelle : elle rejoint la file et sera écrite en
+                base à la reconnexion. */}
+            <span>Ajouter une saisie à la file</span>
           </button>
         </div>
 

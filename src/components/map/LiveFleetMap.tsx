@@ -27,7 +27,6 @@ import {
   Radio,
   RefreshCw,
   Layers,
-  CloudRain,
   Activity,
   Mountain,
   Eye,
@@ -88,7 +87,6 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
   // Map Layer States
   const [baseMapStyle, setBaseMapStyle] = useState<BaseMapStyle>('streets');
   const [showTraffic, setShowTraffic] = useState<boolean>(true);
-  const [showWeather, setShowWeather] = useState<boolean>(true);
   const [showGeofences, setShowGeofences] = useState<boolean>(true);
   const [showFuelStations, setShowFuelStations] = useState<boolean>(true);
   const [showLayerPanel, setShowLayerPanel] = useState<boolean>(true);
@@ -276,7 +274,15 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
         });
       }
 
-      // 2. Traffic Overlay Layer
+      /**
+       * Allure du véhicule le long de sa trace.
+       *
+       * Ce calque s'annonçait « densité du trafic ». Il ne mesure rien de tel :
+       * il colore la trace selon la vitesse relevée du camion lui-même. Un
+       * ralentissement peut venir d'un poste de contrôle, d'une piste dégradée
+       * ou d'un chargement — en conclure un embouteillage, et réacheminer une
+       * mission là-dessus, serait une erreur coûteuse.
+       */
       if (showTraffic && routePoints.length > 1) {
         for (let i = 0; i < routePoints.length - 1; i++) {
           const p1 = routePoints[i];
@@ -285,10 +291,10 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
           const isModerate = p1.speedKmH >= 25 && p1.speedKmH < 50;
           const color = isCongested ? '#ef4444' : isModerate ? '#f59e0b' : '#10b981';
           const trafficLabel = isCongested
-            ? 'Trafic Très Dense (Ralentissement)'
+            ? 'Allure faible (moins de 25 km/h)'
             : isModerate
-              ? 'Trafic Modéré'
-              : 'Fluide';
+              ? 'Allure réduite (25 à 50 km/h)'
+              : 'Allure de croisière';
 
           const trafficPolyline = L.polyline(
             [
@@ -303,7 +309,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             },
           ).addTo(map).bindPopup(`
             <div style="font-family: sans-serif; font-size: 11px;">
-              <b>Densité du Trafic Routier</b><br/>
+              <b>Allure relevée du véhicule</b><br/>
               État: <span style="color: ${color}; font-weight: bold;">${trafficLabel}</span><br/>
               Vitesse estimée: <b>${p1.speedKmH} km/h</b>
             </div>
@@ -313,45 +319,15 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
         }
       }
 
-      // 3. Weather Overlay Layer
-      if (showWeather) {
-        const weatherZones = [
-          {
-            lat: centerLat + 0.3,
-            lng: centerLng + 0.1,
-            radius: 12000,
-            type: 'Orage Violente & Visibilité Réduite',
-            color: '#3b82f6',
-            icon: '⛈️',
-          },
-          {
-            lat: centerLat + 0.8,
-            lng: centerLng + 0.25,
-            radius: 18000,
-            type: "Pluie Forte & Risque d'Aqualissage",
-            color: '#0284c7',
-            icon: '🌧️',
-          },
-        ];
-
-        weatherZones.forEach(w => {
-          const wCircle = L.circle([w.lat, w.lng], {
-            color: w.color,
-            fillColor: w.color,
-            fillOpacity: 0.25,
-            radius: w.radius,
-            dashArray: '5, 10',
-          }).addTo(map).bindPopup(`
-            <div style="font-family: sans-serif; font-size: 11px;">
-              <b>Zone Météo Perturbée ${w.icon}</b><br/>
-              Conditions: <b>${w.type}</b><br/>
-              Alerte Sécurité Flotte: <i>Réduire la vitesse de 20 km/h</i>
-            </div>
-          `);
-
-          layerGroupRef.current.weather?.push(wCircle);
-        });
-      }
+      /**
+       * Le calque météo a été retiré.
+       *
+       * Il dessinait deux zones d'orage placées par rapport au centre de la
+       * carte, sans aucune source météorologique. Un régulateur qui détourne un
+       * camion pour éviter un orage inexistant perd une journée de livraison —
+       * et cesse de croire au reste de l'écran. Le rétablir suppose un
+       * fournisseur de prévisions, pas un cercle dessiné à la main.
+       */
 
       // 4. Fuel Stations Layer (Stations-Service Zone Isolée)
       if (showFuelStations) {
@@ -542,7 +518,6 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     selectedVehicleId,
     baseMapStyle,
     showTraffic,
-    showWeather,
     showGeofences,
     showFuelStations,
     selectedFuelStationId,
@@ -801,26 +776,12 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                       <Activity
                         className={`w-4 h-4 ${showTraffic ? 'text-emerald-400' : 'text-slate-500'}`}
                       />
-                      <span className="font-medium text-slate-200">Densité du Trafic</span>
+                      <span className="font-medium text-slate-200">Allure du véhicule</span>
                     </div>
                     <input
                       type="checkbox"
                       checked={showTraffic}
                       onChange={e => setShowTraffic(e.target.checked)}
-                      className="accent-orange-500 w-4 h-4 cursor-pointer"
-                    />
-                  </label>
-
-                  {/* Weather Overlay Toggle */}
-                  <label className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <CloudRain className={`w-4 h-4 ${showWeather ? 'text-sky-400' : 'text-slate-500'}`} />
-                      <span className="font-medium text-slate-200">Alertes Météo & Pluie</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={showWeather}
-                      onChange={e => setShowWeather(e.target.checked)}
                       className="accent-orange-500 w-4 h-4 cursor-pointer"
                     />
                   </label>
