@@ -16,7 +16,8 @@ export type NavigationTab =
   | 'scoring'
   | 'rewards'
   | 'maintenance-fuel'
-  | 'ai-hub';
+  | 'ai-hub'
+  | 'help';
 
 /**
  * La permission est confrontée au profil renvoyé par le serveur à la
@@ -38,6 +39,15 @@ export const NAV_PERMISSIONS: Record<NavigationTab, string> = {
   rewards: 'scoring:read',
   'maintenance-fuel': 'maintenance:read',
   'ai-hub': 'intelligence:use',
+  /**
+   * Le guide n'est protégé par aucune permission.
+   *
+   * Le chauffeur en a autant besoin que le directeur — davantage, même : c'est
+   * lui qui utilise l'application dans une cabine, sans personne à qui
+   * demander. La chaîne vide vaut « aucun droit requis », et `hasPermission`
+   * la laisse passer.
+   */
+  help: '',
 };
 
 /** Ordre d'affichage, qui fixe aussi l'écran d'accueil selon le rôle. */
@@ -52,4 +62,5 @@ export const NAV_ORDER: NavigationTab[] = [
   'rewards',
   'maintenance-fuel',
   'ai-hub',
+  'help',
 ];

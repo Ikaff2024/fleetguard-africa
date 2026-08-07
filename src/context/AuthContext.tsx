@@ -245,9 +245,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasPermission = useCallback(
     (permission: string) =>
+      // La chaîne vide vaut « aucun droit requis » : c'est le cas du guide
+      // d'utilisation, dont le chauffeur a autant besoin que le directeur.
+      permission === '' ||
       // En démonstration, aucun compte n'existe : tous les modules sont
       // explorables.
-      status === 'demonstration' || permissions.includes(permission),
+      status === 'demonstration' ||
+      permissions.includes(permission),
     [permissions, status],
   );
 

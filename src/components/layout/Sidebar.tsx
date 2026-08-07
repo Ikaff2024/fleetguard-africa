@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { initials, roleLabel } from '../../lib/roles';
 import { NAV_PERMISSIONS, NavigationTab } from './navigation';
 import {
+  BookOpen,
   MapPin,
   Truck,
   Award,
@@ -95,6 +96,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Wrench,
       badge: alertsCount > 0 ? `${alertsCount} Anomalies` : undefined,
       badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30',
+    },
+    {
+      id: 'help',
+      label: 'Aide & guide',
+      icon: BookOpen,
     },
     {
       id: 'ai-hub',

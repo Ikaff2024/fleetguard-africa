@@ -42,6 +42,7 @@ const MissionPlanner = lazy(() =>
 const TripHistoryView = lazy(() =>
   import('./components/tracking/TripHistoryView').then(m => ({ default: m.TripHistoryView })),
 );
+const UserGuide = lazy(() => import('./components/help/UserGuide').then(m => ({ default: m.UserGuide })));
 const FleetIntelligenceHub = lazy(() =>
   import('./components/ai/FleetIntelligenceHub').then(m => ({ default: m.FleetIntelligenceHub })),
 );
@@ -186,6 +187,7 @@ function AppContent() {
               {effectiveTab === 'fleet' && <FleetManagementView currentOrg={currentOrg} />}
               {effectiveTab === 'maintenance-fuel' && <FleetManagementView currentOrg={currentOrg} />}
               {effectiveTab === 'ai-hub' && <FleetIntelligenceHub currentOrg={currentOrg} />}
+              {effectiveTab === 'help' && <UserGuide currentOrg={currentOrg} />}
             </Suspense>
           </ErrorBoundary>
         </main>
