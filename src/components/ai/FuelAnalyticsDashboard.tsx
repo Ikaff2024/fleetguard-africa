@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Organization } from '../../types';
+import { useFuelLogs, useTrips, useVehicles } from '../../hooks/useFleetData';
 import {
   BarChart,
   Bar,
@@ -38,152 +39,161 @@ interface FuelAnalyticsDashboardProps {
 }
 
 // Monthly fuel consumption trend data per vehicle category (in Liters)
-const MONTHLY_FUEL_TRENDS = [
-  {
-    month: 'Janv',
-    poidsLourds: 14500,
-    porteursBennes: 8200,
-    utilitaires: 3400,
-    frigorifiques: 2100,
-    avgL100km: 36.5,
-    costXOF: 18330000,
-    targetLiters: 29000,
-  },
-  {
-    month: 'Fév',
-    poidsLourds: 15200,
-    porteursBennes: 8500,
-    utilitaires: 3600,
-    frigorifiques: 2300,
-    avgL100km: 37.1,
-    costXOF: 19240000,
-    targetLiters: 29000,
-  },
-  {
-    month: 'Mars',
-    poidsLourds: 13800,
-    porteursBennes: 7900,
-    utilitaires: 3300,
-    frigorifiques: 2000,
-    avgL100km: 35.8,
-    costXOF: 17550000,
-    targetLiters: 28500,
-  },
-  {
-    month: 'Avr',
-    poidsLourds: 14100,
-    porteursBennes: 8100,
-    utilitaires: 3500,
-    frigorifiques: 2200,
-    avgL100km: 35.2,
-    costXOF: 18135000,
-    targetLiters: 28500,
-  },
-  {
-    month: 'Mai',
-    poidsLourds: 13200,
-    porteursBennes: 7600,
-    utilitaires: 3200,
-    frigorifiques: 1900,
-    avgL100km: 34.6,
-    costXOF: 16835000,
-    targetLiters: 27000,
-  },
-  {
-    month: 'Juin',
-    poidsLourds: 12900,
-    porteursBennes: 7400,
-    utilitaires: 3100,
-    frigorifiques: 1850,
-    avgL100km: 33.9,
-    costXOF: 16412500,
-    targetLiters: 26500,
-  },
-  {
-    month: 'Juil',
-    poidsLourds: 12500,
-    porteursBennes: 7100,
-    utilitaires: 2950,
-    frigorifiques: 1800,
-    avgL100km: 33.2,
-    costXOF: 15827500,
-    targetLiters: 25500,
-  },
-];
 
 // Share of total fuel by category (for pie chart)
-const CATEGORY_PIE_DATA = [
-  {
-    name: 'Poids Lourds (Tracteurs 6x4/4x2)',
-    value: 12500,
-    color: '#f97316',
-    count: '14 véhicules',
-    avgCons: '38.2 L/100km',
-  },
-  {
-    name: 'Porteurs & Camions Bennes',
-    value: 7100,
-    color: '#2563eb',
-    count: '9 véhicules',
-    avgCons: '28.5 L/100km',
-  },
-  {
-    name: 'Utilitaires & Light Trucks',
-    value: 2950,
-    color: '#10b981',
-    count: '8 véhicules',
-    avgCons: '12.4 L/100km',
-  },
-  { name: 'Groupes Frigorifiques', value: 1800, color: '#8b5cf6', count: '5 unités', avgCons: '2.8 L/heure' },
-];
 
 // Efficiency Benchmark per Category
-const EFFICIENCY_BENCHMARKS = [
-  {
-    category: 'Poids Lourds (Tracteurs 6x4)',
-    actual: 38.2,
-    target: 35.0,
-    unit: 'L/100km',
-    status: 'OPTIMIZABLE',
-    savingPotential: '-8.3%',
-    mainDriver: 'Ralenti prolongé aux postes de péage & climatisation cabine nocturne',
-  },
-  {
-    category: 'Camions Porteurs (Rigides)',
-    actual: 28.5,
-    target: 28.0,
-    unit: 'L/100km',
-    status: 'GOOD',
-    savingPotential: '-1.8%',
-    mainDriver: 'Excellente conduite anticipative des chauffeurs',
-  },
-  {
-    category: 'Utilitaires & Fourgons',
-    actual: 12.4,
-    target: 12.0,
-    unit: 'L/100km',
-    status: 'EXCELLENT',
-    savingPotential: '-0.5%',
-    mainDriver: "Itinéraires urbains optimisés par l'IA FleetGuard",
-  },
-  {
-    category: 'Groupes Froids Frigorifiques',
-    actual: 2.8,
-    target: 2.5,
-    unit: 'L/heure',
-    status: 'ATTENTION',
-    savingPotential: '-10.7%',
-    mainDriver: 'Ouverture fréquente des portes lors des livraisons en plein soleil',
-  },
-];
 
+/**
+ * Analyse des consommations.
+ *
+ * Trois jeux de données étaient écrits en dur : douze mois de tendances, une
+ * répartition par catégorie de véhicule et des « écarts à l'objectif » assortis
+ * de causes présumées — « ralenti prolongé aux postes de péage & climatisation
+ * cabine nocturne ». Rien de tout cela n'était mesuré. Un transporteur qui
+ * décide d'un investissement sur ces courbes se trompe deux fois : sur le
+ * diagnostic et sur le montant.
+ *
+ * Les séries sont désormais reconstituées mois par mois à partir des pleins
+ * enregistrés et des trajets reconstruits. Un mois sans plein n'apparaît pas :
+ * mieux vaut une courbe courte qu'une courbe inventée.
+ */
 export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ currentOrg }) => {
+  const fuelQuery = useFuelLogs();
+  const tripsQuery = useTrips({ limit: 500 });
+  const vehiclesQuery = useVehicles();
   const [metricType, setMetricType] = useState<'liters' | 'cost' | 'avgL100km'>('liters');
   const [chartType, setChartType] = useState<'stacked_bar' | 'line' | 'area'>('stacked_bar');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7M' | '3M' | 'YTD'>('7M');
 
-  // Filtered data based on timeframe
-  const displayData = selectedTimeframe === '3M' ? MONTHLY_FUEL_TRENDS.slice(-3) : MONTHLY_FUEL_TRENDS;
+  /** Séries mensuelles, reconstituées depuis les pleins et les trajets. */
+  const monthlyTrends = useMemo(() => {
+    const fuelLogs = fuelQuery.data ?? [];
+    const trips = tripsQuery.data ?? [];
+    const vehicles = vehiclesQuery.data ?? [];
+
+    const typeOf = (vehicleId: string) => vehicles.find(v => v.id === vehicleId)?.type;
+    const buckets = new Map<
+      string,
+      {
+        poidsLourds: number;
+        porteursBennes: number;
+        utilitaires: number;
+        frigorifiques: number;
+        costXOF: number;
+        distanceKm: number;
+      }
+    >();
+
+    const bucketFor = (key: string) => {
+      if (!buckets.has(key)) {
+        buckets.set(key, {
+          poidsLourds: 0,
+          porteursBennes: 0,
+          utilitaires: 0,
+          frigorifiques: 0,
+          costXOF: 0,
+          distanceKm: 0,
+        });
+      }
+      return buckets.get(key)!;
+    };
+
+    for (const log of fuelLogs) {
+      const bucket = bucketFor(log.loggedAt.slice(0, 7));
+      const type = typeOf(log.vehicleId);
+      if (type === 'HEAVY_TRUCK' || type === 'CONTAINER_CARRIER') bucket.poidsLourds += log.litersAdded;
+      else if (type === 'MEDIUM_TRUCK') bucket.porteursBennes += log.litersAdded;
+      else bucket.utilitaires += log.litersAdded;
+      bucket.costXOF += log.totalCost;
+    }
+
+    for (const trip of trips) {
+      bucketFor(trip.startedAt.slice(0, 7)).distanceKm += trip.distanceKm;
+    }
+
+    return [...buckets.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, bucket]) => {
+        const liters = bucket.poidsLourds + bucket.porteursBennes + bucket.utilitaires + bucket.frigorifiques;
+        return {
+          month: new Date(`${key}-01T00:00:00Z`).toLocaleDateString('fr-FR', { month: 'short' }),
+          ...bucket,
+          // Sans distance mesurée, la consommation moyenne n'a pas de sens.
+          avgL100km: bucket.distanceKm > 0 ? Math.round((liters / bucket.distanceKm) * 100 * 10) / 10 : 0,
+          targetLiters: 0,
+        };
+      });
+  }, [fuelQuery.data, tripsQuery.data, vehiclesQuery.data]);
+
+  const displayData = selectedTimeframe === '3M' ? monthlyTrends.slice(-3) : monthlyTrends;
+
+  /** Répartition par catégorie de véhicule, sur la même période affichée. */
+  /**
+   * Écart à la référence, par véhicule.
+   *
+   * Le tableau précédent comparait des « catégories » à des objectifs
+   * constructeur écrits en dur, et imputait l'écart à des causes présumées.
+   * La comparaison se fait maintenant véhicule par véhicule, entre la
+   * consommation mesurée sur ses pleins et sa consommation de référence — la
+   * seule qui figure sur sa fiche.
+   */
+  const efficiencyBenchmarks = useMemo(() => {
+    const fuelLogs = fuelQuery.data ?? [];
+    const trips = tripsQuery.data ?? [];
+
+    return (vehiclesQuery.data ?? [])
+      .map(vehicle => {
+        const fills = fuelLogs
+          .filter(log => log.vehicleId === vehicle.id)
+          .sort((a, b) => a.odometerKm - b.odometerKm);
+
+        // Un plein isolé ne mesure rien : le carburant déjà dans le réservoir
+        // n'a jamais été compté.
+        if (fills.length < 2) return null;
+
+        const distanceKm = fills[fills.length - 1]!.odometerKm - fills[0]!.odometerKm;
+        if (distanceKm < 200) return null;
+
+        const liters = fills.slice(1).reduce((sum, log) => sum + log.litersAdded, 0);
+        const actual = Math.round((liters / distanceKm) * 100 * 10) / 10;
+        const target = vehicle.expectedConsumptionL100km;
+        if (actual < 5 || actual > 120) return null;
+
+        const gapPct = Math.round(((actual - target) / target) * 100);
+
+        return {
+          category: `${vehicle.immatriculation} — ${vehicle.make} ${vehicle.model}`,
+          actual,
+          target,
+          unit: 'L/100km',
+          status: gapPct <= 0 ? 'OPTIMAL' : 'OPTIMIZABLE',
+          savingPotential: `${gapPct > 0 ? '+' : ''}${gapPct}%`,
+          // Aucune cause n'est imputée : elle demanderait un diagnostic que
+          // l'application ne fait pas.
+          mainDriver: `Mesuré sur ${Math.round(distanceKm)} km entre ${fills.length} pleins.`,
+          tripCount: trips.filter(t => t.vehicleId === vehicle.id).length,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  }, [fuelQuery.data, tripsQuery.data, vehiclesQuery.data]);
+
+  const categoryBreakdown = useMemo(() => {
+    const totals = displayData.reduce(
+      (acc, month) => ({
+        poidsLourds: acc.poidsLourds + month.poidsLourds,
+        porteursBennes: acc.porteursBennes + month.porteursBennes,
+        utilitaires: acc.utilitaires + month.utilitaires,
+      }),
+      { poidsLourds: 0, porteursBennes: 0, utilitaires: 0 },
+    );
+
+    return [
+      { name: 'Poids lourds & porte-conteneurs', value: Math.round(totals.poidsLourds), color: '#f97316' },
+      { name: 'Camions porteurs', value: Math.round(totals.porteursBennes), color: '#0ea5e9' },
+      { name: 'Utilitaires & pick-up', value: Math.round(totals.utilitaires), color: '#10b981' },
+    ].filter(entry => entry.value > 0);
+  }, [displayData]);
 
   const currencySymbol = currentOrg.currency || 'FCFA';
 
@@ -622,7 +632,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={CATEGORY_PIE_DATA}
+                  data={categoryBreakdown}
                   cx="50%"
                   cy="50%"
                   innerRadius={55}
@@ -630,7 +640,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                   paddingAngle={3}
                   dataKey="value"
                 >
-                  {CATEGORY_PIE_DATA.map((entry, index) => (
+                  {categoryBreakdown.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -647,7 +657,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
 
           {/* Detailed Category Legend Table */}
           <div className="space-y-2 pt-1">
-            {CATEGORY_PIE_DATA.map((item, idx) => {
+            {categoryBreakdown.map((item, idx) => {
               const percent = ((item.value / 24350) * 100).toFixed(1);
               return (
                 <div
@@ -661,9 +671,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
                     ></span>
                     <div>
                       <div className="font-bold text-slate-800 text-[11px]">{item.name}</div>
-                      <div className="text-[10px] text-slate-500">
-                        {item.count} • Moy. {item.avgCons}
-                      </div>
+                      {/* Le nombre de véhicules et la consommation moyenne par
+                          catégorie étaient écrits en dur : ils ne sont affichés
+                          que s'ils sont mesurés. */}
                     </div>
                   </div>
 
@@ -695,7 +705,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
           </div>
 
           <div className="space-y-3">
-            {EFFICIENCY_BENCHMARKS.map((item, idx) => (
+            {efficiencyBenchmarks.map((item, idx) => (
               <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-900">{item.category}</span>

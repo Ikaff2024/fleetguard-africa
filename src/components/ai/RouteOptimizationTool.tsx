@@ -33,7 +33,14 @@ export interface DeliveryStop {
   priority: 'HIGH' | 'NORMAL' | 'LOW';
 }
 
-// Preset Corridor Presets based on Region
+/**
+ * Gabarits d'itinéraires, par région.
+ *
+ * Ce sont des points de départ modifiables, comme les valeurs par défaut d'un
+ * formulaire — pas des relevés. La « difficulté » de chaque étape est une
+ * appréciation du planificateur, et l'infobulle le précise : aucune source de
+ * trafic n'alimente l'application.
+ */
 const PRESET_ROUTES: { [key: string]: { name: string; origin: string; stops: DeliveryStop[] } } = {
   BENIN_NORTH: {
     name: 'Corridor Cotonou - Parakou - Malanville (Bénin)',
@@ -368,7 +375,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
               Adresse: ${stop.address}<br/>
               Poids déchargement: <b>${stop.cargoWeightTons} Tonnes</b><br/>
               Fenêtre de livraison: ${stop.timeWindowStart} - ${stop.timeWindowEnd}<br/>
-              Risque Trafic: <span style="color: ${stop.trafficRisk === 'HIGH' ? 'red' : 'orange'}">${stop.trafficRisk}</span>
+              Difficulté déclarée : <span style="color: ${stop.trafficRisk === 'HIGH' ? 'red' : 'orange'}">${stop.trafficRisk}</span>
+              <br/><i style="font-size:10px;color:#94a3b8">Saisie par le planificateur, non mesurée.</i>
             </div>
           `);
       });
