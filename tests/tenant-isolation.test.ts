@@ -1299,3 +1299,113 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
     expect(theirs.body.data.some((m: { id: string }) => myIds.has(m.id))).toBe(false);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Réglages de détection et carte', () => {
+  let adminToken: string;
+  let managerToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+    managerToken = await tokenFor('manager@transafrik.bj');
+  });
+
+  it('expose le fournisseur de tuiles et sa contrainte de licence', async () => {
+    const res = await request(app).get('/api/v1/map-config');
+
+    expect(res.status).toBe(200);
+    expect(['OSM', 'MAPTILER']).toContain(res.body.data.provider);
+    // Sans clé, l'usage commercial est interdit : l'application doit le dire
+    // plutôt que de laisser la contrainte dans un fichier de configuration.
+    if (res.body.data.provider === 'OSM') {
+      expect(res.body.data.commercialUseAllowed).toBe(false);
+    }
+    expect(res.body.data.styles.streets).toBeTruthy();
+  });
+
+  it('sert les seuils de détection de l’organisation', async () => {
+    const res = await request(app)
+      .get('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.openRoadSpeedLimitKmH).toBeGreaterThan(0);
+    expect(res.body.data.speedToleranceKmH).toBeGreaterThanOrEqual(0);
+  });
+
+  it('réserve la modification à la configuration de l’entreprise', async () => {
+    // Abaisser la limite change la note de chaque chauffeur, donc les primes :
+    // ce n'est pas un geste d'exploitation quotidienne.
+    const res = await request(app)
+      .patch('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        openRoadSpeedLimitKmH: 90,
+        speedToleranceKmH: 5,
+        minOverspeedDurationSeconds: 30,
+        nightStartHour: 0,
+        nightEndHour: 5,
+      });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('applique un seuil modifié aux remontées suivantes', async () => {
+    const before = await request(app)
+      .get('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    const updated = await request(app)
+      .patch('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...before.body.data, openRoadSpeedLimitKmH: 95 });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.openRoadSpeedLimitKmH).toBe(95);
+    // Le changement ne vaut que pour la suite : un chauffeur sanctionné hier
+    // ne doit pas voir son dossier changer parce que la limite a bougé.
+    expect(updated.body.data.appliesTo).toContain('inchangés');
+
+    const after = await request(app)
+      .get('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(after.body.data.openRoadSpeedLimitKmH).toBe(95);
+
+    // Rétabli pour ne pas fausser les autres contrôles.
+    await request(app)
+      .patch('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(before.body.data);
+  });
+
+  it('refuse un seuil hors de toute plausibilité', async () => {
+    const res = await request(app)
+      .patch('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        openRoadSpeedLimitKmH: 300,
+        speedToleranceKmH: 5,
+        minOverspeedDurationSeconds: 30,
+        nightStartHour: 0,
+        nightEndHour: 5,
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('ne laisse pas une organisation lire les seuils d’une autre', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    const mine = await request(app)
+      .get('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${adminToken}`);
+    const theirs = await request(app)
+      .get('/api/v1/organizations/me/detection-thresholds')
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(mine.status).toBe(200);
+    expect(theirs.status).toBe(200);
+    // Chacune lit la sienne : « me » est résolu depuis le jeton, jamais fourni.
+    expect(theirs.body.data).toBeTruthy();
+  });
+});

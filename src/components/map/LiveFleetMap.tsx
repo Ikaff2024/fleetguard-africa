@@ -7,6 +7,14 @@ import {
   useVehicleTrack,
   useVehicles,
 } from '../../hooks/useFleetData';
+import { useApiResource } from '../../hooks/useApiResource';
+
+interface MapConfig {
+  provider: 'OSM' | 'MAPTILER';
+  commercialUseAllowed: boolean;
+  styles: { streets: string; streetsDark: string; terrain: string; satellite: string };
+  attribution: string;
+}
 import { DataState } from '../common/DataState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -106,6 +114,17 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
   // Trace réellement remontée par le véhicule sélectionné.
   const trackQuery = useVehicleTrack(activeVehicle?.id);
   const routePoints = useMemo(() => trackQuery.data ?? [], [trackQuery.data]);
+
+  /**
+   * Fournisseur de tuiles, servi par l'API.
+   *
+   * Les URL étaient figées dans le code : basculer vers un fournisseur sous
+   * licence commerciale demandait une modification et un déploiement. La
+   * configuration vient désormais du serveur, et une clé se change sans
+   * reconstruire l'application.
+   */
+  const mapConfigQuery = useApiResource<MapConfig>('/map-config');
+  const mapConfig = mapConfigQuery.data;
 
   const stationsQuery = useFuelStations();
   const stations = useMemo(() => stationsQuery.data ?? [], [stationsQuery.data]);
@@ -214,27 +233,19 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
 
       layerGroupRef.current = { traffic: [], weather: [], geofences: [], fuelStations: [], markers: [] };
 
-      // Base Tile Layer selection
-      let tileUrl =
-        isDark && baseMapStyle === 'streets'
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      let tileAttr =
-        isDark && baseMapStyle === 'streets'
-          ? '&copy; OpenStreetMap contributors &copy; CARTO | FleetGuard Africa'
-          : '&copy; OpenStreetMap contributors | FleetGuard Africa';
+      // Fond de carte : les styles viennent du fournisseur configuré.
+      const styles = mapConfig?.styles;
+      const tileUrl =
+        baseMapStyle === 'terrain'
+          ? (styles?.terrain ?? '')
+          : baseMapStyle === 'satellite'
+            ? (styles?.satellite ?? '')
+            : isDark
+              ? (styles?.streetsDark ?? '')
+              : (styles?.streets ?? '');
+      const tileAttr = mapConfig?.attribution ?? '';
 
-      if (baseMapStyle === 'terrain') {
-        tileUrl =
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
-        tileAttr =
-          'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), swisstopo, MapmyIndia, OpenStreetMap contributors, and the GIS User Community';
-      } else if (baseMapStyle === 'satellite') {
-        tileUrl =
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-        tileAttr =
-          'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
-      }
+      if (!tileUrl) return;
 
       const newTileLayer = L.tileLayer(tileUrl, {
         attribution: tileAttr,
@@ -536,6 +547,9 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     showFuelStations,
     selectedFuelStationId,
     isDark,
+    // Les tuiles arrivent après le premier rendu : sans cette dépendance, la
+    // carte resterait vide jusqu'à une interaction.
+    mapConfig,
   ]);
 
   if (vehiclesQuery.isLoading || vehiclesQuery.error) {
@@ -581,6 +595,18 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
               ? `${routePoints.length} position(s) remontée(s)`
               : 'Aucune position remontée'}
           </span>
+
+          {/* La contrainte de licence est affichée, pas enfouie dans un fichier
+              de configuration : elle doit être vue avant la première facture,
+              pas découverte après. */}
+          {mapConfig && !mapConfig.commercialUseAllowed && (
+            <span
+              title="Les tuiles OpenStreetMap publiques sont interdites en usage commercial. Renseigner MAPTILER_API_KEY avant le premier client."
+              className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold"
+            >
+              Fond de carte : usage interne
+            </span>
+          )}
         </div>
       </div>
 

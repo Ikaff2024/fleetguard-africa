@@ -2,7 +2,9 @@ import type { GpsPoint } from '../../types';
 import { isDatabaseEnabled, withTenant } from '../db/prisma.js';
 import { logger } from '../logger.js';
 import {
+  DEFAULT_THRESHOLDS,
   type DetectedEvent,
+  type DetectionThresholds,
   type ZoneContext,
   detectEvents,
   distanceTravelledKm,
@@ -148,7 +150,26 @@ export async function ingestTelemetryBatch(input: {
       logger.error({ err, batchId }, 'Résolution des zones impossible — détection sans geofence');
     }
 
-    const detected = detectEvents(points, { zones });
+    /**
+     * Les seuils appartiennent à l'organisation, pas au code.
+     *
+     * La limite poids lourds n'est pas la même au Bénin et au Kenya, et un
+     * transporteur qui dessert des pistes n'a pas la même tolérance qu'un
+     * autre sur bitume. Valider ces valeurs avec un exploitant devait rester
+     * un réglage, pas un déploiement.
+     */
+    const organization = await tx.organization.findFirst({ where: { id: organizationId } });
+    const thresholds: DetectionThresholds = organization
+      ? {
+          openRoadSpeedLimitKmH: organization.openRoadSpeedLimitKmH,
+          speedToleranceKmH: organization.speedToleranceKmH,
+          minOverspeedDurationSeconds: organization.minOverspeedDurationSeconds,
+          nightStartHour: organization.nightStartHour,
+          nightEndHour: organization.nightEndHour,
+        }
+      : DEFAULT_THRESHOLDS;
+
+    const detected = detectEvents(points, { zones, thresholds });
     const distanceKm = distanceTravelledKm(points);
 
     if (detected.length > 0) {

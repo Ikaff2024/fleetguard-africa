@@ -150,8 +150,11 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
   de garder le téléphone allumé et branché. Un suivi réellement continu en
   arrière-plan suppose une application native ou un boîtier — la même route
   d'ingestion les servira.
-- **Tuiles cartographiques** : les serveurs OpenStreetMap publics sont interdits
-  en usage commercial. Prévoir un fournisseur dédié avant le premier client.
+- **Tuiles cartographiques** : sans `MAPTILER_API_KEY`, la carte retombe sur les
+  tuiles OpenStreetMap publiques, interdites en usage commercial. L'écran
+  l'affiche (« Fond de carte : usage interne ») plutôt que de laisser la
+  contrainte dans un fichier de configuration. Renseigner la clé bascule le
+  fournisseur sans reconstruction.
 - **Primes en monnaie électronique** : verser du cash via Orange Money, MTN MoMo
   ou Wave relève de la réglementation BCEAO et suppose un agrégateur agréé. Le
   MVP doit s'en tenir aux bons carburant.

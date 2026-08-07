@@ -30,6 +30,16 @@ const envSchema = z.object({
   RATE_LIMIT_AI_MAX: z.coerce.number().int().positive().default(10),
 
   GEMINI_API_KEY: z.string().min(1).optional(),
+
+  /**
+   * Clé du fournisseur de tuiles cartographiques.
+   *
+   * Sans elle, la carte retombe sur les tuiles OpenStreetMap publiques, dont la
+   * politique d'utilisation interdit l'usage commercial. L'application le
+   * signale à l'écran plutôt que de le laisser dans un fichier de
+   * configuration que personne ne relit.
+   */
+  MAPTILER_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
   GEMINI_TIMEOUT_MS: z.coerce.number().int().positive().default(25_000),
 

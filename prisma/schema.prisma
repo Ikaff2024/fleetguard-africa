@@ -60,16 +60,31 @@ enum CurrencyCode {
 }
 
 model Organization {
-  id           String       @id @default(uuid()) @db.Uuid
-  name         String
-  code         String       @unique
-  country      String
-  currency     CurrencyCode
-  timezone     String
-  logoUrl      String?
-  maxVehicles  Int          @default(50)
-  contactEmail String
-  contactPhone String
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  code        String       @unique
+  country     String
+  currency    CurrencyCode
+  timezone    String
+  logoUrl     String?
+  maxVehicles Int          @default(50)
+
+  /**
+   * Seuils de détection, ajustables par organisation.
+   * Ils étaient constants dans le code : les valider avec un exploitant
+   * demandait une modification et un déploiement. Or ils varient — la limite
+   * poids lourds n'est pas la même au Bénin et au Kenya, et un transporteur
+   * qui dessert des pistes n'a pas la même tolérance qu'un autre sur bitume.
+   * Les valeurs par défaut restent celles du code : une organisation qui n'y
+   * touche pas conserve exactement le comportement documenté.
+   */
+  openRoadSpeedLimitKmH       Int    @default(80)
+  speedToleranceKmH           Int    @default(5)
+  minOverspeedDurationSeconds Int    @default(30)
+  nightStartHour              Int    @default(0)
+  nightEndHour                Int    @default(5)
+  contactEmail                String
+  contactPhone                String
 
   // Suspension d'un client pour impayé sans destruction de ses données.
   isActive  Boolean   @default(true)
