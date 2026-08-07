@@ -553,6 +553,22 @@ async function main() {
   // le cas nominal du partage de gain, où la conduite économe se traduit
   // réellement en prime. Les autres profils, eux, exposent chacun un motif
   // d'inéligibilité — c'est aussi ce qu'un transporteur doit voir.
+  /**
+   * Les pleins de démonstration des exécutions précédentes sont retirés.
+   *
+   * Le peuplement a produit, au fil des versions, des jeux différents : un plein
+   * isolé, puis une paire. Sans ce nettoyage, les anciens subsistent entre les
+   * nouveaux et faussent la mesure de consommation, qui se fait d'un plein à
+   * l'autre — c'est ce qui rendait un chauffeur inéligible en production alors
+   * qu'il l'était en local.
+   *
+   * Seules les lignes que le peuplement a lui-même créées sont visées, par leur
+   * numéro de reçu. Les saisies venues du terrain ne sont jamais touchées.
+   */
+  await prisma.fuelLog.deleteMany({
+    where: { OR: [{ receiptNumber: { startsWith: 'BASE-' } }, { receiptNumber: { startsWith: 'DEMO-' } }] },
+  });
+
   const traceDriver = [...MOCK_DRIVERS].sort((a, b) => b.currentSafetyScore - a.currentSafetyScore)[0];
   const traceVehicle = MOCK_VEHICLES.find(v => v.id === traceDriver?.assignedVehicleId);
 
