@@ -144,23 +144,28 @@ if (!ready) {
 
   run('Contrôle de fumée', 'node', ['scripts/smoke-test.mjs', baseUrl], { env: smokeEnv });
 
-  // Le mode hors connexion se vérifie dans les deux cas : le shell ne dépend
-  // pas de la base. Avec une session, le contrôle va plus loin et vérifie qu'un
-  // exploitant déjà connecté conserve son espace de travail après une coupure.
-  run('Fonctionnement hors connexion', 'node', ['scripts/verify-offline-shell.mjs', baseUrl], {
-    env: DATABASE_READY
-      ? {
-          ...process.env,
-          OFFLINE_CHECK_EMAIL: process.env.SMOKE_EMAIL ?? 'manager@transafrik.bj',
-          OFFLINE_CHECK_PASSWORD: process.env.SMOKE_PASSWORD ?? 'FleetGuard2026!Demo',
-        }
-      : process.env,
-  });
-
   if (DATABASE_READY) {
+    /**
+     * Le mode hors connexion ne se vérifie que sur un build de production.
+     *
+     * Sans base, le serveur démarre en mode développement et sert l'application
+     * par le middleware Vite, depuis les sources : `sw.js` n'existe alors pas,
+     * et l'enregistrement du worker est volontairement désactivé pour ne pas
+     * masquer les modifications derrière un cache. Lancer le contrôle dans ces
+     * conditions produirait un échec sans rapport avec le code.
+     */
+    run('Fonctionnement hors connexion', 'node', ['scripts/verify-offline-shell.mjs', baseUrl], {
+      env: {
+        ...process.env,
+        OFFLINE_CHECK_EMAIL: process.env.SMOKE_EMAIL ?? 'manager@transafrik.bj',
+        OFFLINE_CHECK_PASSWORD: process.env.SMOKE_PASSWORD ?? 'FleetGuard2026!Demo',
+      },
+    });
+
     run('Isolation multi-tenant (API)', 'npx', ['vitest', 'run', 'tests/tenant-isolation.test.ts']);
     run('Cloisonnement visible à l’écran', 'node', ['scripts/verify-tenant-isolation-ui.mjs', baseUrl]);
   } else {
+    skip('Fonctionnement hors connexion', 'build de production requis (base absente)');
     skip('Isolation multi-tenant', 'DATABASE_APP_URL et JWT_SECRET absents');
     skip('Cloisonnement visible à l’écran', 'DATABASE_APP_URL et JWT_SECRET absents');
   }

@@ -85,33 +85,12 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
           exit $STATUS
 
-      - name: Fonctionnement hors connexion
-        # Le service worker peut s'enregistrer sans rien précacher d'utile, et
-        # la panne ne se voit alors qu'au moment où l'utilisateur en a besoin :
-        # sur la route, sans réseau. Ce contrôle coupe réellement la connexion
-        # dans le navigateur. Il vérifie aussi qu'aucune réponse d'API n'est
-        # mise en cache — un poste partagé au dépôt ne doit jamais montrer la
-        # flotte du client précédent.
-        run: |
-          NODE_ENV=development PORT=3000 node dist/server.js &
-          SERVER_PID=$!
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3000/api/v1/health > /dev/null && break
-            sleep 1
-          done
-          node scripts/verify-offline-shell.mjs http://localhost:3000
-          STATUS=$?
-          kill $SERVER_PID 2>/dev/null || true
-          exit $STATUS
-
       - name: Capture en cas d'échec
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: captures-echec
-          path: |
-            smoke-screenshot.png
-            offline-screenshot.png
+          name: capture-fumee
+          path: smoke-screenshot.png
           retention-days: 7
           if-no-files-found: ignore
 
@@ -204,9 +183,27 @@ jobs:
           #    précédents sans qu'aucun client ne voie jamais sa propre flotte.
           node scripts/verify-tenant-isolation-ui.mjs http://localhost:3000
 
+          # 4. L'application s'ouvre-t-elle sans réseau, et le cache reste-t-il
+          #    exempt de données d'API ? Ce contrôle appartient à ce job et non
+          #    au précédent : le service worker n'existe que dans un build de
+          #    production, là où le serveur sert `dist/` au lieu de passer par
+          #    le middleware Vite.
+          export OFFLINE_CHECK_EMAIL=manager@transafrik.bj
+          export OFFLINE_CHECK_PASSWORD='FleetGuard2026!Demo'
+          node scripts/verify-offline-shell.mjs http://localhost:3000
+
           STATUS=$?
           kill $SERVER_PID 2>/dev/null || true
           exit $STATUS
+
+      - name: Capture en cas d'échec
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: capture-hors-connexion
+          path: offline-screenshot.png
+          retention-days: 7
+          if-no-files-found: ignore
 
   docker:
     name: Image Docker
