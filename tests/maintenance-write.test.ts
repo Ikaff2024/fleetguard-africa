@@ -20,7 +20,14 @@ import { createApp } from '../src/server/app.js';
 const DATABASE_CONFIGURED = Boolean(process.env.DATABASE_APP_URL && process.env.JWT_SECRET);
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'FleetGuard2026!Demo';
 
-const TECH = 'atelier@transafrik.bj';
+/**
+ * Les écritures ont lieu dans le bac à sable, jamais dans le parc de
+ * démonstration. Emprunter un camion réel revenait à pousser son compteur à
+ * 211 000 km et à empiler des interventions de contrôle dans un carnet que
+ * l'utilisateur consulte.
+ */
+const TECH = 'atelier@sandbox.fleetguard.local';
+const SANDBOX_MANAGER = 'manager@sandbox.fleetguard.local';
 const OTHER_ORG = 'manager@sahelexpress.sn';
 
 let app: Express;
@@ -57,7 +64,7 @@ beforeAll(async () => {
   // pas : le gestionnaire prépare le terrain, le technicien écrit le carnet.
   const res = await request(app)
     .post('/api/v1/vehicles')
-    .set('Authorization', `Bearer ${await tokenFor('manager@transafrik.bj')}`)
+    .set('Authorization', `Bearer ${await tokenFor(SANDBOX_MANAGER)}`)
     .send({
       immatriculation: `MT-${suffix}`,
       vin: `VINMAINT${suffix}`,
@@ -77,7 +84,7 @@ afterAll(async () => {
   if (!dedicatedVehicleId) return;
   await request(app)
     .delete(`/api/v1/vehicles/${dedicatedVehicleId}`)
-    .set('Authorization', `Bearer ${await tokenFor('manager@transafrik.bj')}`);
+    .set('Authorization', `Bearer ${await tokenFor(SANDBOX_MANAGER)}`);
 });
 
 describe.runIf(DATABASE_CONFIGURED)('Enregistrement d’un passage à l’atelier', () => {

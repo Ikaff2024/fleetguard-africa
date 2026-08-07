@@ -19,10 +19,17 @@ import { createApp } from '../src/server/app.js';
 const DATABASE_CONFIGURED = Boolean(process.env.DATABASE_APP_URL && process.env.JWT_SECRET);
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'FleetGuard2026!Demo';
 
-const MANAGER = 'manager@transafrik.bj';
-const DRIVER_ACCOUNT = 'chauffeur@transafrik.bj';
-const OTHER_ORG_DRIVER = 'chauffeur@sahelexpress.sn';
-const OTHER_ORG_MANAGER = 'manager@sahelexpress.sn';
+/**
+ * Les consignes sont écrites dans le bac à sable : chaque exécution en crée une
+ * dizaine, et elles resteraient sinon dans le fil d'un chauffeur réel.
+ *
+ * Le contrôle de cloisonnement garde en face une organisation de démonstration,
+ * puisque c'est précisément la séparation entre deux tenants qu'il vérifie.
+ */
+const MANAGER = 'manager@sandbox.fleetguard.local';
+const DRIVER_ACCOUNT = 'chauffeur@sandbox.fleetguard.local';
+const OTHER_ORG_DRIVER = 'chauffeur@transafrik.bj';
+const OTHER_ORG_MANAGER = 'manager@transafrik.bj';
 
 let app: Express;
 const tokens = new Map<string, string>();

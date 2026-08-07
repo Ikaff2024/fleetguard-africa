@@ -1208,7 +1208,9 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
    */
   beforeAll(async () => {
     app = await createApp();
-    managerToken = await tokenFor('manager@transafrik.bj');
+    // La planification écrit beaucoup : elle travaille dans le bac à sable,
+    // dont le calendrier n'apparaît sur aucun écran consulté.
+    managerToken = await tokenFor('manager@sandbox.fleetguard.local');
 
     const suffix = `${Date.now()}`.slice(-8);
 
@@ -1216,7 +1218,7 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
       .post('/api/v1/vehicles')
       .set('Authorization', `Bearer ${managerToken}`)
       .send({
-        immatriculation: `MS-${suffix}`,
+        immatriculation: `SB-${suffix}`,
         vin: `VINMISSION${suffix}`,
         make: 'Test',
         model: 'Véhicule de planification',
@@ -1235,7 +1237,7 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
       .send({
         fullName: `Chauffeur de planification ${suffix}`,
         phone: '+229 90 00 00 00',
-        licenseNumber: `MS-${suffix}`,
+        licenseNumber: `SB-${suffix}`,
         licenseCategory: 'CE',
         // La route attend une date seule : un horodatage complet est refusé.
         licenseExpiryDate: new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10),

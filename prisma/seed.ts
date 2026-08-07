@@ -752,6 +752,128 @@ async function main() {
     }
   }
 
+  // --- Bac à sable des tests automatisés -----------------------------------
+  /**
+   * Organisation dédiée aux suites automatisées.
+   *
+   * Les tests empruntaient les camions et les chauffeurs de démonstration. Ils
+   * s'y gênaient entre eux — deux suites parallèles pouvaient archiver le
+   * véhicule que la troisième venait de choisir — et surtout ils y laissaient
+   * des traces visibles à l'écran : 130 missions accumulées sur le calendrier
+   * d'un chauffeur, un compteur poussé à 211 000 km, des immatriculations de
+   * contrôle dans le parc.
+   *
+   * Ce tenant leur appartient. Il porte un nom qui ne trompe personne, il n'a
+   * ni trajet ni plein — les suites créent ce dont elles ont besoin — et ce qui
+   * s'y accumule ne salit aucune donnée que l'on regarde.
+   */
+  const SANDBOX_ORG_KEY = 'org_bac_a_sable_tests';
+  const sandboxOrgId = stableUuid(SANDBOX_ORG_KEY);
+
+  await prisma.organization.upsert({
+    where: { id: sandboxOrgId },
+    update: { name: 'Bac à sable — tests automatisés' },
+    create: {
+      id: sandboxOrgId,
+      name: 'Bac à sable — tests automatisés',
+      code: 'SANDBOX',
+      country: "Côte d'Ivoire",
+      currency: 'XOF',
+      timezone: 'Africa/Abidjan',
+      maxVehicles: 50,
+      contactEmail: 'tests@fleetguard.local',
+      contactPhone: '+225 00 00 00 00',
+    },
+  });
+
+  const sandboxAccounts = [
+    {
+      email: 'admin@sandbox.fleetguard.local',
+      fullName: 'Administrateur bac à sable',
+      role: 'ORGANIZATION_ADMIN' as const,
+    },
+    {
+      email: 'manager@sandbox.fleetguard.local',
+      fullName: 'Gestionnaire bac à sable',
+      role: 'FLEET_MANAGER' as const,
+    },
+    {
+      email: 'atelier@sandbox.fleetguard.local',
+      fullName: 'Atelier bac à sable',
+      role: 'MAINTENANCE_TECH' as const,
+    },
+    {
+      email: 'chauffeur@sandbox.fleetguard.local',
+      fullName: 'Chauffeur bac à sable',
+      role: 'DRIVER' as const,
+    },
+  ];
+
+  const sandboxPasswordHash = await hashPassword(DEMO_PASSWORD);
+
+  for (const account of sandboxAccounts) {
+    const userId = stableUuid(`sandbox_user_${account.email}`);
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: { fullName: account.fullName, role: account.role },
+      create: {
+        id: userId,
+        organizationId: sandboxOrgId,
+        email: account.email,
+        fullName: account.fullName,
+        role: account.role,
+        phone: '+225 00 00 00 00',
+        passwordHash: sandboxPasswordHash,
+      },
+    });
+  }
+
+  /**
+   * Un véhicule et un chauffeur stables, que les suites peuvent lire sans
+   * jamais les modifier. Celles qui écrivent créent les leurs.
+   */
+  const sandboxVehicleId = stableUuid('sandbox_vehicle_reference');
+  await prisma.vehicle.upsert({
+    where: { id: sandboxVehicleId },
+    update: {},
+    create: {
+      id: sandboxVehicleId,
+      organizationId: sandboxOrgId,
+      immatriculation: 'CI-0001-SB',
+      vin: 'VINSANDBOXREFERENCE0',
+      make: 'Référence',
+      model: 'Poids lourd de contrôle',
+      year: 2024,
+      type: 'HEAVY_TRUCK',
+      fuelType: 'DIESEL',
+      tankCapacityLiters: 400,
+      expectedConsumptionL100km: 35,
+      currentOdometerKm: 100_000,
+      status: 'ACTIVE',
+    },
+  });
+
+  const sandboxDriverId = stableUuid('sandbox_driver_reference');
+  await prisma.driver.upsert({
+    where: { id: sandboxDriverId },
+    update: {},
+    create: {
+      id: sandboxDriverId,
+      organizationId: sandboxOrgId,
+      userId: stableUuid('sandbox_user_chauffeur@sandbox.fleetguard.local'),
+      fullName: 'Chauffeur bac à sable',
+      phone: '+225 00 00 00 01',
+      licenseNumber: 'SB-REFERENCE-0001',
+      licenseCategory: 'CE',
+      licenseExpiryDate: new Date(Date.now() + 800 * 86_400_000),
+      assignedVehicleId: sandboxVehicleId,
+      status: 'AVAILABLE',
+      currentSafetyScore: 90,
+    },
+  });
+
+  console.log('  1 bac à sable pour les tests automatisés');
+
   console.log('\nPeuplement terminé.');
   console.log('\nComptes de démonstration :');
   for (const account of accounts) {
