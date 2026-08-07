@@ -80,6 +80,9 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         frigorifiques: number;
         costXOF: number;
         distanceKm: number;
+        /** Kilometres et litres reellement mesures au compteur, d'un plein a l'autre. */
+        measuredKm: number;
+        measuredLiters: number;
       }
     >();
 
@@ -92,6 +95,8 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
           frigorifiques: 0,
           costXOF: 0,
           distanceKm: 0,
+          measuredKm: 0,
+          measuredLiters: 0,
         });
       }
       return buckets.get(key)!;
@@ -106,6 +111,37 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
       bucket.costXOF += log.totalCost;
     }
 
+    /**
+     * Consommation mensuelle, mesuree d'un plein au suivant.
+     *
+     * La premiere version divisait les litres du mois par la distance des
+     * trajets reconstruits du meme mois. Les deux sources ne couvrent pas la
+     * meme periode — les trajets ne remontent qu'aussi loin que les positions
+     * GPS — et le rapport donnait 207 L/100 km sur un parc dont la reference
+     * est de 36.
+     *
+     * Chaque paire de pleins consecutifs d'un vehicule porte, elle, une mesure
+     * certaine : la distance au compteur, et les litres verses au second plein
+     * pour la couvrir. La paire est rattachee au mois du plein d'arrivee.
+     */
+    const fillsByVehicle = new Map<string, { odometerKm: number; litersAdded: number; loggedAt: string }[]>();
+    for (const log of fuelLogs) {
+      const list = fillsByVehicle.get(log.vehicleId) ?? [];
+      list.push({ odometerKm: log.odometerKm, litersAdded: log.litersAdded, loggedAt: log.loggedAt });
+      fillsByVehicle.set(log.vehicleId, list);
+    }
+
+    for (const fills of fillsByVehicle.values()) {
+      const ordered = [...fills].sort((a, b) => a.odometerKm - b.odometerKm);
+      for (let i = 1; i < ordered.length; i += 1) {
+        const span = ordered[i]!.odometerKm - ordered[i - 1]!.odometerKm;
+        if (span <= 0) continue;
+        const bucket = bucketFor(ordered[i]!.loggedAt.slice(0, 7));
+        bucket.measuredKm += span;
+        bucket.measuredLiters += ordered[i]!.litersAdded;
+      }
+    }
+
     for (const trip of trips) {
       bucketFor(trip.startedAt.slice(0, 7)).distanceKm += trip.distanceKm;
     }
@@ -117,8 +153,13 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         return {
           month: new Date(`${key}-01T00:00:00Z`).toLocaleDateString('fr-FR', { month: 'short' }),
           ...bucket,
-          // Sans distance mesurée, la consommation moyenne n'a pas de sens.
-          avgL100km: bucket.distanceKm > 0 ? Math.round((liters / bucket.distanceKm) * 100 * 10) / 10 : 0,
+          // Sans deux pleins encadrant une distance au compteur, la moyenne du
+          // mois n'est pas mesurable : zero la laisse hors du graphique plutot
+          // que d'y tracer un rapport qui n'en est pas un.
+          avgL100km:
+            bucket.measuredKm > 0
+              ? Math.round((bucket.measuredLiters / bucket.measuredKm) * 100 * 10) / 10
+              : 0,
           targetLiters: 0,
         };
       });
@@ -160,12 +201,60 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
       liters: Math.round(liters),
       cost,
       distanceKm: Math.round(distanceKm),
-      // Sans distance mesuree, la moyenne n'a pas de sens : elle reste vide.
-      avgL100km: distanceKm > 0 ? Math.round((liters / distanceKm) * 1000) / 10 : null,
       trend,
       lastMonthLabel: last?.month ?? null,
     };
   }, [displayData]);
+
+  /**
+   * Consommation moyenne de la flotte, mesurée d'un plein à l'autre.
+   *
+   * Première version fausse, et de la même façon que le défaut qui avait
+   * surpayé les primes : elle divisait les litres enregistrés par la distance
+   * des trajets reconstruits. Les deux ne couvrent pas la même période — les
+   * trajets ne remontent qu'aussi loin que les positions GPS — et le rapport
+   * affichait 207 L/100 km sur un parc dont la référence est de 36. Un chiffre
+   * absurde de cinq fois la réalité, présenté comme la moyenne de la flotte.
+   *
+   * La mesure correcte est celle du compteur : entre le premier et le dernier
+   * plein d'un véhicule, la distance est certaine et les litres versés après le
+   * premier sont exactement ceux qui l'ont couverte. Les véhicules n'ayant
+   * qu'un seul plein sont écartés — ils ne mesurent rien.
+   */
+  const fleetConsumption = useMemo(() => {
+    const byVehicle = new Map<string, { odometerKm: number; litersAdded: number }[]>();
+
+    for (const log of fuelQuery.data ?? []) {
+      const fills = byVehicle.get(log.vehicleId) ?? [];
+      fills.push({ odometerKm: log.odometerKm, litersAdded: log.litersAdded });
+      byVehicle.set(log.vehicleId, fills);
+    }
+
+    let measuredKm = 0;
+    let measuredLiters = 0;
+    let vehiclesMeasured = 0;
+
+    for (const fills of byVehicle.values()) {
+      if (fills.length < 2) continue;
+      const ordered = [...fills].sort((a, b) => a.odometerKm - b.odometerKm);
+      const span = ordered[ordered.length - 1]!.odometerKm - ordered[0]!.odometerKm;
+      if (span <= 0) continue;
+
+      // Le premier plein a servi avant la mesure : ses litres n'en font pas
+      // partie, sinon la consommation serait surestimée de moitié.
+      measuredKm += span;
+      measuredLiters += ordered.slice(1).reduce((sum, fill) => sum + fill.litersAdded, 0);
+      vehiclesMeasured += 1;
+    }
+
+    if (measuredKm === 0) return { avgL100km: null, vehiclesMeasured: 0, measuredKm: 0 };
+
+    return {
+      avgL100km: Math.round((measuredLiters / measuredKm) * 1000) / 10,
+      vehiclesMeasured,
+      measuredKm: Math.round(measuredKm),
+    };
+  }, [fuelQuery.data]);
 
   /** Ecarts de consommation releves — les memes constats qu'au centre d'alertes. */
   const fuelAnomalies = useMemo(
@@ -415,13 +504,13 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             </div>
           </div>
           <div className="text-2xl font-extrabold text-slate-900 font-mono">
-            {totals.avgL100km ?? '\u2014'}{' '}
+            {fleetConsumption.avgL100km ?? '\u2014'}{' '}
             <span className="text-xs text-slate-500 font-sans font-normal">L / 100 km</span>
           </div>
           <div className="text-xs text-slate-500 font-semibold">
-            {totals.avgL100km === null
-              ? 'Aucune distance reconstruite sur la periode'
-              : `${totals.distanceKm.toLocaleString('fr-FR')} km parcourus`}
+            {fleetConsumption.avgL100km === null
+              ? 'Deux pleins par vehicule sont necessaires pour mesurer'
+              : `Mesure au compteur sur ${fleetConsumption.vehiclesMeasured} vehicule(s), ${fleetConsumption.measuredKm.toLocaleString('fr-FR')} km`}
           </div>
         </div>
 
