@@ -13,6 +13,7 @@ import {
   Cpu,
   Gift,
   Route,
+  Navigation,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -37,6 +38,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badge?: string;
     badgeColor?: string;
   }[] = [
+    {
+      id: 'driver-console',
+      label: 'Ma tournée',
+      icon: Navigation,
+      badge: 'Terrain',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    },
     {
       id: 'live-map',
       label: 'Carte & suivi temps réel',

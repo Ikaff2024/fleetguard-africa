@@ -7,7 +7,15 @@
  */
 
 export type NavigationTab =
-  'live-map' | 'alerts' | 'trips' | 'fleet' | 'scoring' | 'rewards' | 'maintenance-fuel' | 'ai-hub';
+  | 'driver-console'
+  | 'live-map'
+  | 'alerts'
+  | 'trips'
+  | 'fleet'
+  | 'scoring'
+  | 'rewards'
+  | 'maintenance-fuel'
+  | 'ai-hub';
 
 /**
  * La permission est confrontée au profil renvoyé par le serveur à la
@@ -17,6 +25,9 @@ export type NavigationTab =
  * répondrait « accès refusé ».
  */
 export const NAV_PERMISSIONS: Record<NavigationTab, string> = {
+  // Seul le terrain émet : cette permission n'appartient qu'au rôle chauffeur,
+  // et l'écran devient donc son écran d'accueil.
+  'driver-console': 'tracking:ingest',
   'live-map': 'tracking:read',
   alerts: 'alerts:read',
   trips: 'tracking:read',
@@ -29,6 +40,7 @@ export const NAV_PERMISSIONS: Record<NavigationTab, string> = {
 
 /** Ordre d'affichage, qui fixe aussi l'écran d'accueil selon le rôle. */
 export const NAV_ORDER: NavigationTab[] = [
+  'driver-console',
   'live-map',
   'alerts',
   'trips',

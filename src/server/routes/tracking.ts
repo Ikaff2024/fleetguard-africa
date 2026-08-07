@@ -7,6 +7,7 @@ import { ingestionRateLimit } from '../http/security.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import { logger } from '../logger.js';
 import { findDriver, findVehicle } from '../repositories/fleet-repository.js';
+import { findDriverForUser } from '../repositories/driver-identity.js';
 import {
   ingestTelemetryBatch,
   listRecentSafetyEvents,
@@ -77,6 +78,31 @@ trackingRouter.post(
     const driver = await findDriver(organizationId, payload.driverId);
     if (!driver) {
       throw ApiError.forbidden("Ce chauffeur n'appartient pas à votre organisation.");
+    }
+
+    /**
+     * Un chauffeur n'émet que pour lui-même.
+     *
+     * Sans ce contrôle, un conducteur pourrait déclarer sa conduite sous le nom
+     * d'un collègue : ses excès de vitesse feraient chuter le score de l'autre,
+     * donc sa prime, et l'entretien disciplinaire viserait la mauvaise personne.
+     * L'appartenance à l'organisation ne suffit pas — la fiche doit être la
+     * sienne.
+     *
+     * Les comptes de bureau qui portent `tracking:ingest` (administrateurs,
+     * passerelles de boîtiers) ne sont pas concernés : ils n'ont pas de fiche
+     * chauffeur et déclarent pour le compte du parc.
+     */
+    if (req.auth?.role === 'DRIVER') {
+      const own = await findDriverForUser(organizationId, req.auth.userId);
+      if (!own) {
+        throw ApiError.forbidden(
+          "Aucune fiche chauffeur n'est rattachée à votre compte : impossible d'émettre des positions.",
+        );
+      }
+      if (own.id !== payload.driverId) {
+        throw ApiError.forbidden('Vous ne pouvez émettre des positions que sous votre propre nom.');
+      }
     }
 
     // Sans base, l'idempotence reste en mémoire et rien n'est persisté : la

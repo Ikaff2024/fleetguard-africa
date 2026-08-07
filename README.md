@@ -144,8 +144,12 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
 - **Envoi de SMS non raccordé** : le centre d'alertes enregistre la prise en
   charge, mais aucun message ne part vers un opérateur mobile ; l'écran le dit
   explicitement plutôt que d'annoncer un envoi.
-- **Pas d'application mobile chauffeur** : la télémétrie s'ingère par l'API,
-  mais rien ne l'émet encore depuis le terrain.
+- **Suivi interrompu écran éteint** : la console de bord du chauffeur émet
+  depuis le navigateur du téléphone, sans boîtier ni installation. Le navigateur
+  suspend toutefois le code quand l'écran s'éteint : l'écran le dit et demande
+  de garder le téléphone allumé et branché. Un suivi réellement continu en
+  arrière-plan suppose une application native ou un boîtier — la même route
+  d'ingestion les servira.
 - **Pas de planification prévisionnelle** : l'écran de charge montre les
   missions réellement effectuées, déduites des trajets. Affecter un chauffeur à
   une mission future suppose une table de planning qui n'existe pas encore.

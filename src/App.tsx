@@ -33,6 +33,9 @@ const RewardsModule = lazy(() =>
 const FleetManagementView = lazy(() =>
   import('./components/fleet/FleetManagementView').then(m => ({ default: m.FleetManagementView })),
 );
+const DriverConsole = lazy(() =>
+  import('./components/driver/DriverConsole').then(m => ({ default: m.DriverConsole })),
+);
 const TripHistoryView = lazy(() =>
   import('./components/tracking/TripHistoryView').then(m => ({ default: m.TripHistoryView })),
 );
@@ -168,6 +171,7 @@ function AppContent() {
               changement d'écran : un module en échec ne bloque pas la navigation. */}
           <ErrorBoundary key={effectiveTab} moduleName={effectiveTab}>
             <Suspense fallback={<ModuleLoader />}>
+              {effectiveTab === 'driver-console' && <DriverConsole currentOrg={currentOrg} />}
               {effectiveTab === 'live-map' && <LiveFleetMap currentOrg={currentOrg} />}
               {effectiveTab === 'alerts' && (
                 <AlertsCenter currentOrg={currentOrg} onNavigateToMap={() => setActiveTab('live-map')} />

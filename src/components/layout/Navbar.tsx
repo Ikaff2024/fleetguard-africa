@@ -3,6 +3,7 @@ import { Building2, Globe, Clock, User, ChevronDown, Database } from 'lucide-rea
 import { MOCK_ORGANIZATIONS } from '../../data/mock-data';
 import { Organization, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { roleLabel } from '../../lib/roles';
 import { useOfflineSync } from '../../context/OfflineSyncContext';
 import { ThemeSwitcher } from '../common/ThemeSwitcher';
 
@@ -136,49 +137,61 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>{currentOrg.timezone.split('/')[1] || currentOrg.timezone}</span>
         </div>
 
-        {/* Role Switcher */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-800 dark:text-slate-200">
-          <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-          <select
-            value={currentRole}
-            onChange={e => onSelectRole(e.target.value as UserRole)}
-            className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-          >
-            <option
-              value="SUPER_ADMIN"
-              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+        {/* Le sélecteur de rôle n'a de sens qu'en démonstration.
+            Authentifié, le rôle vient du jeton signé : un chauffeur qui voit un
+            menu « Fleet Manager » peut croire qu'il lui suffit de le choisir. */}
+        {canSwitchOrganization ? (
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-800 dark:text-slate-200">
+            <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <select
+              value={currentRole}
+              onChange={e => onSelectRole(e.target.value as UserRole)}
+              className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
             >
-              SuperAdmin System
-            </option>
-            <option
-              value="ORGANIZATION_ADMIN"
-              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-            >
-              Admin Organisation
-            </option>
-            <option
-              value="FLEET_MANAGER"
-              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-            >
-              Fleet Manager
-            </option>
-            <option
-              value="SAFETY_OFFICER"
-              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-            >
-              Safety Officer
-            </option>
-            <option
-              value="MAINTENANCE_TECH"
-              className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-            >
-              Technicien Garage
-            </option>
-            <option value="DRIVER" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
-              Chauffeur Mobile
-            </option>
-          </select>
-        </div>
+              <option
+                value="SUPER_ADMIN"
+                className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              >
+                SuperAdmin System
+              </option>
+              <option
+                value="ORGANIZATION_ADMIN"
+                className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              >
+                Admin Organisation
+              </option>
+              <option
+                value="FLEET_MANAGER"
+                className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              >
+                Fleet Manager
+              </option>
+              <option
+                value="SAFETY_OFFICER"
+                className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              >
+                Safety Officer
+              </option>
+              <option
+                value="MAINTENANCE_TECH"
+                className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              >
+                Technicien Garage
+              </option>
+              <option
+                value="DRIVER"
+                className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              >
+                Chauffeur Mobile
+              </option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-800 dark:text-slate-200">
+            <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span className="text-xs font-semibold">{roleLabel(currentRole)}</span>
+          </div>
+        )}
       </div>
     </header>
   );

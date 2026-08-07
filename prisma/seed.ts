@@ -416,6 +416,24 @@ async function main() {
       phone: '+229 97 00 11 25',
     },
     {
+      // Le compte chauffeur est ce qui rend la console de bord utilisable :
+      // c'est lui qui émet la télémétrie depuis le téléphone du conducteur.
+      email: 'chauffeur@transafrik.bj',
+      fullName: 'Koffi Mensah',
+      role: 'DRIVER' as const,
+      org: 'org_transafrik_cotonou',
+      phone: '+229 97 00 11 26',
+      linkToDriver: 'drv_koffi_01',
+    },
+    {
+      email: 'chauffeur@sahelexpress.sn',
+      fullName: 'Mamadou Diallo',
+      role: 'DRIVER' as const,
+      org: 'org_sahel_express',
+      phone: '+221 77 00 11 26',
+      linkToDriver: 'drv_mamadou_08',
+    },
+    {
       email: 'manager@sahelexpress.sn',
       fullName: 'Ousmane Ndiaye',
       role: 'FLEET_MANAGER' as const,
@@ -440,6 +458,21 @@ async function main() {
         isActive: true,
       },
     });
+
+    /**
+     * Rattachement du compte à la fiche chauffeur.
+     *
+     * Sans ce lien, la console de bord ne saurait pas pour quel chauffeur ni
+     * quel véhicule émettre : les positions arriveraient orphelines, et ni le
+     * score ni les trajets ne pourraient leur être attribués.
+     */
+    const linked = (account as { linkToDriver?: string }).linkToDriver;
+    if (linked) {
+      await prisma.driver.updateMany({
+        where: { id: stableUuid(linked) },
+        data: { userId: id },
+      });
+    }
   }
   console.log(`  ${accounts.length} comptes utilisateurs`);
 

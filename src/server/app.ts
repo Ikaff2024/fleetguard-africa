@@ -5,6 +5,7 @@ import { applySecurity, globalRateLimit } from './http/security.js';
 import { httpLogger } from './logger.js';
 import { alertsRouter } from './routes/alerts.js';
 import { authRouter } from './routes/auth.js';
+import { driverConsoleRouter } from './routes/driver-console.js';
 import { fatigueRouter } from './routes/fatigue.js';
 import { fleetRouter } from './routes/fleet.js';
 import { fleetWriteRouter } from './routes/fleet-write.js';
@@ -43,6 +44,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   api.use(healthRouter);
   api.use(authRouter);
   api.use(alertsRouter);
+  api.use(driverConsoleRouter);
   api.use(fatigueRouter);
   api.use(fleetRouter);
   api.use(fleetWriteRouter);

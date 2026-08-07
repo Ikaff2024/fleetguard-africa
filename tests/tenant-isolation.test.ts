@@ -947,3 +947,95 @@ describe.skipIf(!DATABASE_CONFIGURED)('Réseau de ravitaillement et fatigue', ()
     expect(theirs.body.data.drivers.some((d: { driverId: string }) => myDrivers.has(d.driverId))).toBe(false);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Console de bord du chauffeur', () => {
+  let driverToken: string;
+  let managerToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    driverToken = await tokenFor('chauffeur@transafrik.bj');
+    managerToken = await tokenFor('manager@transafrik.bj');
+  });
+
+  const assignment = (token: string) =>
+    request(app).get('/api/v1/me/assignment').set('Authorization', `Bearer ${token}`);
+
+  it('donne au chauffeur son affectation', async () => {
+    const res = await assignment(driverToken);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.driverId).toBeTruthy();
+    expect(res.body.data.vehicle).toBeTruthy();
+    expect(res.body.data.safetyScore).toBeGreaterThan(0);
+  });
+
+  it('refuse l’affectation à un rôle de bureau', async () => {
+    // `tracking:ingest` appartient au terrain. Un gestionnaire n'émet pas de
+    // positions, et n'a donc pas d'affectation à consulter ici.
+    const res = await assignment(managerToken);
+    expect(res.status).toBe(403);
+  });
+
+  it('accepte les positions émises depuis le téléphone du chauffeur', async () => {
+    const me = await assignment(driverToken);
+    const base = Date.now() - 20 * 60_000;
+
+    const res = await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${driverToken}`)
+      .send({
+        batchId: `mob-test-${Date.now()}`,
+        vehicleId: me.body.data.vehicle.id,
+        driverId: me.body.data.driverId,
+        points: [0, 1, 2].map(index => ({
+          latitude: 6.37 + index * 0.004,
+          longitude: 2.42 + index * 0.002,
+          speedKmH: 62,
+          headingDegree: 30,
+          timestamp: new Date(base + index * 30_000).toISOString(),
+          accuracyMeters: 8,
+          ignitionOn: true,
+          batteryLevelPct: 100,
+          networkType: '4G',
+        })),
+      });
+
+    expect(res.status).toBe(202);
+    expect(res.body.data.persisted).toBe(true);
+  });
+
+  it('empêche un chauffeur d’attribuer sa conduite à un collègue', async () => {
+    // Le point décisif : sans ce refus, n'importe quel compte pourrait faire
+    // porter ses infractions — donc la perte de prime — par un autre.
+    const others = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${managerToken}`);
+    const me = await assignment(driverToken);
+
+    const someoneElse = others.body.data.find((d: { id: string }) => d.id !== me.body.data.driverId);
+
+    const res = await request(app)
+      .post('/api/v1/tracking/telemetry/batch')
+      .set('Authorization', `Bearer ${driverToken}`)
+      .send({
+        batchId: `mob-usurpation-${Date.now()}`,
+        vehicleId: me.body.data.vehicle.id,
+        driverId: someoneElse.id,
+        points: [
+          {
+            latitude: 6.37,
+            longitude: 2.42,
+            speedKmH: 120,
+            headingDegree: 30,
+            timestamp: new Date().toISOString(),
+            accuracyMeters: 8,
+            ignitionOn: true,
+            batteryLevelPct: 100,
+            networkType: '4G',
+          },
+        ],
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toContain('votre propre nom');
+  });
+});
