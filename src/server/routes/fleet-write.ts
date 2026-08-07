@@ -6,7 +6,7 @@ import { ApiError, asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
 import { requireResourceId } from '../http/params.js';
-import { mapDriver, mapVehicle } from '../repositories/mappers.js';
+import { mapDriver, mapMaintenanceLog, mapVehicle } from '../repositories/mappers.js';
 import { recordAudit } from '../services/audit.js';
 
 export const fleetWriteRouter = Router();
@@ -304,5 +304,125 @@ fleetWriteRouter.patch(
     );
 
     res.json({ statusCode: 200, data: mapDriver(updated) });
+  }),
+);
+
+/**
+ * Enregistrement d'un passage à l'atelier.
+ *
+ * Cette route manquait. L'écran du carnet d'entretien affichait pourtant la
+ * ligne saisie, l'ajoutait aux totaux et l'imprimait dans un document présenté
+ * comme réglementaire — le tout dans l'état React, sans jamais appeler le
+ * serveur. Au rechargement de la page, l'intervention avait disparu.
+ *
+ * Un carnet d'entretien sert à prouver qu'une révision a eu lieu : devant un
+ * assureur après un accident de freinage, devant un acheteur qui reprend le
+ * camion, devant l'inspection technique. Un carnet qui oublie ne sert à rien,
+ * et un carnet qui affirme se souvenir est pire.
+ */
+const maintenanceInput = z.object({
+  vehicleId: z.string().uuid(),
+  type: z.enum(['PREVENTATIVE', 'CORRECTIVE', 'TIRE_REPLACEMENT', 'OIL_CHANGE', 'BRAKE_SERVICE'] as const),
+  description: z.string().trim().min(3).max(1000),
+  odometerKmAtService: z.number().int().nonnegative().max(3_000_000),
+  cost: z.number().nonnegative().max(1_000_000_000),
+  serviceProvider: z.string().trim().min(2).max(160),
+  technicianName: z.string().trim().max(160).optional(),
+  technicianNotes: z.string().trim().max(2000).optional(),
+  performedAt: z.string().datetime({ offset: true }).optional(),
+  /**
+   * Prochaine échéance kilométrique.
+   *
+   * Facultative et jamais déduite : l'écran ajoutait 15 000 km au compteur,
+   * intervalle inventé et identique pour un tracteur routier et un utilitaire.
+   * Une échéance non renseignée reste vide, et l'écran des échéances le dit.
+   */
+  nextServiceKmDue: z.number().int().positive().max(3_000_000).optional(),
+  status: z.enum(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE'] as const).default('COMPLETED'),
+});
+
+fleetWriteRouter.post(
+  '/maintenance',
+  resolveTenant,
+  requirePermission('maintenance:write'),
+  asyncHandler(async (req, res) => {
+    ensureDatabase();
+    const organizationId = requireTenantId(req);
+    const auth = requireAuthContext(req);
+    const input = maintenanceInput.parse(req.body);
+
+    const created = await withTenant(organizationId, async tx => {
+      const vehicle = await tx.vehicle.findFirst({
+        where: { id: input.vehicleId, deletedAt: null },
+        select: { id: true, currentOdometerKm: true },
+      });
+      if (!vehicle) return null;
+
+      const organization = await tx.organization.findFirst({
+        where: { id: organizationId },
+        select: { currency: true },
+      });
+
+      const log = await tx.maintenanceLog.create({
+        data: {
+          organizationId,
+          vehicleId: input.vehicleId,
+          type: input.type,
+          description: input.description,
+          odometerKmAtService: input.odometerKmAtService,
+          cost: input.cost,
+          currency: organization?.currency ?? 'XOF',
+          serviceProvider: input.serviceProvider,
+          technicianName: input.technicianName ?? null,
+          // Aucune note par défaut : « Entretien réalisé selon les normes
+          // constructeur » était une attestation attribuée à un mécanicien qui
+          // n'avait rien écrit.
+          technicianNotes: input.technicianNotes ?? null,
+          performedAt: input.performedAt ? new Date(input.performedAt) : new Date(),
+          nextServiceKmDue: input.nextServiceKmDue ?? null,
+          status: input.status,
+        },
+      });
+
+      /**
+       * Le compteur du véhicule suit le relevé de l'atelier, s'il est plus
+       * élevé. Un compteur ne recule pas : une saisie inférieure est ignorée
+       * plutôt que d'écraser un kilométrage déjà remonté du terrain.
+       */
+      if (input.odometerKmAtService > vehicle.currentOdometerKm) {
+        await tx.vehicle.update({
+          where: { id: vehicle.id },
+          data: { currentOdometerKm: input.odometerKmAtService },
+        });
+      }
+
+      if (input.nextServiceKmDue) {
+        await tx.vehicle.update({
+          where: { id: vehicle.id },
+          data: { nextServiceKm: input.nextServiceKmDue },
+        });
+      }
+
+      return log;
+    });
+
+    if (!created) {
+      throw ApiError.notFound('Véhicule introuvable dans cette organisation.');
+    }
+
+    await recordAudit(
+      {
+        organizationId,
+        userId: auth.userId,
+        userEmail: auth.email,
+        action: 'MAINTENANCE_RECORDED',
+        resource: 'maintenance',
+        resourceId: created.id,
+        details: { vehicleId: input.vehicleId, type: input.type, cost: input.cost },
+      },
+      req,
+    );
+
+    res.status(201).json({ statusCode: 201, data: mapMaintenanceLog(created) });
   }),
 );

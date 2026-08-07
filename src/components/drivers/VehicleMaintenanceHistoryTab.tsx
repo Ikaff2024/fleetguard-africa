@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useDrivers, useMaintenanceLogs, useVehicles } from '../../hooks/useFleetData';
+import { apiClient } from '../../lib/api-client';
 import { Organization, MaintenanceLog } from '../../types';
 import {
   Wrench,
@@ -27,10 +28,15 @@ export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTab
   const driversQuery = useDrivers();
   const maintenanceQuery = useMaintenanceLogs();
   const vehiclesQuery = useVehicles();
-  // Local state for logs
-  const [logs, setLogs] = useState<MaintenanceLog[]>(() => {
-    return maintenanceQuery.data ?? [];
-  });
+  /**
+   * Le carnet vient du serveur, sans copie locale.
+   *
+   * L'état était initialisé une seule fois, au premier rendu, alors que la
+   * requête était encore en vol : l'écran annonçait « 0 intervention » et
+   * « 0 XOF de coût cumulé » pour toute la flotte, quel que soit le contenu
+   * réel de la base. Aucun effet ne le resynchronisait ensuite.
+   */
+  const logs = useMemo(() => maintenanceQuery.data ?? [], [maintenanceQuery.data]);
 
   const vehicles = useMemo(() => vehiclesQuery.data ?? [], [vehiclesQuery.data]);
 
@@ -51,19 +57,24 @@ export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTab
   const [newVehicleId, setNewVehicleId] = useState<string>(vehicles[0]?.id || '');
   const [newType, setNewType] = useState<MaintenanceLog['type']>('PREVENTATIVE');
   const [newDescription, setNewDescription] = useState<string>('');
-  const [newOdometer, setNewOdometer] = useState<number>(145000);
-  const [newCost, setNewCost] = useState<number>(250000);
-  const [newServiceProvider, setNewServiceProvider] = useState<string>('Atelier Interne TransAfrik');
+  // Les champs partent vides : « 145 000 km » et « 250 000 XOF » n'étaient pas
+  // des exemples grisés mais les valeurs réelles du formulaire, validées telles
+  // quelles dans le carnet.
+  const [newOdometer, setNewOdometer] = useState<string>('');
+  const [newCost, setNewCost] = useState<string>('');
+  // L'atelier d'une entreprise particulière s'affichait par défaut chez tous
+  // les clients, et partait dans l'enregistrement.
+  const [newServiceProvider, setNewServiceProvider] = useState<string>('');
   const [newDate, setNewDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [newStatus, setNewStatus] = useState<MaintenanceLog['status']>('COMPLETED');
-  const [newTechName, setNewTechName] = useState<string>("Chef d'Atelier Principal");
+  const [newTechName, setNewTechName] = useState<string>('');
   const [newTechNotes, setNewTechNotes] = useState<string>('');
 
   // Part replacement temp state for new form
   const [partName, setPartName] = useState<string>('');
   const [partNumber, setPartNumber] = useState<string>('');
   const [partQty, setPartQty] = useState<number>(1);
-  const [partUnitCost, setPartUnitCost] = useState<number>(15000);
+  const [partUnitCost, setPartUnitCost] = useState<number>(0);
   const [tempParts, setTempParts] = useState<
     { partNumber: string; partName: string; quantity: number; unitCost: number }[]
   >([]);
@@ -144,35 +155,69 @@ export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTab
     setTempParts(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleCreateLog = (e: React.FormEvent) => {
+  const [writeError, setWriteError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  /**
+   * Enregistrement d'un passage à l'atelier.
+   *
+   * La version précédente n'appelait aucune route : elle ajoutait la ligne à
+   * l'état React, l'affichait dans le carnet, la comptait dans les totaux et
+   * l'imprimait dans un document présenté comme réglementaire. Au rechargement
+   * de la page, l'intervention avait disparu.
+   *
+   * Un carnet d'entretien sert à prouver qu'une révision a eu lieu — devant un
+   * assureur après un accident de freinage, devant un acheteur qui reprend le
+   * camion. Un carnet qui oublie ne sert à rien ; un carnet qui affirme se
+   * souvenir est pire.
+   */
+  const handleCreateLog = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newVehicleId || !newDescription.trim()) return;
+    if (!newVehicleId || !newDescription.trim() || isSaving) return;
 
-    const created: MaintenanceLog = {
-      id: `maint_${Date.now()}`,
-      organizationId: currentOrg.id,
-      vehicleId: newVehicleId,
-      type: newType,
-      description: newDescription.trim(),
-      odometerKmAtService: newOdometer,
-      cost: newCost,
-      currency: currentOrg.currency || 'XOF',
-      serviceProvider: newServiceProvider.trim() || 'Atelier Interne',
-      performedAt: newDate,
-      nextServiceKmDue: newOdometer + 15000,
-      status: newStatus,
-      technicianName: newTechName.trim() || "Chef d'Atelier",
-      technicianNotes: newTechNotes.trim() || 'Entretien réalisé selon les normes constructeur.',
-      partsReplaced: tempParts.length > 0 ? tempParts : undefined,
-    };
+    if (!Number(newOdometer)) {
+      setWriteError(
+        'Le relevé du compteur est nécessaire : il situe l’intervention dans la vie du véhicule.',
+      );
+      return;
+    }
+    if (!newServiceProvider.trim()) {
+      setWriteError('Le prestataire est nécessaire : c’est lui qui répond de l’intervention.');
+      return;
+    }
 
-    setLogs(prev => [created, ...prev]);
-    setShowAddModal(false);
+    setIsSaving(true);
+    setWriteError(null);
+    try {
+      await apiClient.post('/maintenance', {
+        vehicleId: newVehicleId,
+        type: newType,
+        description: newDescription.trim(),
+        odometerKmAtService: Number(newOdometer),
+        cost: Number(newCost) || 0,
+        serviceProvider: newServiceProvider.trim(),
+        // Rien n'est inventé pour combler un champ vide : ni le nom du
+        // technicien, ni une note d'attestation, ni une échéance déduite d'un
+        // intervalle de 15 000 km identique pour tous les véhicules.
+        ...(newTechName.trim() ? { technicianName: newTechName.trim() } : {}),
+        ...(newTechNotes.trim() ? { technicianNotes: newTechNotes.trim() } : {}),
+        performedAt: new Date(newDate).toISOString(),
+        status: newStatus,
+      });
 
-    // Reset form
-    setNewDescription('');
-    setNewTechNotes('');
-    setTempParts([]);
+      maintenanceQuery.reload();
+      vehiclesQuery.reload();
+      setShowAddModal(false);
+      setNewDescription('');
+      setNewTechNotes('');
+      setNewOdometer('');
+      setNewCost('');
+      setTempParts([]);
+    } catch (error) {
+      setWriteError(error instanceof Error ? error.message : "L'intervention n'a pas pu être enregistrée.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getTypeBadge = (type: MaintenanceLog['type']) => {
@@ -671,7 +716,7 @@ export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTab
                   <input
                     type="number"
                     value={newOdometer}
-                    onChange={e => setNewOdometer(Number(e.target.value))}
+                    onChange={e => setNewOdometer(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 font-mono"
                   />
                 </div>
@@ -683,7 +728,7 @@ export const VehicleMaintenanceHistoryTab: React.FC<VehicleMaintenanceHistoryTab
                   <input
                     type="number"
                     value={newCost}
-                    onChange={e => setNewCost(Number(e.target.value))}
+                    onChange={e => setNewCost(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 font-mono"
                   />
                 </div>

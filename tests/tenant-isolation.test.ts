@@ -1235,7 +1235,7 @@ describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
       .send({
         fullName: `Chauffeur de planification ${suffix}`,
         phone: '+229 90 00 00 00',
-        licenseNumber: `LIC-MS-${suffix}`,
+        licenseNumber: `MS-${suffix}`,
         licenseCategory: 'CE',
         // La route attend une date seule : un horodatage complet est refusé.
         licenseExpiryDate: new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10),

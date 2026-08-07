@@ -65,12 +65,30 @@ async function as(tenant: string, account?: string): Promise<Record<string, stri
  * base, les entités portent des UUID. On résout donc l'identifiant à partir
  * des données servies.
  */
+/**
+ * Entités du peuplement, jamais celles d'une autre suite.
+ *
+ * Ces fonctions prenaient `data[0]`. Les suites s'exécutant en parallèle, ce
+ * premier élément pouvait être le véhicule dédié d'un autre fichier — archivé
+ * en cours de route par son propre nettoyage. L'ingestion répondait alors 403
+ * « ce véhicule n'appartient pas à votre organisation », sans que le code
+ * vérifié soit en cause.
+ *
+ * Les entités créées par les tests portent un préfixe reconnaissable ; on les
+ * écarte pour ne retenir que celles du jeu de démonstration, qui sont stables.
+ */
+const TEST_ARTIFACT = /^(TS|MS|MT)-/;
+
 async function firstDriverId(tenant: string): Promise<string> {
   if (!DATABASE_CONFIGURED) return DRIVER_A;
   const res = await request(app)
     .get('/api/v1/drivers')
     .set(await as(tenant));
-  return res.body.data[0].id;
+  const seeded = res.body.data.filter(
+    (driver: { licenseNumber?: string }) => !TEST_ARTIFACT.test(driver.licenseNumber ?? ''),
+  );
+  expect(seeded.length, 'aucun chauffeur du peuplement').toBeGreaterThan(0);
+  return seeded[0].id;
 }
 
 async function firstVehicleId(tenant: string): Promise<string> {
@@ -78,7 +96,11 @@ async function firstVehicleId(tenant: string): Promise<string> {
   const res = await request(app)
     .get('/api/v1/vehicles')
     .set(await as(tenant));
-  return res.body.data[0].id;
+  const seeded = res.body.data.filter(
+    (vehicle: { immatriculation: string }) => !TEST_ARTIFACT.test(vehicle.immatriculation),
+  );
+  expect(seeded.length, 'aucun véhicule du peuplement').toBeGreaterThan(0);
+  return seeded[0].id;
 }
 
 const orgIds = new Map<string, string>();
