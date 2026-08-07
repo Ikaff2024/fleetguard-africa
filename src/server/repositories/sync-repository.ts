@@ -95,6 +95,25 @@ async function applyFuelLog(
     };
   }
 
+  /**
+   * Un plein ne peut pas dépasser la contenance du réservoir.
+   *
+   * C'est le garde-fou contre la faute de frappe la plus courante du terrain —
+   * 180 au lieu de 18,0. Accepter ce volume fausserait durablement la
+   * consommation calculée, donc la détection de siphonnage et la prime du
+   * chauffeur. La saisie revient au terrain avec son motif plutôt que d'être
+   * enregistrée puis contestée des semaines plus tard.
+   */
+  const tankCapacity = Number(vehicle.tankCapacityLiters);
+  if (tankCapacity > 0 && liters > tankCapacity) {
+    return {
+      id: itemId,
+      type: 'FUEL_LOG',
+      status: 'FAILED',
+      message: `Volume de ${liters} L supérieur à la contenance du réservoir de ${plate} (${tankCapacity} L).`,
+    };
+  }
+
   const pricePerLiter = asNumber(payload.pricePerLiter) ?? 0;
   const totalCost = asNumber(payload.totalCost) ?? liters * pricePerLiter;
   const id = stableId(itemId);

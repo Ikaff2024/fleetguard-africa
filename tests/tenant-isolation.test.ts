@@ -637,7 +637,9 @@ describe.skipIf(!DATABASE_CONFIGURED)('Saisies hors ligne', () => {
     const res = await send(adminToken, [
       item(id, 'FUEL_LOG', {
         vehicleRegistration: plate,
-        litersAdded: 180,
+        // Volume compatible avec le réservoir : un plein impossible est
+        // désormais refusé, et c'est le sujet d'un autre test.
+        litersAdded: 60,
         pricePerLiter: 650,
         stationName: 'Station Total Malanville',
         loggedAt: new Date().toISOString(),
@@ -661,7 +663,7 @@ describe.skipIf(!DATABASE_CONFIGURED)('Saisies hors ligne', () => {
     const station = `Station rejeu ${Date.now()}`;
     const payload = item(`off-rejeu-${Date.now()}`, 'FUEL_LOG', {
       vehicleRegistration: plate,
-      litersAdded: 120,
+      litersAdded: 55,
       pricePerLiter: 650,
       stationName: station,
       loggedAt: new Date().toISOString(),
@@ -689,6 +691,25 @@ describe.skipIf(!DATABASE_CONFIGURED)('Saisies hors ligne', () => {
     const vehicles = await request(app).get('/api/v1/vehicles').set('Authorization', `Bearer ${adminToken}`);
     const vehicle = vehicles.body.data.find((v: { immatriculation: string }) => v.immatriculation === plate);
     expect(vehicle.currentOdometerKm).toBeGreaterThanOrEqual(target);
+  });
+
+  it('refuse un volume supérieur à la contenance du réservoir', async () => {
+    // La faute de frappe la plus courante du terrain : 180 au lieu de 18,0.
+    // L'accepter fausserait la consommation calculée, donc la détection de
+    // siphonnage et la prime du chauffeur.
+    const id = `off-cuve-${Date.now()}`;
+    const res = await send(adminToken, [
+      item(id, 'FUEL_LOG', {
+        vehicleRegistration: plate,
+        litersAdded: 9000,
+        pricePerLiter: 650,
+        stationName: 'Station volume aberrant',
+      }),
+    ]);
+
+    expect(res.body.data.syncedItemIds).not.toContain(id);
+    const result = res.body.data.results.find((r: { id: string }) => r.id === id);
+    expect(result.serverMessage).toContain('réservoir');
   });
 
   it('refuse un compteur qui recule, sans acquitter', async () => {

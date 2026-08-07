@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useDrivers,
+  useFuelLogs,
   useFuelStations,
   useGeofences,
   useVehicleTrack,
@@ -90,7 +91,17 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
   // Filter vehicles for active tenant
   const tenantVehicles = vehiclesQuery.data ?? [];
   const activeVehicle = tenantVehicles.find(v => v.id === selectedVehicleId) || tenantVehicles[0];
-  const activeDriver = (driversQuery.data ?? []).find(d => d.id === activeVehicle?.currentDriverId);
+  /**
+   * L'affectation est portée par le chauffeur, pas par le véhicule.
+   *
+   * L'écran cherchait `vehicle.currentDriverId`, un champ que la base ne
+   * possède pas : les six camions s'affichaient donc « Chauffeur : non
+   * assigné » alors que les affectations existaient bel et bien.
+   */
+  const driverOfVehicle = (vehicleId: string | undefined) =>
+    vehicleId ? (driversQuery.data ?? []).find(d => d.assignedVehicleId === vehicleId) : undefined;
+
+  const activeDriver = driverOfVehicle(activeVehicle?.id);
 
   // Trace réellement remontée par le véhicule sélectionné.
   const trackQuery = useVehicleTrack(activeVehicle?.id);
@@ -98,6 +109,44 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
 
   const stationsQuery = useFuelStations();
   const stations = useMemo(() => stationsQuery.data ?? [], [stationsQuery.data]);
+
+  const fuelLogsQuery = useFuelLogs();
+
+  /**
+   * Estimation du carburant restant.
+   *
+   * Aucun de ces camions n'a de jauge remontée : la valeur se déduit du dernier
+   * plein enregistré, de la distance parcourue depuis, et de la consommation de
+   * référence du véhicule. C'est une estimation, elle est présentée comme telle
+   * — l'écran affichait auparavant « 32 % (~112 litres / 80 L) », un chiffre
+   * inventé et arithmétiquement impossible.
+   *
+   * Sans plein enregistré, il n'y a rien à estimer, et l'écran le dit.
+   */
+  const fuelEstimate = useMemo(() => {
+    const capacity = activeVehicle?.tankCapacityLiters ?? 0;
+    const consumption = activeVehicle?.expectedConsumptionL100km ?? 0;
+    if (!activeVehicle || capacity <= 0 || consumption <= 0) return null;
+
+    const lastFill = (fuelLogsQuery.data ?? [])
+      .filter(log => log.vehicleId === activeVehicle.id)
+      .sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime())[0];
+
+    if (!lastFill) return null;
+
+    const kmSinceFill = Math.max(0, activeVehicle.currentOdometerKm - lastFill.odometerKm);
+    const consumed = (kmSinceFill * consumption) / 100;
+    const remainingLiters = Math.max(0, Math.min(capacity, lastFill.litersAdded - consumed));
+
+    return {
+      remainingLiters: Math.round(remainingLiters),
+      capacity,
+      percent: Math.round((remainingLiters / capacity) * 100),
+      rangeKm: Math.round((remainingLiters / consumption) * 100),
+      kmSinceFill: Math.round(kmSinceFill),
+      filledAt: lastFill.loggedAt,
+    };
+  }, [activeVehicle, fuelLogsQuery.data]);
 
   // Active Vehicle GPS Position
   const lastGpsPoint = routePoints[routePoints.length - 1] || { latitude: 7.9124, longitude: 2.1092 };
@@ -116,6 +165,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     .sort((a, b) => a.distanceKm - b.distanceKm);
 
   const selectedStation = sortedFuelStations.find(s => s.id === selectedFuelStationId) || null;
+  const nearestStationKm = sortedFuelStations[0]?.distanceKm;
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
@@ -544,7 +594,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
           <div className="space-y-2">
             {tenantVehicles.map(veh => {
               const isSelected = veh.id === selectedVehicleId;
-              const driver = (driversQuery.data ?? []).find(d => d.id === veh.currentDriverId);
+              const driver = driverOfVehicle(veh.id);
 
               return (
                 <div
@@ -835,15 +885,30 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               Niveau Réservoir Estimé
             </div>
-            <div className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1.5 font-mono">
-              <span>32 %</span>
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                (~112 Litres / {activeVehicle?.tankCapacityLiters || 350}L)
-              </span>
-            </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
-              <div className="bg-amber-500 h-full rounded-full" style={{ width: '32%' }}></div>
-            </div>
+            {fuelEstimate ? (
+              <>
+                <div className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                  <span>{fuelEstimate.percent} %</span>
+                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                    (~{fuelEstimate.remainingLiters} L / {fuelEstimate.capacity} L)
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className="bg-amber-500 h-full rounded-full"
+                    style={{ width: `${fuelEstimate.percent}%` }}
+                  ></div>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                  Estimé depuis le plein du {new Date(fuelEstimate.filledAt).toLocaleDateString('fr-FR')} —{' '}
+                  {fuelEstimate.kmSinceFill} km parcourus. Aucune jauge remontée.
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                Aucun plein enregistré pour ce véhicule : le niveau ne peut pas être estimé.
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80">
@@ -851,10 +916,12 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
               Autonomie Autorisée
             </div>
             <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">
-              ~ 280 KM
+              {fuelEstimate ? `~ ${fuelEstimate.rangeKm} KM` : '—'}
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-              Conso attendue: {activeVehicle?.expectedConsumptionL100km || 34}L / 100km
+              {activeVehicle
+                ? `Conso de référence : ${activeVehicle.expectedConsumptionL100km} L / 100 km`
+                : 'Véhicule non sélectionné'}
             </div>
           </div>
 
@@ -863,8 +930,16 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
               <AlertTriangle className="w-3.5 h-3.5 text-orange-500" />
               Recommandation Régulateur
             </div>
+            {/* La recommandation découle de l'autonomie estimée et de la
+                distance à la station la plus proche du réseau conventionné. */}
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1 leading-snug">
-              Prochain arrêt recommandé dans moins de 180 km avant la zone blanche du Sahel.
+              {!fuelEstimate
+                ? 'Enregistrer un plein permettra d’estimer l’autonomie et de conseiller un arrêt.'
+                : nearestStationKm === undefined
+                  ? 'Aucune station conventionnée enregistrée : ajouter le réseau de l’entreprise.'
+                  : fuelEstimate.rangeKm < nearestStationKm
+                    ? `Autonomie estimée ${fuelEstimate.rangeKm} km, station conventionnée la plus proche à ${Math.round(nearestStationKm)} km : le camion ne peut pas l’atteindre. Organiser un ravitaillement.`
+                    : `Autonomie estimée ${fuelEstimate.rangeKm} km ; station conventionnée la plus proche à ${Math.round(nearestStationKm)} km. Marge suffisante.`}
             </div>
           </div>
         </div>

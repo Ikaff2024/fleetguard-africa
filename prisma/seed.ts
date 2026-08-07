@@ -600,7 +600,12 @@ async function main() {
     const referenceL100km = Number(traceVehicle.expectedConsumptionL100km);
     const distanceKm = 348.4 * 2;
     // Conduite économe : environ 22 % sous la référence du véhicule.
-    const litersUsed = Math.round((referenceL100km * 0.78 * distanceKm) / 100);
+    // Le volume est borné par la capacité du réservoir — un plein de 120 L dans
+    // un réservoir de 80 L ferait douter de tout le reste de l'écran.
+    const litersUsed = Math.min(
+      Number(traceVehicle.tankCapacityLiters),
+      Math.round((referenceL100km * 0.78 * distanceKm) / 100),
+    );
 
     await prisma.fuelLog.upsert({
       where: { id: stableUuid(`fuel-demo-${traceVehicle.id}`) },
