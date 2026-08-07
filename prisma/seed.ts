@@ -516,6 +516,43 @@ async function main() {
   }
   console.log(`  ${MOCK_FUEL_STATIONS.length} stations conventionnées`);
 
+  // --- Un plein récent et cohérent par véhicule -----------------------------
+  // Le planificateur de ravitaillement estime le niveau à partir du dernier
+  // plein : sans plein, il affiche honnêtement qu'il ne peut rien estimer. Pour
+  // que la démonstration montre la fonction, chaque camion en a un — borné par
+  // la contenance de son réservoir, sinon le chiffre affiché contredirait la
+  // fiche du véhicule.
+  for (const vehicle of MOCK_VEHICLES) {
+    const capacity = Number(vehicle.tankCapacityLiters);
+    const consumption = Number(vehicle.expectedConsumptionL100km);
+    if (!capacity || !consumption) continue;
+
+    // Plein aux trois quarts, effectué 300 km avant le relevé actuel : le
+    // véhicule apparaît en cours de mission, pas à sec ni fraîchement rempli.
+    const liters = Math.round(capacity * 0.75);
+    const odometerAtFill = Math.max(0, vehicle.currentOdometerKm - 300);
+
+    await prisma.fuelLog.upsert({
+      where: { id: stableUuid(`fuel-base-${vehicle.id}`) },
+      update: { litersAdded: liters, odometerKm: odometerAtFill },
+      create: {
+        id: stableUuid(`fuel-base-${vehicle.id}`),
+        organizationId: stableUuid(vehicle.organizationId),
+        vehicleId: stableUuid(vehicle.id),
+        litersAdded: liters,
+        pricePerLiter: 700,
+        totalCost: liters * 700,
+        currency: 'XOF',
+        odometerKm: odometerAtFill,
+        stationName: 'TotalEnergies Bohicon Carrefour RNIE2',
+        receiptNumber: `BASE-${vehicle.immatriculation}`,
+        calculatedL100km: consumption,
+        loggedAt: new Date(Date.now() - 3 * 86_400_000),
+      },
+    });
+  }
+  console.log(`  ${MOCK_VEHICLES.length} pleins de référence`);
+
   // --- Trace GPS et trajets reconstruits ------------------------------------
   // Deux missions sur les jours précédents, pour que l'historique ne soit pas
   // vide à la première ouverture.
