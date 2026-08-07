@@ -37,6 +37,7 @@ export const DriverConsole: React.FC<DriverConsoleProps> = ({ currentOrg }) => {
     pointsBuffered: 0,
     pointsSent: 0,
     screenLockHeld: false,
+    interruptedMinutes: 0,
   });
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
@@ -173,6 +174,16 @@ export const DriverConsole: React.FC<DriverConsoleProps> = ({ currentOrg }) => {
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
               Gardez l’écran allumé pendant la tournée, téléphone branché. Écran éteint, le suivi s’interrompt
               jusqu’au prochain déverrouillage.
+            </div>
+          )}
+
+          {status.interruptedMinutes > 0 && (
+            /* Un trou dans la trace se dit. Le gestionnaire verra un trajet
+               amputé ; le chauffeur doit savoir pourquoi, et l'entretien ne
+               doit pas porter sur un soupçon de désactivation volontaire. */
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+              Environ {status.interruptedMinutes} min n’ont pas été enregistrées pendant que l’application
+              était en arrière-plan. Laissez-la au premier plan, écran allumé.
             </div>
           )}
 

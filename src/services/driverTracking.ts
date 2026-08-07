@@ -46,6 +46,11 @@ export interface TrackingStatus {
   lastError?: string;
   /** Vrai quand le navigateur maintient l'écran allumé. */
   screenLockHeld: boolean;
+  /**
+   * Minutes pendant lesquelles rien n'a été relevé alors que la tournée était
+   * en cours — typiquement un passage écran éteint.
+   */
+  interruptedMinutes: number;
 }
 
 type Listener = (status: TrackingStatus) => void;
@@ -80,6 +85,7 @@ export class DriverTracker {
     pointsBuffered: this.buffer.length,
     pointsSent: 0,
     screenLockHeld: false,
+    interruptedMinutes: 0,
   };
 
   constructor(
@@ -124,7 +130,7 @@ export class DriverTracker {
     // on en profite pour vider la file accumulée.
     document.addEventListener('visibilitychange', this.onVisibilityChange);
 
-    this.emit({ isTracking: true, lastError: undefined });
+    this.emit({ isTracking: true, lastError: undefined, interruptedMinutes: 0 });
   }
 
   async stop(): Promise<void> {
@@ -142,8 +148,34 @@ export class DriverTracker {
     this.emit({ isTracking: false });
   }
 
+  /**
+   * Retour au premier plan.
+   *
+   * Deux choses s'y jouent. Le verrou d'écran est **relâché par le navigateur**
+   * dès que la page passe en arrière-plan : sans le redemander, un chauffeur
+   * qui consulte un message revient à un téléphone qui se reverrouille tout
+   * seul, et sa tournée cesse d'être suivie sans que rien ne le signale.
+   *
+   * Ensuite, l'écart entre le dernier relevé et maintenant mesure ce qui n'a
+   * pas été enregistré pendant la suspension. Il est affiché : mieux vaut un
+   * chauffeur informé d'un trou dans sa trace qu'un gestionnaire qui découvre
+   * un trajet amputé.
+   */
   private onVisibilityChange = () => {
-    if (document.visibilityState === 'visible') void this.flush();
+    if (document.visibilityState !== 'visible') return;
+
+    if (this.status.isTracking) {
+      const gapMs = this.lastSampleAt > 0 ? Date.now() - this.lastSampleAt : 0;
+      // En deçà de deux relevés manqués, c'est le fonctionnement normal.
+      if (gapMs > SAMPLE_INTERVAL_MS * 3) {
+        this.emit({
+          interruptedMinutes: this.status.interruptedMinutes + Math.round(gapMs / 60_000),
+        });
+      }
+      void this.requestScreenLock();
+    }
+
+    void this.flush();
   };
 
   private onPosition(position: GeolocationPosition): void {
