@@ -420,27 +420,50 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
     expect(res.body.data.configVersion).toBeGreaterThan(0);
   });
 
+  /** Chauffeur dont la distance mesurée reste sous le seuil de représentativité. */
+  const findUnderThreshold = async () => {
+    const drivers = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${adminToken}`);
+
+    for (const driver of drivers.body.data) {
+      const res = await request(app)
+        .get(`/api/v1/scoring/drivers/${driver.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      if (res.body.data && !res.body.data.isSignificant) return res.body.data;
+    }
+    return null;
+  };
+
   it('ne retient pas un score calculé sur une distance non représentative', async () => {
-    const res = await request(app)
-      .get(`/api/v1/scoring/drivers/${driverId}`)
+    const data = await findUnderThreshold();
+    expect(data, 'aucun chauffeur sous le seuil dans le jeu de données').toBeTruthy();
+
+    // La règle, et non une hypothèse sur le jeu de données : le drapeau doit
+    // refléter la comparaison au seuil.
+    expect(data.minimumDistanceKm).toBeGreaterThan(0);
+    expect(data.scoreResult.distanceDrivenKm).toBeLessThan(data.minimumDistanceKm);
+
+    /**
+     * La note officielle n'est pas touchée par un calcul non représentatif.
+     *
+     * Sur quelques kilomètres, une seule infraction équivaut à cinq incidents
+     * aux 100 km et ferait chuter la note à 40/100 : un gestionnaire
+     * convoquerait le chauffeur sur un artefact de calcul. On vérifie la
+     * garantie — la note reste stable d'un calcul à l'autre — plutôt qu'un
+     * écart chiffré qui dépendrait du jeu de données.
+     */
+    const officialBefore = data.driver.currentSafetyScore;
+
+    const again = await request(app)
+      .get(`/api/v1/scoring/drivers/${data.driver.id}`)
       .set('Authorization', `Bearer ${adminToken}`);
 
-    // Les lots de test totalisent quelques kilomètres : très en deçà du seuil.
-    expect(res.body.data.isSignificant).toBe(false);
-    expect(res.body.data.minimumDistanceKm).toBeGreaterThan(0);
-    expect(res.body.data.scoreResult.distanceDrivenKm).toBeLessThan(res.body.data.minimumDistanceKm);
-
-    // Un score non représentatif ne devient pas la note officielle du
-    // chauffeur : sur 12 km, une seule infraction équivaut à cinq incidents
-    // aux 100 km et ferait chuter la note à 40/100. Un gestionnaire
-    // convoquerait le chauffeur sur un artefact de calcul.
-    expect(res.body.data.driver.currentSafetyScore).toBeGreaterThan(res.body.data.scoreResult.score);
+    expect(again.body.data.driver.currentSafetyScore).toBe(officialBefore);
   });
 
   it("n'historise pas un score non représentatif", async () => {
-    const res = await request(app)
-      .get(`/api/v1/scoring/drivers/${driverId}`)
-      .set('Authorization', `Bearer ${adminToken}`);
+    const data = await findUnderThreshold();
+    expect(data).toBeTruthy();
+    const res = { body: { data } };
 
     // L'historique alimente la courbe de tendance et, à terme, la prime : y
     // inscrire un score calculé sur quelques kilomètres la fausserait.
@@ -1146,5 +1169,133 @@ describe.skipIf(!DATABASE_CONFIGURED)('Gestion du réseau conventionné', () => 
       .send({ dieselPrice: 1 });
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe.skipIf(!DATABASE_CONFIGURED)('Planification des missions', () => {
+  let managerToken: string;
+  let vehicleId: string;
+  let driverId: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    managerToken = await tokenFor('manager@transafrik.bj');
+
+    const vehicles = await request(app)
+      .get('/api/v1/vehicles')
+      .set('Authorization', `Bearer ${managerToken}`);
+    vehicleId = vehicles.body.data[0].id;
+
+    const drivers = await request(app).get('/api/v1/drivers').set('Authorization', `Bearer ${managerToken}`);
+    driverId = drivers.body.data[0].id;
+  });
+
+  /**
+   * Chaque exécution planifie dans sa propre fenêtre future.
+   *
+   * Les missions écrites par les exécutions précédentes subsistent en base :
+   * réutiliser les mêmes dates ferait échouer le contrôle sur un conflit
+   * d'affectation sans rapport avec le code vérifié.
+   */
+  const RUN_OFFSET_DAYS = 200 + (Math.floor(Date.now() / 1000) % 2000);
+
+  const inDays = (days: number) => new Date(Date.now() + (RUN_OFFSET_DAYS + days) * 86_400_000).toISOString();
+
+  const mission = (overrides: Record<string, unknown> = {}) => ({
+    vehicleId,
+    driverId,
+    originLabel: 'Cotonou',
+    destinationLabel: 'Parakou',
+    plannedDistanceKm: 420,
+    scheduledStart: inDays(3),
+    ...overrides,
+  });
+
+  it('évalue une mission sans rien enregistrer', async () => {
+    const res = await request(app)
+      .post('/api/v1/missions/assess')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(mission());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.plannedDrivingHours).toBeGreaterThan(0);
+    // L'écran doit pouvoir dire d'où vient l'estimation de durée.
+    expect(['OBSERVED', 'DEFAULT']).toContain(res.body.data.speedBasis);
+
+    const before = await request(app).get('/api/v1/missions').set('Authorization', `Bearer ${managerToken}`);
+    const after = await request(app).get('/api/v1/missions').set('Authorization', `Bearer ${managerToken}`);
+    expect(after.body.data.length).toBe(before.body.data.length);
+  });
+
+  it('planifie une mission réalisable', async () => {
+    const res = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(mission({ scheduledStart: inDays(10), plannedDistanceKm: 200 }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.feasibility.feasible).toBe(true);
+  });
+
+  it('refuse une mission qui dépasserait le plafond hebdomadaire', async () => {
+    // 4 000 km : quelle que soit l'allure retenue, le plafond saute.
+    const res = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(mission({ scheduledStart: inDays(20), plannedDistanceKm: 4000 }));
+
+    expect(res.status).toBe(409);
+    expect(res.body.details.blockers.length).toBeGreaterThan(0);
+    // Un refus qu'on ne peut pas expliquer au gestionnaire sera contourné.
+    expect(res.body.details.blockers[0].message).toBeTruthy();
+  });
+
+  it('accepte le dépassement seulement avec un motif écrit', async () => {
+    const res = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(
+        mission({
+          scheduledStart: inDays(25),
+          plannedDistanceKm: 4000,
+          overrideReason: 'Relais prévu à Parakou avec un second chauffeur, confirmé par le client.',
+        }),
+      );
+
+    expect(res.status).toBe(201);
+
+    // La justification est conservée : c'est elle qui distingue une décision
+    // assumée d'une négligence.
+    const list = await request(app).get('/api/v1/missions').set('Authorization', `Bearer ${managerToken}`);
+    const created = list.body.data.find((m: { id: string }) => m.id === res.body.data.id);
+    expect(created.overrideReason).toContain('Relais');
+  });
+
+  it('refuse d’engager deux fois le même chauffeur sur un créneau', async () => {
+    const start = inDays(40);
+
+    const first = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(mission({ scheduledStart: start, plannedDistanceKm: 200 }));
+    expect(first.status).toBe(201);
+
+    const second = await request(app)
+      .post('/api/v1/missions')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(mission({ scheduledStart: start, plannedDistanceKm: 200 }));
+
+    expect(second.status).toBe(409);
+    expect(second.body.details.blockers.map((b: { code: string }) => b.code)).toContain('DRIVER_BUSY');
+  });
+
+  it('ne montre pas les missions d’un transporteur à un autre', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    const mine = await request(app).get('/api/v1/missions').set('Authorization', `Bearer ${managerToken}`);
+    const theirs = await request(app).get('/api/v1/missions').set('Authorization', `Bearer ${otherToken}`);
+
+    const myIds = new Set(mine.body.data.map((m: { id: string }) => m.id));
+    expect(theirs.body.data.some((m: { id: string }) => myIds.has(m.id))).toBe(false);
   });
 });

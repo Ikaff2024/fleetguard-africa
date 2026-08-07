@@ -150,9 +150,6 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
   de garder le téléphone allumé et branché. Un suivi réellement continu en
   arrière-plan suppose une application native ou un boîtier — la même route
   d'ingestion les servira.
-- **Pas de planification prévisionnelle** : l'écran de charge montre les
-  missions réellement effectuées, déduites des trajets. Affecter un chauffeur à
-  une mission future suppose une table de planning qui n'existe pas encore.
 - **Tuiles cartographiques** : les serveurs OpenStreetMap publics sont interdits
   en usage commercial. Prévoir un fournisseur dédié avant le premier client.
 - **Primes en monnaie électronique** : verser du cash via Orange Money, MTN MoMo

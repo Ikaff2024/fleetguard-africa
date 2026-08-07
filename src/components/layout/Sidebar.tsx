@@ -14,6 +14,7 @@ import {
   Gift,
   Route,
   Navigation,
+  CalendarClock,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -63,6 +64,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'trips',
       label: 'Historique des trajets',
       icon: Route,
+    },
+    {
+      id: 'planning',
+      label: 'Planification des missions',
+      icon: CalendarClock,
     },
     {
       id: 'fleet',

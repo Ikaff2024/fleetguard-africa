@@ -28,6 +28,17 @@ export class ApiError extends Error {
   static forbidden(message = 'Accès refusé à cette ressource') {
     return new ApiError(403, message, 'FORBIDDEN');
   }
+  /**
+   * La demande est bien formée, mais l'état du système s'y oppose.
+   *
+   * Distinct d'un 400 : le gestionnaire n'a rien mal saisi, c'est la charge de
+   * travail du chauffeur qui rend l'affectation impossible. Les détails sont
+   * renvoyés pour que l'écran puisse l'expliquer plutôt que refuser sèchement.
+   */
+  static conflict(message: string, details?: unknown) {
+    return new ApiError(409, message, 'CONFLICT', details);
+  }
+
   static notFound(message = 'Ressource introuvable') {
     return new ApiError(404, message, 'NOT_FOUND');
   }

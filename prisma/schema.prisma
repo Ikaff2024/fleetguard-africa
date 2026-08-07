@@ -94,6 +94,7 @@ model Organization {
   trips            Trip[]
   alerts           Alert[]
   fuelStations     FuelStation[]
+  missions         Mission[]
 
   @@index([code])
   @@map("organizations")
@@ -223,6 +224,7 @@ model Vehicle {
   telemetryBatches TelemetryBatch[]
   trips            Trip[]
   alerts           Alert[]
+  missions         Mission[]
 
   // Une immatriculation est unique au sein d'une organisation, pas mondialement :
   // deux transporteurs de pays différents peuvent porter la même plaque.
@@ -280,6 +282,7 @@ model Driver {
   unlockedBadges   DriverUnlockedBadge[]
   trips            Trip[]
   alerts           Alert[]
+  missions         Mission[]
 
   @@unique([organizationId, licenseNumber])
   @@index([organizationId, status])
@@ -1004,4 +1007,61 @@ model FuelStation {
   @@unique([organizationId, name])
   @@index([organizationId, isActive])
   @@map("fuel_stations")
+}
+
+// ============================================================================
+// PLANIFICATION DES MISSIONS
+// ============================================================================
+
+enum MissionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// Mission planifiée sur un corridor.
+///
+/// C'est la seule donnée de l'application qui porte sur l'avenir : tout le
+/// reste constate ce qui s'est passé. Elle a donc une règle propre — une
+/// mission ne peut pas être créée si elle fait dépasser les plafonds de
+/// conduite, et ce contrôle s'appuie sur les heures *mesurées* à partir des
+/// trajets reconstruits, jamais sur un carnet rempli de mémoire.
+///
+/// Le dépassement reste possible, mais jamais silencieux : un gestionnaire qui
+/// passe outre doit le motiver, et la justification est conservée. En cas
+/// d'accident, la question posée à l'entreprise sera précisément celle-là.
+model Mission {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vehicleId String  @db.Uuid
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driverId  String  @db.Uuid
+  driver    Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  originLabel       String
+  destinationLabel  String
+  plannedDistanceKm Decimal @db.Decimal(10, 2)
+
+  scheduledStart      DateTime
+  scheduledEnd        DateTime
+  /// Durée de conduite retenue au moment de la planification, en heures.
+  plannedDrivingHours Decimal  @db.Decimal(5, 2)
+
+  status MissionStatus @default(PLANNED)
+  notes  String?
+
+  /// Renseigné quand la mission a été validée malgré un dépassement constaté.
+  overrideReason  String?
+  createdByUserId String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, scheduledStart])
+  @@index([organizationId, driverId, scheduledStart])
+  @@index([organizationId, status])
+  @@map("missions")
 }

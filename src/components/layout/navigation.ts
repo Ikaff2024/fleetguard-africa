@@ -11,6 +11,7 @@ export type NavigationTab =
   | 'live-map'
   | 'alerts'
   | 'trips'
+  | 'planning'
   | 'fleet'
   | 'scoring'
   | 'rewards'
@@ -31,6 +32,7 @@ export const NAV_PERMISSIONS: Record<NavigationTab, string> = {
   'live-map': 'tracking:read',
   alerts: 'alerts:read',
   trips: 'tracking:read',
+  planning: 'fleet:read',
   fleet: 'fleet:read',
   scoring: 'scoring:read',
   rewards: 'scoring:read',
@@ -44,6 +46,7 @@ export const NAV_ORDER: NavigationTab[] = [
   'live-map',
   'alerts',
   'trips',
+  'planning',
   'fleet',
   'scoring',
   'rewards',

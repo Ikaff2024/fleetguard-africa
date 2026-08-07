@@ -36,6 +36,9 @@ const FleetManagementView = lazy(() =>
 const DriverConsole = lazy(() =>
   import('./components/driver/DriverConsole').then(m => ({ default: m.DriverConsole })),
 );
+const MissionPlanner = lazy(() =>
+  import('./components/planning/MissionPlanner').then(m => ({ default: m.MissionPlanner })),
+);
 const TripHistoryView = lazy(() =>
   import('./components/tracking/TripHistoryView').then(m => ({ default: m.TripHistoryView })),
 );
@@ -179,6 +182,7 @@ function AppContent() {
               {effectiveTab === 'scoring' && <DriverScoreCalculator currentOrg={currentOrg} />}
               {effectiveTab === 'rewards' && <RewardsModule currentOrg={currentOrg} />}
               {effectiveTab === 'trips' && <TripHistoryView currentOrg={currentOrg} />}
+              {effectiveTab === 'planning' && <MissionPlanner currentOrg={currentOrg} />}
               {effectiveTab === 'fleet' && <FleetManagementView currentOrg={currentOrg} />}
               {effectiveTab === 'maintenance-fuel' && <FleetManagementView currentOrg={currentOrg} />}
               {effectiveTab === 'ai-hub' && <FleetIntelligenceHub currentOrg={currentOrg} />}
