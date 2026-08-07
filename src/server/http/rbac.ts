@@ -32,6 +32,8 @@ export type Permission =
   | 'compliance:write'
   | 'alerts:read'
   | 'alerts:acknowledge'
+  | 'messages:read'
+  | 'messages:send'
   | 'reports:read'
   | 'intelligence:use'
   | 'users:read'
@@ -56,6 +58,8 @@ const ALL_PERMISSIONS: Permission[] = [
   'compliance:write',
   'alerts:read',
   'alerts:acknowledge',
+  'messages:read',
+  'messages:send',
   'reports:read',
   'intelligence:use',
   'users:read',
@@ -88,6 +92,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'compliance:write',
     'alerts:read',
     'alerts:acknowledge',
+    'messages:read',
+    'messages:send',
     'reports:read',
     'intelligence:use',
     'users:read',
@@ -103,6 +109,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'scoring:configure',
     'alerts:read',
     'alerts:acknowledge',
+    'messages:read',
+    'messages:send',
     'reports:read',
     'intelligence:use',
     'compliance:read',
@@ -122,7 +130,17 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // mobile, qui remonte la télémétrie : `tracking:ingest` n'appartient donc pas
   // aux rôles de bureau. En Phase 2, les boîtiers GPS disposeront de leur
   // propre mécanisme d'identification d'appareil.
-  DRIVER: ['scoring:read', 'alerts:read', 'fuel:write', 'compliance:read', 'tracking:ingest'],
+  DRIVER: [
+    'scoring:read',
+    'alerts:read',
+    'fuel:write',
+    'compliance:read',
+    'tracking:ingest',
+    // Le chauffeur lit les consignes qui lui sont adressées et les confirme
+    // lui-même ; il n'en envoie pas. C'est précisément parce que l'expéditeur
+    // ne peut pas signer à sa place que l'accusé vaut preuve.
+    'messages:read',
+  ],
 };
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {

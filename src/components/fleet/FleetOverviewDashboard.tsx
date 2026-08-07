@@ -2,42 +2,42 @@ import React from 'react';
 import { Organization } from '../../types';
 import { useFuelLogs, useVehicles } from '../../hooks/useFleetData';
 import { DataState } from '../common/DataState';
-import { Activity, Droplet, Truck, TrendingUp } from 'lucide-react';
+import { Activity, Droplet, Truck, TrendingDown, TrendingUp } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
 interface FleetOverviewDashboardProps {
   currentOrg: Organization;
 }
 
-const sparklineDataFuel = [
-  { value: 120 },
-  { value: 135 },
-  { value: 110 },
-  { value: 140 },
-  { value: 155 },
-  { value: 145 },
-  { value: 180 },
-];
+/** Fenêtre du graphique et de la comparaison : une semaine, puis la précédente. */
+const TREND_DAYS = 7;
 
-const sparklineDataHealth = [
-  { value: 85 },
-  { value: 86 },
-  { value: 84 },
-  { value: 88 },
-  { value: 89 },
-  { value: 92 },
-  { value: 94 },
-];
+/**
+ * Litres relevés jour par jour sur la semaine écoulée.
+ *
+ * Les trois courbes de cet écran étaient écrites en dur — sept valeurs figées
+ * qui dessinaient une progression flatteuse quoi qu'il arrive dans le parc.
+ * Celle-ci est reconstruite depuis les pleins enregistrés. Les journées sans
+ * ravitaillement valent zéro et restent dans la série : les retirer lisserait
+ * la courbe et masquerait justement les jours d'immobilisation.
+ */
+function dailyLiters(logs: { loggedAt: string; litersAdded: number }[], days: number, offset = 0) {
+  const series: { day: string; value: number }[] = [];
 
-const sparklineDataActive = [
-  { value: 10 },
-  { value: 11 },
-  { value: 11 },
-  { value: 12 },
-  { value: 12 },
-  { value: 14 },
-  { value: 15 },
-];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - i - offset);
+    const key = date.toISOString().slice(0, 10);
+
+    series.push({
+      day: key,
+      value: logs.filter(log => log.loggedAt.startsWith(key)).reduce((sum, log) => sum + log.litersAdded, 0),
+    });
+  }
+
+  return series;
+}
 
 export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () => {
   // Les données viennent de l'API, déjà bornées à l'organisation de la session
@@ -68,6 +68,22 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () 
    */
   const healthScore = vehicles.length > 0 ? Math.round((activeVehicles / vehicles.length) * 100) : 0;
   const immobilised = vehicles.filter(v => v.status !== 'ACTIVE').length;
+
+  /**
+   * Consommation de la semaine, et variation contre la précédente.
+   *
+   * `null` quand la semaine précédente n'a enregistré aucun plein : une
+   * variation contre zéro n'a pas de sens, et « +100 % » ferait croire à une
+   * dérive alors qu'il ne s'agit que d'un début d'enregistrement.
+   */
+  const fuelSeries = dailyLiters(fuelLogs, TREND_DAYS);
+  const thisWeekLiters = fuelSeries.reduce((sum, point) => sum + point.value, 0);
+  const lastWeekLiters = dailyLiters(fuelLogs, TREND_DAYS, TREND_DAYS).reduce(
+    (sum, point) => sum + point.value,
+    0,
+  );
+  const fuelTrend =
+    lastWeekLiters > 0 ? Math.round(((thisWeekLiters - lastWeekLiters) / lastWeekLiters) * 100) : null;
 
   if (isLoading || loadError) {
     return (
@@ -101,25 +117,14 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () 
               </div>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-emerald-600 bg-emerald-50 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> +15%
+              {/* « +15 % » était écrit en dur. Le statut des véhicules n'est pas
+                  historisé : aucune variation n'est mesurable, et en inventer
+                  une reviendrait à remettre le même chiffre sous une autre
+                  forme. Le nombre de camions en service se lit déjà à gauche. */}
+              <span className="text-slate-600 bg-slate-50 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {activeVehicles === vehicles.length ? 'Tous en service' : `${immobilised} à l’arrêt`}
               </span>
             </div>
-          </div>
-          <div className="h-12 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sparklineDataActive}>
-                <YAxis domain={['dataMin - 2', 'dataMax + 2']} hide />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
           </div>
         </div>
 
@@ -141,21 +146,6 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () 
               </span>
             </div>
           </div>
-          <div className="h-12 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sparklineDataHealth}>
-                <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
         </div>
 
         {/* KPI Card 3: Total Fuel Burned Today */}
@@ -169,14 +159,27 @@ export const FleetOverviewDashboard: React.FC<FleetOverviewDashboardProps> = () 
               <div className="text-3xl font-extrabold text-slate-900 font-mono">{totalFuelToday} L</div>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-rose-600 bg-rose-50 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> +8.4%
-              </span>
+              {fuelTrend === null ? (
+                <span className="text-slate-500 bg-slate-50 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  Semaine précédente sans plein
+                </span>
+              ) : (
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    fuelTrend > 0 ? 'text-rose-600 bg-rose-50' : 'text-emerald-600 bg-emerald-50'
+                  }`}
+                  title="Litres de la semaine écoulée comparés à la semaine précédente"
+                >
+                  {fuelTrend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {fuelTrend > 0 ? '+' : ''}
+                  {fuelTrend}% / 7 j
+                </span>
+              )}
             </div>
           </div>
           <div className="h-12 mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sparklineDataFuel}>
+              <LineChart data={fuelSeries}>
                 <YAxis domain={['dataMin - 20', 'dataMax + 20']} hide />
                 <Line
                   type="monotone"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useGeofences, useVehicles } from '../../hooks/useFleetData';
+import { useAlerts, useGeofences, useVehicles } from '../../hooks/useFleetData';
 import { Geofence, Organization } from '../../types';
 import {
   MapPin,
@@ -58,43 +58,21 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
   const [formChannels, setFormChannels] = useState<('IN_APP' | 'SMS' | 'EMAIL')[]>(['IN_APP', 'SMS']);
   const [formAssignedVehicles, setFormAssignedVehicles] = useState<string[]>([]); // empty = all
 
-  // Simulation & Live Alerts State
-  const [simulatedAlert, setSimulatedAlert] = useState<{
-    id: string;
-    geofenceName: string;
-    vehiclePlate: string;
-    action: 'ENTRÉE' | 'SORTIE' | 'EXCÈS DE VITESSE';
-    time: string;
-    severity: string;
-  } | null>(null);
-
-  const [alertLogs, setAlertLogs] = useState<
-    Array<{
-      id: string;
-      geofenceName: string;
-      vehiclePlate: string;
-      action: string;
-      time: string;
-      severity: string;
-    }>
-  >([
-    {
-      id: 'log-1',
-      geofenceName: 'Port Autonome de Cotonou',
-      vehiclePlate: 'RB-4592-A',
-      action: 'ENTRÉE DÉTECTÉE',
-      time: "Aujourd'hui 08:14",
-      severity: 'HIGH',
-    },
-    {
-      id: 'log-2',
-      geofenceName: 'Entrepôt Logistique Parakou',
-      vehiclePlate: 'RB-8812-B',
-      action: 'SORTIE DÉTECTÉE',
-      time: 'Hier 17:40',
-      severity: 'MEDIUM',
-    },
-  ]);
+  /**
+   * Franchissements reellement constates.
+   *
+   * Cet ecran portait un journal de deux entrees ecrites en dur — « RB-4592-A,
+   * ENTREE DETECTEE, Port Autonome de Cotonou, aujourd'hui 08:14 » — et un
+   * declencheur qui en fabriquait d'autres a la demande, avec la mention
+   * « SMS + Push Envoye » alors qu'aucun message ne partait. Les deux etaient
+   * indiscernables d'un vrai franchissement : un exploitant pouvait convoquer
+   * un chauffeur sur une entree de zone qui n'avait jamais eu lieu.
+   *
+   * Le journal vient desormais du centre d'alertes, ou les franchissements sont
+   * derives des positions reellement remontees.
+   */
+  const alertsQuery = useAlerts();
+  const geofenceCrossings = (alertsQuery.data ?? []).filter(alert => alert.category === 'GEOFENCE');
 
   // Map Initialization & Updates
   useEffect(() => {
@@ -374,71 +352,45 @@ export const GeofenceConfigPanel: React.FC<GeofenceConfigPanelProps> = ({ curren
     }
   };
 
-  // Trigger Instant Live Alert Simulation
-  const handleSimulateAlert = (actionType: 'ENTRÉE' | 'SORTIE' | 'EXCÈS DE VITESSE') => {
-    const targetGeo = geofences.find(g => g.id === selectedGeofenceId) || geofences[0];
-    const targetVehicle = orgVehicles[0] || (vehiclesQuery.data ?? [])[0];
-
-    const newAlert = {
-      id: `alert-${Date.now()}`,
-      geofenceName: targetGeo?.name || 'Zone Surveillée',
-      vehiclePlate: targetVehicle.immatriculation,
-      action: actionType,
-      time: new Date().toLocaleTimeString(),
-      severity: targetGeo?.severity || 'HIGH',
-    };
-
-    setSimulatedAlert(newAlert);
-    setAlertLogs(prev => [
-      {
-        id: newAlert.id,
-        geofenceName: newAlert.geofenceName,
-        vehiclePlate: newAlert.vehiclePlate,
-        action: `${actionType} DÉTECTÉE`,
-        time: `À l'instant (${newAlert.time})`,
-        severity: newAlert.severity,
-      },
-      ...prev,
-    ]);
-
-    // Auto dismiss toast banner after 6s
-    setTimeout(() => {
-      setSimulatedAlert(null);
-    }, 6000);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Simulation Live Instant Toast Banner */}
-      {simulatedAlert && (
-        <div className="bg-orange-500 text-white p-4 rounded-xl shadow-lg flex items-center justify-between animate-bounce">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg shrink-0">
-              <BellRing className="w-5 h-5 text-white animate-pulse" />
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-wider font-extrabold opacity-90">
-                🚨 ALERTE EN TEMPS RÉEL (DECLENCHEUR INSTANTANÉ)
-              </div>
-              <div className="text-sm font-bold mt-0.5">
-                Véhicule <span className="underline">{simulatedAlert.vehiclePlate}</span> : Event{' '}
-                <span className="bg-white/20 px-1.5 py-0.5 rounded">{simulatedAlert.action}</span> dans la
-                zone <strong>"{simulatedAlert.geofenceName}"</strong>
-              </div>
-            </div>
+      {/* Journal des franchissements — constats reels, jamais simules. */}
+      {geofenceCrossings.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+            <BellRing className="w-4 h-4 text-orange-500" />
+            <span>Franchissements constates ({geofenceCrossings.length})</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs bg-white text-orange-600 px-2.5 py-1 rounded-lg font-bold">
-              SMS + Push Envoyé
-            </span>
-            <button
-              onClick={() => setSimulatedAlert(null)}
-              className="text-white hover:text-slate-200 text-xs underline font-bold px-2 cursor-pointer"
-            >
-              Fermer
-            </button>
+          <div className="space-y-1.5">
+            {geofenceCrossings.slice(0, 5).map(crossing => (
+              <div
+                key={crossing.id}
+                className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-xs"
+              >
+                <div className="min-w-[200px] flex-1">
+                  <div className="font-bold text-slate-900">{crossing.title}</div>
+                  <div className="text-[11px] text-slate-600 leading-relaxed">{crossing.description}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase">{crossing.severity}</div>
+                  <div className="text-[10px] font-mono text-slate-400">
+                    {new Date(crossing.recordedAt).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+            Constats derives des positions remontees du terrain. La notification par SMS n'est pas encore
+            raccordee : les franchissements se consultent ici et au centre d'alertes.
+          </p>
         </div>
       )}
 

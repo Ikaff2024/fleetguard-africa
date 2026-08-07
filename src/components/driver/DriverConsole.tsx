@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Gauge, MapPin, Play, Square, Truck, WifiOff } from 'lucide-react';
 import { useApiResource } from '../../hooks/useApiResource';
 import { DriverTracker, type TrackingStatus } from '../../services/driverTracking';
+import { DriverInstructions } from './DriverInstructions';
 import { Organization } from '../../types';
 
 /**
@@ -116,6 +117,8 @@ export const DriverConsole: React.FC<DriverConsoleProps> = ({ currentOrg }) => {
           <span className="font-mono font-bold">{assignment.safetyScore.toFixed(0)} / 100</span>
         </div>
       </div>
+
+      <DriverInstructions />
 
       {!assignment.vehicle ? (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800">

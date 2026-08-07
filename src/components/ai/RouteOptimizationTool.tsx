@@ -1,20 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Organization } from '../../types';
-import {
-  MapPin,
-  Truck,
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  Plus,
-  Trash2,
-  TrendingDown,
-  Zap,
-  Send,
-  RotateCcw,
-  ShieldCheck,
-  Compass,
-} from 'lucide-react';
+import { useFuelLogs, useVehicles } from '../../hooks/useFleetData';
+import { MapPin, Truck, CheckCircle2, Plus, Trash2, Zap, Send, RotateCcw, Compass } from 'lucide-react';
 
 interface RouteOptimizationToolProps {
   currentOrg: Organization;
@@ -158,7 +145,31 @@ const PRESET_ROUTES: { [key: string]: { name: string; origin: string; stops: Del
   },
 };
 
+/** Rayon terrestre moyen, en kilomètres. */
+const EARTH_RADIUS_KM = 6371;
+
+/**
+ * Distance à vol d'oiseau entre deux points.
+ *
+ * C'est un plancher, pas un kilométrage routier : aucune donnée de voirie n'est
+ * disponible ici. L'écart est assumé et annoncé à l'écran, parce qu'un plancher
+ * honnête vaut mieux qu'un chiffre précis inventé.
+ */
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+
+  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
+}
+
 export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ currentOrg }) => {
+  const vehiclesQuery = useVehicles();
+  const fuelQuery = useFuelLogs();
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
 
@@ -178,9 +189,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
         ? 'KENYA_MOMBASA'
         : 'BENIN_NORTH',
   );
-  const [vehicleProfile, setVehicleProfile] = useState<
-    'HEAVY_6X4' | 'RIGID_26T' | 'FRIGO_VAN' | 'LIGHT_PICKUP'
-  >('HEAVY_6X4');
+  // Un véhicule réel du parc, et non un « gabarit » théorique : c'est sa
+  // consommation de référence qui sert au calcul, pas une constante.
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [cargoLoadTons, setCargoLoadTons] = useState<number>(35);
   const [departureTime, setDepartureTime] = useState<
     'MORNING_PEAK' | 'NORMAL_FLOW' | 'EVENING_PEAK' | 'NIGHT_HAUL'
@@ -205,52 +216,53 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
 
   const currencySymbol = currentOrg.currency || 'FCFA';
 
-  // Calculations based on inputs & vehicle profile
-  const getConsumptionFactor = () => {
-    switch (vehicleProfile) {
-      case 'HEAVY_6X4':
-        return 38.0;
-      case 'RIGID_26T':
-        return 28.5;
-      case 'FRIGO_VAN':
-        return 22.0;
-      case 'LIGHT_PICKUP':
-        return 12.5;
-    }
-  };
+  const vehicles = vehiclesQuery.data ?? [];
+  const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId) ?? vehicles[0];
 
-  const baseL100km = getConsumptionFactor();
-  const trafficMultiplier =
-    departureTime === 'MORNING_PEAK'
-      ? 1.22
-      : departureTime === 'EVENING_PEAK'
-        ? 1.18
-        : departureTime === 'NIGHT_HAUL'
-          ? 0.91
-          : 1.05;
-  const loadPenalty = (cargoLoadTons / 40) * 4.5;
+  /**
+   * Prix du litre réellement payé.
+   *
+   * Le calcul utilisait 650 FCFA en dur. Le gazole ne coûte pas le même prix à
+   * Cotonou et à Nairobi, ni ce mois-ci et l'an dernier : la moyenne des pleins
+   * enregistrés est la seule valeur que l'entreprise puisse reconnaître comme
+   * la sienne. Sans aucun plein, l'estimation financière ne s'affiche pas.
+   */
+  const fuelLogs = fuelQuery.data ?? [];
+  const pricePerLiter = (() => {
+    const priced = fuelLogs.filter(log => log.litersAdded > 0 && log.totalCost > 0);
+    if (priced.length === 0) return null;
+    const liters = priced.reduce((sum, log) => sum + log.litersAdded, 0);
+    const cost = priced.reduce((sum, log) => sum + log.totalCost, 0);
+    return Math.round(cost / liters);
+  })();
 
-  // Eco Route Metrics
-  const ecoDistanceKm = 482;
-  const ecoDurationHours = 7.2;
-  const ecoAvgL100km = parseFloat(
-    (baseL100km * (avoidUrbanChokepoints ? 0.9 : 1.0) + loadPenalty).toFixed(1),
-  );
-  const ecoTotalLiters = Math.round((ecoDistanceKm * ecoAvgL100km) / 100);
-  const ecoFuelCost = ecoTotalLiters * 650; // ~650 FCFA per liter
+  /**
+   * Distance du parcours saisi.
+   *
+   * Cet écran comparait trois itinéraires — 482 km, 465 km et 508 km — assortis
+   * de durées (7,2 h, 8,8 h, 7,5 h), d'un « gain » de gazole, d'une économie en
+   * francs et de kilos de CO2 évités. Ces neuf valeurs étaient écrites en dur :
+   * elles ne bougeaient pas d'un mètre quand on changeait les étapes, le
+   * véhicule ou le pays. Un exploitant pouvait arbitrer un plan de transport
+   * sur une comparaison entre deux routes qui n'existaient pas.
+   *
+   * Comparer des itinéraires suppose un moteur de calcul routier et des données
+   * de trafic dont l'application ne dispose pas. Ce qui est réellement
+   * calculable, c'est la distance entre les étapes saisies — et le gazole
+   * qu'elle coûtera au véhicule choisi.
+   */
+  const legs = stops.slice(1).map((stop, index) => ({
+    from: stops[index]!,
+    to: stop,
+    km: haversineKm(stops[index]!, stop),
+  }));
+  const straightLineKm = Math.round(legs.reduce((sum, leg) => sum + leg.km, 0));
 
-  // Standard Route Metrics (Unoptimized / Peak Traffic)
-  const stdDistanceKm = 465; // shorter distance but heavy congestion
-  const stdDurationHours = 8.8; // longer due to traffic jams
-  const stdAvgL100km = parseFloat((baseL100km * trafficMultiplier + loadPenalty).toFixed(1));
-  const stdTotalLiters = Math.round((stdDistanceKm * stdAvgL100km) / 100);
-  const stdFuelCost = stdTotalLiters * 650;
-
-  // Differences
-  const fuelLitersSaved = stdTotalLiters - ecoTotalLiters;
-  const financialCostSaved = stdFuelCost - ecoFuelCost;
-  const timeSavedMinutes = Math.round((stdDurationHours - ecoDurationHours) * 60);
-  const co2ReductionKg = Math.round(fuelLitersSaved * 2.68); // 2.68 kg CO2 per liter of diesel
+  const referenceL100km = selectedVehicle?.expectedConsumptionL100km ?? null;
+  const estimatedLiters =
+    referenceL100km !== null ? Math.round((straightLineKm * referenceL100km) / 100) : null;
+  const estimatedCost =
+    estimatedLiters !== null && pricePerLiter !== null ? estimatedLiters * pricePerLiter : null;
 
   // Switch Preset Corridor
   const handleCorridorChange = (key: string) => {
@@ -489,17 +501,24 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
             <div className="grid grid-cols-2 gap-3 text-xs">
               {/* Vehicle Type */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Gabarit Véhicule :</label>
+                <label className="block text-slate-700 font-bold mb-1">Véhicule affecté :</label>
                 <select
-                  value={vehicleProfile}
-                  onChange={e => setVehicleProfile(e.target.value as any)}
+                  value={selectedVehicle?.id ?? ''}
+                  onChange={e => setSelectedVehicleId(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-medium text-slate-800 focus:outline-none cursor-pointer"
                 >
-                  <option value="HEAVY_6X4">Tracteur Poids Lourd (6x4)</option>
-                  <option value="RIGID_26T">Porteur Rigide (26 Tonnes)</option>
-                  <option value="FRIGO_VAN">Fourgon Frigorifique</option>
-                  <option value="LIGHT_PICKUP">Utilitaires / Light Pickup</option>
+                  {vehicles.length === 0 && <option value="">Aucun véhicule enregistré</option>}
+                  {vehicles.map(vehicle => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.immatriculation} — {vehicle.make} {vehicle.model}
+                    </option>
+                  ))}
                 </select>
+                {referenceL100km !== null && (
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    Référence constructeur : {referenceL100km} L/100 km
+                  </p>
+                )}
               </div>
 
               {/* Cargo Weight */}
@@ -537,9 +556,9 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
                     <span>Pointe Matin (07h-09h)</span>
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                   </div>
-                  <div className="text-[10px] text-slate-500 font-normal">
-                    Trafic urbain dense (+22% cons.)
-                  </div>
+                  {/* « +22 % de consommation » était un coefficient inventé,
+                      appliqué au calcul comme s'il avait été mesuré. */}
+                  <div className="text-[10px] text-slate-500 font-normal">Trafic urbain dense</div>
                 </button>
 
                 <button
@@ -554,7 +573,7 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
                     <span>Trajet De Nuit (21h-05h)</span>
                     <span className="w-2 h-2 rounded-full bg-purple-500"></span>
                   </div>
-                  <div className="text-[10px] text-slate-500 font-normal">Fluide & régulier (-9% cons.)</div>
+                  <div className="text-[10px] text-slate-500 font-normal">Circulation plus fluide</div>
                 </button>
               </div>
             </div>
@@ -720,123 +739,93 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
             </div>
           )}
 
-          {/* Route Comparison Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Card 1: ECO FUEL ROUTE */}
-            <div
-              onClick={() => setSelectedRouteType('ECO_FUEL')}
-              className={`p-4 rounded-xl border transition cursor-pointer relative shadow-xs ${
-                selectedRouteType === 'ECO_FUEL'
-                  ? 'bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-500/30'
-                  : 'bg-white border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-600" /> IA Éco-Carburant
-                </span>
-                <span className="text-xs font-mono font-extrabold text-emerald-700">{ecoDistanceKm} km</span>
-              </div>
+          {/* Les trois cartes d'itineraires — 482 km, 465 km, 508 km — etaient
+              ecrites en dur, avec leurs durees et leurs moyennes. Elles ne
+              bougeaient ni avec les etapes saisies, ni avec le vehicule, ni
+              avec le pays. Comparer des itineraires suppose un moteur de calcul
+              routier et des donnees de trafic dont l'application ne dispose
+              pas ; ce qui suit est ce qu'elle sait reellement calculer. */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="border-b border-slate-100 pb-3">
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-orange-500" />
+                Estimation du parcours saisi
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Calculee sur les {stops.length} etapes renseignees et la consommation de reference du vehicule
+                choisi.
+              </p>
+            </div>
 
-              <div className="text-lg font-extrabold text-slate-900 font-mono">
-                {ecoTotalLiters}{' '}
-                <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
-              </div>
-
-              <div className="text-xs text-slate-600 mt-1 space-y-1">
-                <div className="flex justify-between">
-                  <span>Temps estimé :</span>
-                  <strong className="text-slate-900 font-mono">{ecoDurationHours}h</strong>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Distance a vol d'oiseau
                 </div>
-                <div className="flex justify-between">
-                  <span>Moyenne :</span>
-                  <strong className="text-emerald-700 font-mono">{ecoAvgL100km} L/100km</strong>
+                <div className="text-xl font-extrabold font-mono text-slate-900 mt-1">
+                  {straightLineKm.toLocaleString('fr-FR')} km
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Plancher, hors detours routiers</div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-orange-50 border border-orange-200">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                  Gazole estime
+                </div>
+                <div className="text-xl font-extrabold font-mono text-orange-800 mt-1">
+                  {estimatedLiters === null ? '\u2014' : `${estimatedLiters} L`}
+                </div>
+                <div className="text-[10px] text-orange-700 mt-0.5">
+                  {referenceL100km === null
+                    ? 'Reference du vehicule non renseignee'
+                    : `A ${referenceL100km} L/100 km`}
                 </div>
               </div>
 
-              <div className="mt-3 pt-2 border-t border-emerald-200 text-[10px] text-emerald-800 font-bold flex items-center gap-1">
-                <TrendingDown className="w-3.5 h-3.5 text-emerald-600" />
-                <span>
-                  Économise {fuelLitersSaved} L (~{financialCostSaved.toLocaleString()} {currencySymbol})
-                </span>
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                  Cout carburant
+                </div>
+                <div className="text-xl font-extrabold font-mono text-emerald-800 mt-1">
+                  {estimatedCost === null
+                    ? '\u2014'
+                    : `${estimatedCost.toLocaleString('fr-FR')} ${currencySymbol}`}
+                </div>
+                <div className="text-[10px] text-emerald-700 mt-0.5">
+                  {pricePerLiter === null
+                    ? 'Aucun plein enregistre'
+                    : `${pricePerLiter} ${currencySymbol}/L constate`}
+                </div>
               </div>
             </div>
 
-            {/* Card 2: STANDARD FASTEST ROUTE */}
-            <div
-              onClick={() => setSelectedRouteType('STANDARD_FASTEST')}
-              className={`p-4 rounded-xl border transition cursor-pointer relative shadow-xs ${
-                selectedRouteType === 'STANDARD_FASTEST'
-                  ? 'bg-orange-50/80 border-orange-400 ring-2 ring-orange-500/30'
-                  : 'bg-white border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  Standard (Sans IA)
-                </span>
-                <span className="text-xs font-mono font-extrabold text-slate-700">{stdDistanceKm} km</span>
-              </div>
-
-              <div className="text-lg font-extrabold text-slate-900 font-mono">
-                {stdTotalLiters}{' '}
-                <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
-              </div>
-
-              <div className="text-xs text-slate-600 mt-1 space-y-1">
-                <div className="flex justify-between">
-                  <span>Temps estimé :</span>
-                  <strong className="text-slate-900 font-mono">{stdDurationHours}h</strong>
+            {legs.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Detail par etape
                 </div>
-                <div className="flex justify-between">
-                  <span>Moyenne :</span>
-                  <strong className="text-orange-700 font-mono">{stdAvgL100km} L/100km</strong>
-                </div>
+                {legs.map((leg, index) => (
+                  <div
+                    key={`${leg.from.id}-${leg.to.id}-${index}`}
+                    className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-slate-50 border border-slate-100"
+                  >
+                    <span className="text-slate-700 truncate pr-2">
+                      {leg.from.name} <span className="text-slate-400">&rarr;</span> {leg.to.name}
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 shrink-0">
+                      {Math.round(leg.km)} km
+                    </span>
+                  </div>
+                ))}
               </div>
+            )}
 
-              <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] text-red-600 font-bold flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                <span>Exposition aux embouteillages</span>
-              </div>
-            </div>
-
-            {/* Card 3: PERIPHERAL BYPASS ROUTE */}
-            <div
-              onClick={() => setSelectedRouteType('BYPASS')}
-              className={`p-4 rounded-xl border transition cursor-pointer relative shadow-xs ${
-                selectedRouteType === 'BYPASS'
-                  ? 'bg-purple-50/80 border-purple-400 ring-2 ring-purple-500/30'
-                  : 'bg-white border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
-                  Contournement
-                </span>
-                <span className="text-xs font-mono font-extrabold text-purple-700">508 km</span>
-              </div>
-
-              <div className="text-lg font-extrabold text-slate-900 font-mono">
-                {ecoTotalLiters + 12}{' '}
-                <span className="text-xs text-slate-500 font-sans font-normal">Litres Diesel</span>
-              </div>
-
-              <div className="text-xs text-slate-600 mt-1 space-y-1">
-                <div className="flex justify-between">
-                  <span>Temps estimé :</span>
-                  <strong className="text-slate-900 font-mono">7.5h</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Moyenne :</span>
-                  <strong className="text-purple-700 font-mono">34.8 L/100km</strong>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-2 border-t border-slate-100 text-[10px] text-purple-700 font-bold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                <span>Route secondaire 100% fluide</span>
-              </div>
-            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed pt-1 border-t border-slate-100">
+              La distance est mesuree en ligne droite entre les points saisis : le kilometrage routier reel
+              sera superieur. Le temps de trajet n'est pas estime ici — il depend de la reglementation de
+              conduite et des pauses obligatoires, que l'ecran de planification des missions applique sur les
+              heures reellement mesurees.
+            </p>
           </div>
 
           {/* Leaflet Map Interactive Visualizer Container */}
@@ -854,35 +843,36 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
               </button>
             </div>
 
-            {/* Route Stats Overlay Banner */}
+            {/* La banniere annoncait « Gains Estimes par FleetGuard AI » :
+                litres economises, kilos de CO2 evites, francs epargnes et
+                minutes gagnees. Les quatre derivaient de la comparaison entre
+                deux itineraires inventes. Un gain qu'on ne peut pas mesurer ne
+                se proclame pas — surtout adosse a une marque. */}
             <div className="absolute bottom-3 left-3 right-3 z-20 bg-slate-900/90 backdrop-blur text-white p-3 rounded-xl shadow-xl border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-                  <Zap className="w-4 h-4" />
+                <div className="p-2 bg-orange-500/20 text-orange-400 rounded-lg">
+                  <MapPin className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-slate-200">Gains Estimés par FleetGuard AI</div>
-                  <div className="text-[11px] text-emerald-400 font-mono">
-                    -{fuelLitersSaved} Litres de Carburant • -{co2ReductionKg} kg CO2 Émis
+                  <div className="font-bold text-slate-200">
+                    {stops.length} etapes &middot; {straightLineKm.toLocaleString('fr-FR')} km a vol d'oiseau
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Trace reliant les points saisis, sans calcul de voirie
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 text-right">
-                <div>
-                  <div className="text-[10px] text-slate-400 uppercase font-bold">Économie Financière</div>
-                  <div className="font-mono font-extrabold text-emerald-400 text-sm">
-                    {financialCostSaved.toLocaleString()} {currencySymbol}
+              {estimatedLiters !== null && (
+                <div className="text-right">
+                  <div className="text-[10px] text-slate-400 uppercase font-bold">Gazole estime</div>
+                  <div className="font-mono font-extrabold text-orange-400 text-sm">
+                    {estimatedLiters} L
+                    {estimatedCost !== null &&
+                      ` \u00b7 ${estimatedCost.toLocaleString('fr-FR')} ${currencySymbol}`}
                   </div>
                 </div>
-
-                <div>
-                  <div className="text-[10px] text-slate-400 uppercase font-bold">Temps Gagné</div>
-                  <div className="font-mono font-extrabold text-sky-400 text-sm">
-                    {timeSavedMinutes} minutes
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

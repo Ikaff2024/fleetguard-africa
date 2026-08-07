@@ -716,6 +716,42 @@ async function main() {
     console.log(`  ${pointCount} positions GPS, ${tripCount} trajet(s) reconstruit(s)`);
   }
 
+  // --- Une consigne de demonstration ---------------------------------------
+  /**
+   * Elle est enregistree sans aucun horodatage de reception, et c'est tout
+   * l'interet : l'ecran affichera « En attente de la releve du chauffeur ».
+   *
+   * La tentation serait de peupler un accusé signé pour que la demonstration
+   * paraisse plus vivante. Ce serait reproduire exactement le defaut corrige —
+   * un accusé de reception que personne n'a donne. La consigne se confirme
+   * depuis la console de bord, avec le compte chauffeur, et pas autrement.
+   */
+  const instructionRecipient = MOCK_DRIVERS.find(d => d.id === 'drv_koffi_01') ?? MOCK_DRIVERS[0];
+
+  if (instructionRecipient) {
+    const recipientId = stableUuid(instructionRecipient.id);
+    const existing = await prisma.driverMessage.findFirst({
+      where: { driverId: recipientId, senderName: 'Direction d’exploitation' },
+    });
+
+    if (!existing) {
+      await prisma.driverMessage.create({
+        data: {
+          organizationId: stableUuid(instructionRecipient.organizationId),
+          driverId: recipientId,
+          senderName: 'Direction d’exploitation',
+          category: 'SAFETY_REMINDER',
+          priority: 'URGENT',
+          body:
+            'Fortes pluies annoncées sur le corridor cette nuit. Allumez les feux, ' +
+            'réduisez à 60 km/h et confirmez la prise en compte avant le départ.',
+          ackRequired: true,
+        },
+      });
+      console.log('  1 consigne en attente de relève');
+    }
+  }
+
   console.log('\nPeuplement terminé.');
   console.log('\nComptes de démonstration :');
   for (const account of accounts) {

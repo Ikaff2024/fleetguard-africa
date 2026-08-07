@@ -12,6 +12,7 @@ import { fleetWriteRouter } from './routes/fleet-write.js';
 import { healthRouter } from './routes/health.js';
 import { intelligenceRouter } from './routes/intelligence.js';
 import { mapConfigRouter } from './routes/map-config.js';
+import { messagesRouter } from './routes/messages.js';
 import { missionsRouter } from './routes/missions.js';
 import { orgSettingsRouter } from './routes/org-settings.js';
 import { personalDataRouter } from './routes/personal-data.js';
@@ -54,6 +55,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   api.use(fleetRouter);
   api.use(fleetWriteRouter);
   api.use(mapConfigRouter);
+  api.use(messagesRouter);
   api.use(missionsRouter);
   api.use(orgSettingsRouter);
   api.use(personalDataRouter);

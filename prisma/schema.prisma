@@ -110,6 +110,7 @@ model Organization {
   alerts           Alert[]
   fuelStations     FuelStation[]
   missions         Mission[]
+  driverMessages   DriverMessage[]
 
   @@index([code])
   @@map("organizations")
@@ -298,6 +299,7 @@ model Driver {
   trips            Trip[]
   alerts           Alert[]
   missions         Mission[]
+  messages         DriverMessage[]
 
   @@unique([organizationId, licenseNumber])
   @@index([organizationId, status])
@@ -1079,4 +1081,72 @@ model Mission {
   @@index([organizationId, driverId, scheduledStart])
   @@index([organizationId, status])
   @@map("missions")
+}
+
+// ============================================================================
+// CONSIGNES AUX CHAUFFEURS
+// ============================================================================
+
+enum DriverMessageCategory {
+  SAFETY_REMINDER
+  MISSION_UPDATE
+  FUEL_INSTRUCTION
+  MAINTENANCE_NOTICE
+  GENERAL
+}
+
+enum DriverMessagePriority {
+  NORMAL
+  URGENT
+  CRITICAL
+}
+
+/// Consigne adressée à un chauffeur, et sa réception réelle.
+///
+/// Cet écran affichait auparavant « Accusé de Lecture Signé » deux secondes
+/// après l'envoi, sans qu'aucun chauffeur n'ait rien vu. Un exploitant qui
+/// transmet « fortes pluies, réduisez à 60 km/h » lisait que le conducteur
+/// avait signé. En cas d'accident, l'entreprise aurait produit la preuve d'un
+/// avertissement qui n'avait jamais quitté le serveur.
+///
+/// Les trois horodatages ci-dessous ne sont donc écrits qu'au moment où le
+/// fait se produit : `deliveredAt` quand le téléphone du chauffeur récupère la
+/// consigne, `readAt` quand elle s'affiche devant lui, `acknowledgedAt` quand
+/// il appuie lui-même sur le bouton. Aucun n'est renseigné à l'envoi, et aucun
+/// ne peut l'être par le gestionnaire : ce qui vaut preuve, c'est justement que
+/// l'expéditeur ne puisse pas l'écrire.
+model DriverMessage {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  driverId String @db.Uuid
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  /// Auteur de la consigne. Conservé même si le compte est supprimé plus tard :
+  /// une consigne sans auteur ne vaut rien dans un dossier.
+  senderUserId String? @db.Uuid
+  senderName   String
+
+  category DriverMessageCategory @default(GENERAL)
+  priority DriverMessagePriority @default(NORMAL)
+  body     String
+
+  /// L'expéditeur exige une confirmation explicite du chauffeur.
+  ackRequired Boolean @default(false)
+
+  sentAt         DateTime  @default(now())
+  /// Horodaté par le serveur quand le téléphone du chauffeur récupère la consigne.
+  deliveredAt    DateTime?
+  /// Horodaté quand la consigne s'affiche devant le chauffeur.
+  readAt         DateTime?
+  /// Horodaté quand le chauffeur confirme lui-même en avoir pris connaissance.
+  acknowledgedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, driverId, sentAt])
+  @@index([organizationId, sentAt])
+  @@map("driver_messages")
 }

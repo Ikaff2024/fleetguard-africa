@@ -2,6 +2,7 @@ import type {
   AlertRecord,
   ComplianceDoc,
   Driver,
+  DriverMessage,
   DriverScoreConfig,
   FuelLog,
   FatigueReport,
@@ -129,3 +130,16 @@ export const useFatigueFrameworks = () =>
 
 /** Infractions relevées sur la trace, du plus récent au plus ancien. */
 export const useSafetyEvents = () => useApiResource<SafetyEvent[]>('/tracking/events');
+
+/**
+ * Consignes adressées à un chauffeur, avec leur état de réception réel.
+ *
+ * Les trois horodatages viennent du serveur et ne sont posés que par des
+ * gestes du chauffeur : rien ici n'est estimé côté navigateur. C'est ce qui
+ * distingue un accusé de réception opposable d'un voyant vert décoratif.
+ */
+export const useDriverMessages = (driverId?: string) =>
+  useApiResource<DriverMessage[]>(driverId ? `/messages?driverId=${driverId}` : '/messages');
+
+/** Consignes destinées au chauffeur connecté — console de bord. */
+export const useMyMessages = (enabled = true) => useApiResource<DriverMessage[]>('/me/messages', { enabled });

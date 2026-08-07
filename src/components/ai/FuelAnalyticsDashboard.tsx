@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Organization } from '../../types';
-import { useFuelLogs, useTrips, useVehicles } from '../../hooks/useFleetData';
+import { useAlerts, useFuelLogs, useTrips, useVehicles } from '../../hooks/useFleetData';
 import {
   BarChart,
   Bar,
@@ -20,10 +20,7 @@ import {
 } from 'recharts';
 import {
   Fuel,
-  TrendingDown,
   AlertTriangle,
-  Sparkles,
-  CheckCircle2,
   BarChart3,
   Zap,
   Droplets,
@@ -62,6 +59,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
   const fuelQuery = useFuelLogs();
   const tripsQuery = useTrips({ limit: 500 });
   const vehiclesQuery = useVehicles();
+  const alertsQuery = useAlerts();
   const [metricType, setMetricType] = useState<'liters' | 'cost' | 'avgL100km'>('liters');
   const [chartType, setChartType] = useState<'stacked_bar' | 'line' | 'area'>('stacked_bar');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7M' | '3M' | 'YTD'>('7M');
@@ -127,6 +125,53 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
   }, [fuelQuery.data, tripsQuery.data, vehiclesQuery.data]);
 
   const displayData = selectedTimeframe === '3M' ? monthlyTrends.slice(-3) : monthlyTrends;
+
+  /**
+   * Indicateurs de tete, mesures sur la periode effectivement affichee.
+   *
+   * Ce bandeau annoncait 24 350 litres, 33,2 L/100 km, 15,82 M XOF « conforme
+   * au budget previsionnel » et 2 anomalies pour 480 litres « evites ». Aucun
+   * de ces cinq chiffres ne venait des donnees : ils ne bougeaient ni avec
+   * l'organisation consultee, ni avec la periode choisie, ni quand le parc
+   * doublait. Un transporteur pouvait batir un budget dessus.
+   *
+   * Chacun se recalcule desormais depuis les pleins enregistres et les trajets
+   * reconstruits, sur la meme fenetre que le graphique — sans quoi le total ne
+   * correspondrait pas a la courbe placee juste en dessous.
+   */
+  const totals = useMemo(() => {
+    const litersOf = (month: (typeof displayData)[number] | undefined) =>
+      month ? month.poidsLourds + month.porteursBennes + month.utilitaires + month.frigorifiques : 0;
+
+    const liters = displayData.reduce((sum, month) => sum + litersOf(month), 0);
+    const cost = displayData.reduce((sum, month) => sum + month.costXOF, 0);
+    const distanceKm = displayData.reduce((sum, month) => sum + month.distanceKm, 0);
+
+    // Le dernier mois contre le precedent : la seule comparaison que les
+    // donnees autorisent. Elle disparait tant qu'il n'y a pas deux mois.
+    const last = displayData[displayData.length - 1];
+    const previous = displayData[displayData.length - 2];
+    const trend =
+      last && previous && litersOf(previous) > 0
+        ? Math.round(((litersOf(last) - litersOf(previous)) / litersOf(previous)) * 1000) / 10
+        : null;
+
+    return {
+      liters: Math.round(liters),
+      cost,
+      distanceKm: Math.round(distanceKm),
+      // Sans distance mesuree, la moyenne n'a pas de sens : elle reste vide.
+      avgL100km: distanceKm > 0 ? Math.round((liters / distanceKm) * 1000) / 10 : null,
+      trend,
+      lastMonthLabel: last?.month ?? null,
+    };
+  }, [displayData]);
+
+  /** Ecarts de consommation releves — les memes constats qu'au centre d'alertes. */
+  const fuelAnomalies = useMemo(
+    () => (alertsQuery.data ?? []).filter(alert => alert.category === 'FUEL_ANOMALY'),
+    [alertsQuery.data],
+  );
 
   /** Répartition par catégorie de véhicule, sur la même période affichée. */
   /**
@@ -194,6 +239,12 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
       { name: 'Utilitaires & pick-up', value: Math.round(totals.utilitaires), color: '#10b981' },
     ].filter(entry => entry.value > 0);
   }, [displayData]);
+
+  /** Total du camembert : la somme des parts affichees, jamais un chiffre a part. */
+  const categoryTotal = useMemo(
+    () => categoryBreakdown.reduce((sum, entry) => sum + entry.value, 0),
+    [categoryBreakdown],
+  );
 
   const currencySymbol = currentOrg.currency || 'FCFA';
 
@@ -321,79 +372,96 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
         </div>
       </div>
 
-      {/* KPI Highlight Stats */}
+      {/* Indicateurs de tete : chaque valeur se recalcule depuis les pleins
+          enregistres, sur la periode affichee par le graphique. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-              Consommation Juillet
+              Volume sur la periode
             </span>
             <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
               <Droplets className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-extrabold text-slate-900 font-mono">
-            24,350 <span className="text-xs text-slate-500 font-sans font-normal">Litres</span>
+            {totals.liters.toLocaleString('fr-FR')}{' '}
+            <span className="text-xs text-slate-500 font-sans font-normal">Litres</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
-            <ArrowDownRight className="w-4 h-4" />
-            <span>-3.1% vs Juin 2026 (Économie IA)</span>
-          </div>
+          {totals.trend === null ? (
+            <div className="text-xs text-slate-500 font-semibold">
+              Comparaison possible des deux mois enregistres
+            </div>
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 text-xs font-bold ${
+                totals.trend > 0 ? 'text-rose-600' : 'text-emerald-600'
+              }`}
+            >
+              <ArrowDownRight className={`w-4 h-4 ${totals.trend > 0 ? 'rotate-90' : ''}`} />
+              <span>
+                {totals.trend > 0 ? '+' : ''}
+                {totals.trend}% en {totals.lastMonthLabel} vs mois precedent
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* KPI 2 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Moyenne Flotte</span>
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Moyenne flotte</span>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
               <Truck className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-extrabold text-slate-900 font-mono">
-            33.2 <span className="text-xs text-slate-500 font-sans font-normal">L / 100km</span>
+            {totals.avgL100km ?? '\u2014'}{' '}
+            <span className="text-xs text-slate-500 font-sans font-normal">L / 100 km</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
-            <TrendingDown className="w-4 h-4" />
-            <span>-3.3 L/100km depuis Janvier</span>
+          <div className="text-xs text-slate-500 font-semibold">
+            {totals.avgL100km === null
+              ? 'Aucune distance reconstruite sur la periode'
+              : `${totals.distanceKm.toLocaleString('fr-FR')} km parcourus`}
           </div>
         </div>
 
-        {/* KPI 3 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-              Budget Carburant Mensuel
+              Depense carburant
             </span>
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-extrabold text-slate-900 font-mono">
-            15.82M <span className="text-xs text-slate-500 font-sans font-normal">{currencySymbol}</span>
+            {Math.round(totals.cost).toLocaleString('fr-FR')}{' '}
+            <span className="text-xs text-slate-500 font-sans font-normal">{currencySymbol}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Conforme au budget prévisionnel</span>
-          </div>
+          {/* « Conforme au budget previsionnel » supposait un budget que
+              l'application ne connait pas. On dit ce qui est constate. */}
+          <div className="text-xs text-slate-500 font-semibold">Somme des pleins enregistres</div>
         </div>
 
-        {/* KPI 4 */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-              Alertes Anomalies / Vol
+              Ecarts de consommation
             </span>
             <div className="p-2 bg-red-50 text-red-600 rounded-lg">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-extrabold text-slate-900 font-mono">
-            2 <span className="text-xs text-slate-500 font-sans font-normal">Suspectées</span>
+            {fuelAnomalies.length}{' '}
+            <span className="text-xs text-slate-500 font-sans font-normal">releves</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-orange-600 font-bold">
-            <ShieldCheck className="w-4 h-4" />
-            <span>480 Litres identifiés & évités</span>
+          {/* « 480 litres identifies & evites » creditait l'outil d'economies
+              qu'aucune mesure n'etablit. Un ecart constate n'est pas un vol
+              dejoue : le controle humain tranche. */}
+          <div className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-slate-400" />
+            <span>{fuelAnomalies.filter(a => a.status === 'UNHANDLED').length} a verifier</span>
           </div>
         </div>
       </div>
@@ -624,7 +692,7 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
           <div className="border-b border-slate-100 pb-3">
             <h4 className="text-sm font-bold text-slate-900">Répartition du Volume (Juillet 2026)</h4>
             <p className="text-[11px] text-slate-500">
-              Part relative de chaque catégorie sur les 24,350 L consommés.
+              Part relative de chaque categorie sur les litres enregistres.
             </p>
           </div>
 
@@ -651,14 +719,16 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
             {/* Inner Center Label */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-xs text-slate-500 font-bold uppercase">Total</span>
-              <span className="text-base font-extrabold text-slate-900 font-mono">24,350 L</span>
+              <span className="text-base font-extrabold text-slate-900 font-mono">
+                {categoryTotal.toLocaleString('fr-FR')} L
+              </span>
             </div>
           </div>
 
           {/* Detailed Category Legend Table */}
           <div className="space-y-2 pt-1">
             {categoryBreakdown.map((item, idx) => {
-              const percent = ((item.value / 24350) * 100).toFixed(1);
+              const percent = categoryTotal > 0 ? ((item.value / categoryTotal) * 100).toFixed(1) : '0.0';
               return (
                 <div
                   key={idx}
@@ -754,53 +824,60 @@ export const FuelAnalyticsDashboard: React.FC<FuelAnalyticsDashboardProps> = ({ 
           </div>
         </div>
 
-        {/* Right Col: AI Prescriptions & Optimization Tips */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs">
+        {/* Les « recommandations prescriptives » de ce bloc etaient ecrites en
+            dur : 42 heures de ralenti moteur sur un axe nomme, 1 260 litres et
+            819 000 XOF d'economies mensuelles, 180 litres sur les groupes
+            frigorifiques. Rien de tout cela n'est mesure — le ralenti moteur
+            suppose une prise sur le calculateur du camion, qu'aucun de ces
+            vehicules ne remonte.
+
+            La derniere affirmait que « les ecarts de vol suspects sont
+            concentres a 80 % sur la station Km 45 Bohicon ». Elle designait un
+            commerce reel, nommement, comme foyer de vol, sur la foi de rien.
+            Publier cela expose l'entreprise qui s'en sert autant que celle
+            qu'elle accuse.
+
+            Les ecarts reellement constates figurent au centre d'alertes, chacun
+            rattache au plein qui l'a produit. */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
           <div className="border-b border-slate-100 pb-3">
             <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              Recommandations Prespectives IA
+              <ShieldCheck className="w-4 h-4 text-slate-500" />
+              Ecarts a verifier
             </h4>
             <p className="text-[11px] text-slate-500">
-              Actions directes suggérées par Gemini AI pour réduire les coûts carburant.
+              Constats issus des pleins enregistres, compares a la consommation de reference du vehicule.
             </p>
           </div>
 
-          <div className="space-y-3 text-xs">
-            <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 space-y-1.5">
-              <div className="font-bold text-purple-900 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                <span>Régulation du Ralenti à l'Arrêt</span>
-              </div>
-              <p className="text-purple-800 text-[11px] leading-relaxed">
-                Les camions Poids Lourds cumulent 42 heures de ralenti moteur sur l'axe Cotonou-Parakou.
-                Limiter le ralenti à 5 min économiserait{' '}
-                <strong>1,260 Litres (~819 000 {currencySymbol}/mois)</strong>.
-              </p>
+          {fuelAnomalies.length === 0 ? (
+            <p className="text-xs text-slate-500 py-6 text-center">
+              Aucun ecart releve sur la periode. Deux pleins au moins sont necessaires pour mesurer la
+              consommation reelle d'un vehicule.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {fuelAnomalies.slice(0, 5).map(anomaly => (
+                <div
+                  key={anomaly.id}
+                  className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1"
+                >
+                  <div className="font-bold text-slate-900 text-[11px]">{anomaly.title}</div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">{anomaly.description}</p>
+                  {anomaly.metricValue && (
+                    <div className="text-[10px] font-mono text-slate-500">
+                      {anomaly.metricLabel ?? 'Releve'} : {anomaly.metricValue}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
+          )}
 
-            <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 space-y-1.5">
-              <div className="font-bold text-orange-900 flex items-center gap-1.5">
-                <Fuel className="w-3.5 h-3.5 text-orange-600" />
-                <span>Optimisation Groupes Frigorifiques</span>
-              </div>
-              <p className="text-orange-800 text-[11px] leading-relaxed">
-                Reprogrammez les consignes de température de +2°C à +4°C durant le transport nocturne pour
-                économiser <strong>~180 Litres de diesel de groupe froids</strong>.
-              </p>
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 space-y-1.5">
-              <div className="font-bold text-blue-900 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                <span>Audits des Stations-Services Partenaires</span>
-              </div>
-              <p className="text-blue-800 text-[11px] leading-relaxed">
-                Les écarts de vol suspects sont concentrés à 80% sur la station "Km 45 Bohicon". Il est
-                recommandé d'imposer le paiement direct par carte carburant FleetGuard.
-              </p>
-            </div>
-          </div>
+          <p className="text-[10px] text-slate-400 leading-relaxed pt-1">
+            Un ecart de consommation n'etablit pas un vol : une charge lourde, une piste degradee ou un
+            injecteur use l'expliquent aussi. Le controle humain tranche.
+          </p>
         </div>
       </div>
     </div>

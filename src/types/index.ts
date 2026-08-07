@@ -587,3 +587,33 @@ export interface FuelBonusRuleConfig {
   maxMonthlyBonusCapXOF: number; // e.g. 150,000 XOF
   baseTierBonusXOF: number; // Minimum bonus for score >= 90
 }
+
+export type DriverMessageCategory =
+  'SAFETY_REMINDER' | 'MISSION_UPDATE' | 'FUEL_INSTRUCTION' | 'MAINTENANCE_NOTICE' | 'GENERAL';
+
+export type DriverMessagePriority = 'NORMAL' | 'URGENT' | 'CRITICAL';
+
+/**
+ * Consigne adressée à un chauffeur.
+ *
+ * Les trois horodatages de réception sont volontairement nullables : tant que
+ * le fait ne s'est pas produit, il n'y a rien à afficher. Un champ optionnel
+ * rempli par défaut aurait reproduit la fabrication qu'ils remplacent.
+ */
+export interface DriverMessage {
+  id: string;
+  driverId: string;
+  driverName: string;
+  senderName: string;
+  category: DriverMessageCategory;
+  priority: DriverMessagePriority;
+  body: string;
+  ackRequired: boolean;
+  sentAt: string;
+  /** Posé quand le téléphone du chauffeur est venu chercher la consigne. */
+  deliveredAt: string | null;
+  /** Posé quand la consigne s'est affichée devant le chauffeur. */
+  readAt: string | null;
+  /** Posé quand le chauffeur a lui-même confirmé en avoir pris connaissance. */
+  acknowledgedAt: string | null;
+}
