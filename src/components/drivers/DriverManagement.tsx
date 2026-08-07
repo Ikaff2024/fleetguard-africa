@@ -3,7 +3,9 @@ import { useDrivers, useVehicles } from '../../hooks/useFleetData';
 import { Organization, Driver } from '../../types';
 import { ShiftFatigueOptimizer } from './ShiftFatigueOptimizer';
 import { VehicleMaintenanceHistoryTab } from './VehicleMaintenanceHistoryTab';
+import { DriverFormModal } from './DriverFormModal';
 import {
+  UserPlus,
   Users,
   Award,
   Truck,
@@ -89,6 +91,14 @@ export const get30DayPerformanceBadge = (score: number): PerformanceBadgeInfo =>
 };
 
 export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, onNavigateToMessaging }) => {
+  /**
+   * Saisie d'un chauffeur.
+   *
+   * Sans elle, l'API savait en créer mais aucun écran ne s'en servait :
+   * intégrer un transporteur supposait d'exécuter du SQL à sa place.
+   */
+  const [showDriverForm, setShowDriverForm] = useState(false);
+
   const driversQuery = useDrivers();
   const vehiclesQuery = useVehicles();
   const drivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
@@ -150,6 +160,14 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
 
   return (
     <div className="space-y-6">
+      {showDriverForm && (
+        <DriverFormModal
+          vehicles={vehiclesQuery.data ?? []}
+          onClose={() => setShowDriverForm(false)}
+          onSaved={driversQuery.reload}
+        />
+      )}
+
       {/* Top Banner Header */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -169,46 +187,56 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({ currentOrg, 
           </p>
         </div>
 
-        {/* View Selector Tabs */}
-        <div className="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
-            onClick={() => setActiveModuleView('PROFILES')}
-            className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition cursor-pointer ${
-              activeModuleView === 'PROFILES'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            onClick={() => setShowDriverForm(true)}
+            className="px-3.5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
           >
-            <Users className="w-4 h-4 text-orange-500" />
-            <span>Conducteurs & Badges 30J</span>
+            <UserPlus className="w-4 h-4" />
+            <span>Ajouter un chauffeur</span>
           </button>
 
-          <button
-            onClick={() => setActiveModuleView('FATIGUE_OPTIMIZER')}
-            className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition cursor-pointer ${
-              activeModuleView === 'FATIGUE_OPTIMIZER'
-                ? 'bg-orange-500 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Zap className="w-4 h-4 text-amber-300" />
-            <span>Optimiseur de Roulements & Fatigue</span>
-            <span className="bg-amber-100 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.2 rounded-full">
-              Nouveau
-            </span>
-          </button>
+          {/* View Selector Tabs */}
+          <div className="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1 flex-wrap">
+            <button
+              onClick={() => setActiveModuleView('PROFILES')}
+              className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition cursor-pointer ${
+                activeModuleView === 'PROFILES'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-4 h-4 text-orange-500" />
+              <span>Conducteurs & Badges 30J</span>
+            </button>
 
-          <button
-            onClick={() => setActiveModuleView('MAINTENANCE_HISTORY')}
-            className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition cursor-pointer ${
-              activeModuleView === 'MAINTENANCE_HISTORY'
-                ? 'bg-orange-500 text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Wrench className="w-4 h-4 text-amber-300" />
-            <span>Historique de Maintenance</span>
-          </button>
+            <button
+              onClick={() => setActiveModuleView('FATIGUE_OPTIMIZER')}
+              className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition cursor-pointer ${
+                activeModuleView === 'FATIGUE_OPTIMIZER'
+                  ? 'bg-orange-500 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-amber-300" />
+              <span>Optimiseur de Roulements & Fatigue</span>
+              <span className="bg-amber-100 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.2 rounded-full">
+                Nouveau
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveModuleView('MAINTENANCE_HISTORY')}
+              className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition cursor-pointer ${
+                activeModuleView === 'MAINTENANCE_HISTORY'
+                  ? 'bg-orange-500 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Wrench className="w-4 h-4 text-amber-300" />
+              <span>Historique de Maintenance</span>
+            </button>
+          </div>
         </div>
       </div>
 

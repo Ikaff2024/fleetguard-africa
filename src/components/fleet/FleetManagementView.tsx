@@ -28,6 +28,8 @@ import { FleetComplianceTracker } from './FleetComplianceTracker';
 import { DriverManagement } from '../drivers/DriverManagement';
 import { useOfflineSync } from '../../context/OfflineSyncContext';
 import { PrintableReportModal } from '../common/PrintableReportModal';
+import { VehicleFormModal } from './VehicleFormModal';
+import { DriverFormModal } from '../drivers/DriverFormModal';
 
 interface FleetManagementViewProps {
   currentOrg: Organization;
@@ -42,6 +44,16 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
   const [activeSubTab, setActiveSubTab] = useState<
     'overview' | 'vehicles' | 'drivers' | 'geofencing' | 'maintenance' | 'fuel' | 'compliance'
   >('overview');
+  /**
+   * Saisie de la flotte.
+   *
+   * C'est ce qui permet à un nouveau client de démarrer seul. Le bouton
+   * existait mais n'ouvrait rien : intégrer un transporteur supposait
+   * d'exécuter du SQL à sa place.
+   */
+  const [vehicleForm, setVehicleForm] = useState<{ open: boolean }>({ open: false });
+  const [driverForm, setDriverForm] = useState<{ open: boolean }>({ open: false });
+
   const [showAddFuelModal, setShowAddFuelModal] = useState<boolean>(false);
   const [showPrintMaintenanceModal, setShowPrintMaintenanceModal] = useState<boolean>(false);
 
@@ -82,6 +94,18 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
 
   return (
     <div className="space-y-6">
+      {vehicleForm.open && (
+        <VehicleFormModal onClose={() => setVehicleForm({ open: false })} onSaved={vehiclesQuery.reload} />
+      )}
+
+      {driverForm.open && (
+        <DriverFormModal
+          vehicles={vehicles}
+          onClose={() => setDriverForm({ open: false })}
+          onSaved={driversQuery.reload}
+        />
+      )}
+
       {/* Top Banner */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xs">
         <div>
@@ -110,9 +134,14 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
               <span>Périmètres & Notifications Actives</span>
             </button>
           ) : (
-            <button className="px-3.5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer">
+            <button
+              onClick={() =>
+                activeSubTab === 'drivers' ? setDriverForm({ open: true }) : setVehicleForm({ open: true })
+              }
+              className="px-3.5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+            >
               <Plus className="w-4 h-4" />
-              <span>Ajouter un Véhicule</span>
+              <span>{activeSubTab === 'drivers' ? 'Ajouter un chauffeur' : 'Ajouter un véhicule'}</span>
             </button>
           )}
         </div>
