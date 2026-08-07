@@ -30,6 +30,7 @@ import { useOfflineSync } from '../../context/OfflineSyncContext';
 import { PrintableReportModal } from '../common/PrintableReportModal';
 import { VehicleFormModal } from './VehicleFormModal';
 import { DriverFormModal } from '../drivers/DriverFormModal';
+import { StationNetworkPanel } from './StationNetworkPanel';
 
 interface FleetManagementViewProps {
   currentOrg: Organization;
@@ -42,7 +43,7 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
   const maintenanceQuery = useMaintenanceLogs();
   const vehiclesQuery = useVehicles();
   const [activeSubTab, setActiveSubTab] = useState<
-    'overview' | 'vehicles' | 'drivers' | 'geofencing' | 'maintenance' | 'fuel' | 'compliance'
+    'overview' | 'vehicles' | 'drivers' | 'geofencing' | 'maintenance' | 'fuel' | 'stations' | 'compliance'
   >('overview');
   /**
    * Saisie de la flotte.
@@ -210,6 +211,18 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
         </button>
 
         <button
+          onClick={() => setActiveSubTab('stations')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
+            activeSubTab === 'stations'
+              ? 'bg-orange-50 text-orange-600 border-orange-300 shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <Fuel className="w-4 h-4 text-orange-500" />
+          <span>Réseau conventionné</span>
+        </button>
+
+        <button
           onClick={() => setActiveSubTab('fuel')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
             activeSubTab === 'fuel'
@@ -322,6 +335,8 @@ export const FleetManagementView: React.FC<FleetManagementViewProps> = ({ curren
               ))}
             </div>
           )}
+
+          {activeSubTab === 'stations' && <StationNetworkPanel />}
 
           {activeSubTab === 'fuel' && (
             <div className="space-y-4">

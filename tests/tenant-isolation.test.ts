@@ -308,8 +308,17 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
   });
 
   /** Trajet comportant un excès de vitesse prolongé et un freinage brusque. */
+  /**
+   * L'horodatage est relatif à l'exécution, pas figé dans le passé.
+   *
+   * Les listes du serveur sont plafonnées et triées du plus récent : une date
+   * fixe finit par sortir de la fenêtre à mesure que l'historique s'accumule,
+   * et le contrôle échoue pour une raison sans rapport avec le code vérifié.
+   */
+  const RUN_BASE = Date.now() - 2 * 60 * 60 * 1000;
+
   const trip = (batchId: string) => {
-    const base = Date.parse('2026-08-06T14:00:00.000Z');
+    const base = RUN_BASE;
     const speeds = [60, 70, 96, 98, 97, 62];
     return {
       batchId,
@@ -367,9 +376,14 @@ describe.skipIf(!DATABASE_CONFIGURED)('Persistance de la télémétrie', () => {
       const res = await request(app)
         .get('/api/v1/tracking/events?limit=500')
         .set('Authorization', `Bearer ${adminToken}`);
-      return res.body.data.filter((event: { recordedAt: string }) =>
-        event.recordedAt.startsWith('2026-08-06T14:0'),
-      ).length;
+      // Fenêtre du lot de cette exécution : dix minutes suffisent à couvrir
+      // les six points, et excluent l'historique.
+      const from = RUN_BASE - 60_000;
+      const until = RUN_BASE + 10 * 60_000;
+      return res.body.data.filter((event: { recordedAt: string }) => {
+        const at = Date.parse(event.recordedAt);
+        return at >= from && at <= until;
+      }).length;
     };
 
     const before = await countBatchEvents();
@@ -1037,5 +1051,100 @@ describe.skipIf(!DATABASE_CONFIGURED)('Console de bord du chauffeur', () => {
 
     expect(res.status).toBe(403);
     expect(res.body.message).toContain('votre propre nom');
+  });
+});
+
+describe.skipIf(!DATABASE_CONFIGURED)('Gestion du réseau conventionné', () => {
+  let adminToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+  });
+
+  const station = (suffix: string) => ({
+    name: `Oryx Test ${suffix}`,
+    brand: 'ORYX',
+    address: 'RNIE 2, sortie nord',
+    city: 'Bohicon',
+    country: 'Bénin',
+    latitude: 7.182,
+    longitude: 2.068,
+    is24h: true,
+    hasAdBlue: true,
+    hasHeavyTruckParking: true,
+  });
+
+  it('enregistre une station du réseau', async () => {
+    const res = await request(app)
+      .post('/api/v1/fuel-stations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(station(String(Date.now())));
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.id).toBeTruthy();
+  });
+
+  it('date le relevé de prix côté serveur', async () => {
+    const created = await request(app)
+      .post('/api/v1/fuel-stations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(station(`prix-${Date.now()}`));
+
+    const res = await request(app)
+      .patch(`/api/v1/fuel-stations/${created.body.data.id}/prices`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ dieselPrice: 715 });
+
+    expect(res.status).toBe(200);
+
+    const list = await request(app).get('/api/v1/fuel-stations').set('Authorization', `Bearer ${adminToken}`);
+    const found = list.body.data.find((s: { id: string }) => s.id === created.body.data.id);
+
+    expect(found.dieselPrice).toBe(715);
+    // Un tarif sans date ne permet aucune prévision de coût de mission.
+    expect(found.priceObservedAt).toBeTruthy();
+    expect(found.currency).toBeTruthy();
+  });
+
+  it('refuse un relevé sans aucun tarif', async () => {
+    const created = await request(app)
+      .post('/api/v1/fuel-stations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(station(`vide-${Date.now()}`));
+
+    const res = await request(app)
+      .patch(`/api/v1/fuel-stations/${created.body.data.id}/prices`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it('retire une station sans effacer l’historique des pleins', async () => {
+    const created = await request(app)
+      .post('/api/v1/fuel-stations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(station(`retrait-${Date.now()}`));
+
+    const removed = await request(app)
+      .delete(`/api/v1/fuel-stations/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(removed.status).toBe(204);
+
+    const list = await request(app).get('/api/v1/fuel-stations').set('Authorization', `Bearer ${adminToken}`);
+    expect(list.body.data.some((s: { id: string }) => s.id === created.body.data.id)).toBe(false);
+  });
+
+  it('refuse de modifier la station d’un autre transporteur', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+    const mine = await request(app).get('/api/v1/fuel-stations').set('Authorization', `Bearer ${adminToken}`);
+
+    const res = await request(app)
+      .patch(`/api/v1/fuel-stations/${mine.body.data[0].id}/prices`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ dieselPrice: 1 });
+
+    expect(res.status).toBe(404);
   });
 });
