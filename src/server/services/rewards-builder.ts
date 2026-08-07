@@ -197,8 +197,16 @@ export function computeReward(usage: DriverFuelUsage, rules: BonusRules): Comput
   const deltaL100km = measurable ? actualL100km - expectedL100km : 0;
   const savingsRatio = measurable ? Math.max(0, -deltaL100km / expectedL100km) : 0;
 
-  // Litres épargnés sur la distance réellement parcourue.
-  const litersSaved = measurable ? Math.max(0, (-deltaL100km * usage.distanceKm) / 100) : 0;
+  /**
+   * Litres épargnés, arrondis une seule fois.
+   *
+   * L'arrondi est fait ici et nulle part ailleurs : la prime se calcule sur la
+   * valeur affichée, et non sur une décimale invisible. Sans cela, un exploitant
+   * qui refait l'opération depuis l'écran — « 72 litres × 750 × 50 % » — tombe à
+   * cent francs près, et doute du reste. Un chiffre qu'on ne peut pas refaire
+   * est un chiffre qu'on ne peut pas défendre.
+   */
+  const litersSaved = measurable ? Math.round(Math.max(0, (-deltaL100km * usage.distanceKm) / 100)) : 0;
 
   const ecoScore = ecoScoreOf(usage.safetyScore, savingsRatio);
 
@@ -226,7 +234,7 @@ export function computeReward(usage: DriverFuelUsage, rules: BonusRules): Comput
     scoreTrend30d: usage.scoreTrend30d,
     ecoScore,
     fuelEfficiencySavingsL100km: Math.round(deltaL100km * 10) / 10,
-    estimatedFuelSavedLiters: Math.round(litersSaved),
+    estimatedFuelSavedLiters: litersSaved,
     bonusEarned,
     eligible: bonusEarned > 0,
     ineligibilityReason,

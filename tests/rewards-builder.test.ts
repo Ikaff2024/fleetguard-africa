@@ -100,6 +100,24 @@ describe('Primes de conduite économe', () => {
     expect(classement.map(r => r.rankInCompany)).toEqual([1, 2, 3]);
   });
 
+  it('calcule la prime sur les litres affichés, pas sur une décimale cachée', () => {
+    // Un exploitant doit pouvoir refaire l'opération depuis l'écran :
+    // « litres économisés × prix × part ». Sans arrondi unique, il tombe à
+    // cent francs près et doute du reste.
+    const reward = computeReward(
+      { ...usage(), actualL100km: 29.9, expectedL100km: 36.5, distanceKm: 1096 },
+      DEFAULT_BONUS_RULES,
+    );
+
+    const refait =
+      DEFAULT_BONUS_RULES.baseTierBonus +
+      reward.estimatedFuelSavedLiters *
+        DEFAULT_BONUS_RULES.fuelPricePerLiter *
+        (DEFAULT_BONUS_RULES.sharedSavingsPercentage / 100);
+
+    expect(reward.bonusEarned).toBe(Math.round(refait));
+  });
+
   it('respecte les règles de partage documentées', () => {
     expect(DEFAULT_BONUS_RULES.sharedSavingsPercentage).toBe(50);
     expect(DEFAULT_BONUS_RULES.minSafetyScoreForBonus).toBe(85);
