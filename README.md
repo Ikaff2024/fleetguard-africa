@@ -150,8 +150,6 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
   du cahier des charges mais conservés, restent alimentés par un jeu de
   démonstration ; l'API ne les expose pas encore. Les primes, elles, sont
   désormais calculées sur les pleins et les distances réellement enregistrés.
-- **Pas encore une application installable hors ligne.** La file IndexedDB
-  existe, mais sans service worker l'application ne s'ouvre pas sans réseau.
 - **Tuiles cartographiques** : les serveurs OpenStreetMap publics sont interdits
   en usage commercial. Prévoir un fournisseur dédié avant le premier client.
 - **Primes en monnaie électronique** : verser du cash via Orange Money, MTN MoMo

@@ -5,6 +5,8 @@ import {
   type SessionUser,
   apiClient,
   getStoredRefreshToken,
+  readSessionSnapshot,
+  storeSessionSnapshot,
   setAccessToken,
   setSessionLostHandler,
   storeRefreshToken,
@@ -69,9 +71,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearSession = useCallback(() => {
     setAccessToken(null);
     storeRefreshToken(null);
+    storeSessionSnapshot(null);
     setUser(null);
     setPermissions([]);
     setStatus('anonymous');
+  }, []);
+
+  /** Retient de quoi rouvrir l'interface sans réseau. */
+  const rememberSession = useCallback((session: SessionUser, granted: string[]) => {
+    storeSessionSnapshot({
+      user: {
+        id: session.id,
+        email: session.email,
+        fullName: session.fullName,
+        role: session.role,
+        organizationId: session.organizationId,
+        organizationName: session.organizationName,
+      },
+      permissions: granted,
+    });
   }, []);
 
   /**
@@ -98,6 +116,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organizationName: me.organization.name,
         });
         setPermissions(me.permissions);
+        rememberSession(
+          {
+            id: me.id,
+            email: me.email,
+            fullName: me.fullName,
+            role: me.role,
+            organizationId: me.organization.id,
+            organizationName: me.organization.name,
+          },
+          me.permissions,
+        );
         setStatus('authenticated');
       } catch (err) {
         if (cancelled) return;
@@ -105,6 +134,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (err instanceof ApiClientError && err.code === 'AUTH_UNAVAILABLE') {
           setStatus('demonstration');
           return;
+        }
+
+        /**
+         * Réseau absent : la session est conservée telle quelle.
+         *
+         * Effacer le jeton ici — ce que faisait la version précédente —
+         * déconnectait définitivement un chauffeur pour la seule raison qu'il
+         * avait ouvert l'application sous un tunnel. L'interface se rouvre
+         * depuis l'empreinte locale ; elle n'ouvre aucun droit supplémentaire,
+         * puisque toute donnée vient d'une API injoignable, et le serveur
+         * reconfronte le jeton dès le retour du réseau.
+         */
+        if (err instanceof ApiClientError && err.isNetworkError) {
+          const snapshot = readSessionSnapshot();
+          if (snapshot && getStoredRefreshToken()) {
+            setUser(snapshot.user);
+            setPermissions(snapshot.permissions);
+            setStatus('authenticated');
+            return;
+          }
         }
 
         // Session absente ou expirée : une rotation est tentée si un jeton de
@@ -122,6 +171,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               organizationName: me.organization.name,
             });
             setPermissions(me.permissions);
+            rememberSession(
+              {
+                id: me.id,
+                email: me.email,
+                fullName: me.fullName,
+                role: me.role,
+                organizationId: me.organization.id,
+                organizationName: me.organization.name,
+              },
+              me.permissions,
+            );
             setStatus('authenticated');
             return;
           } catch {
@@ -156,8 +216,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const me = await apiClient.get<CurrentUserResponse>('/auth/me');
       setPermissions(me.permissions);
+      // L'empreinte est posée dès la connexion : c'est elle qui permettra de
+      // rouvrir l'interface si le réseau vient à manquer.
+      rememberSession(
+        {
+          id: me.id,
+          email: me.email,
+          fullName: me.fullName,
+          role: me.role,
+          organizationId: me.organization.id,
+          organizationName: me.organization.name,
+        },
+        me.permissions,
+      );
     },
-    [applySession],
+    [applySession, rememberSession],
   );
 
   const logout = useCallback(async () => {

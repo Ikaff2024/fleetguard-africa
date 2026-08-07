@@ -29,6 +29,17 @@ export class ApiClientError extends Error {
   get isAuthError(): boolean {
     return this.status === 401;
   }
+
+  /**
+   * Vrai quand la requête n'a pas atteint le serveur.
+   *
+   * La distinction est essentielle : un serveur qui refuse une session et un
+   * réseau absent demandent des réponses opposées. Confondre les deux revient
+   * à déconnecter un chauffeur parce qu'il est passé sous un tunnel.
+   */
+  get isNetworkError(): boolean {
+    return this.status === 0;
+  }
 }
 
 export interface SessionUser {
@@ -94,6 +105,54 @@ export function storeRefreshToken(token: string | null): void {
   try {
     if (token) localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token);
     else localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+  } catch {
+    /* stockage indisponible : sans effet */
+  }
+}
+
+/**
+ * Empreinte de la session, pour l'ouverture sans réseau.
+ *
+ * Elle ne contient que de quoi afficher l'interface : identité, rôle,
+ * organisation, permissions. **Aucune donnée de flotte n'y figure** — celles-ci
+ * viennent de l'API, dont chaque réponse est bornée par le Row-Level Security.
+ * Un appareil hors réseau affiche donc le cadre de travail et la file de
+ * saisies, jamais les données d'un client.
+ *
+ * L'empreinte survit à un rechargement hors connexion, et disparaît à la
+ * déconnexion. Elle ne prolonge aucun droit : dès le retour du réseau, le jeton
+ * est reconfronté au serveur, qui reste seul juge.
+ */
+const SESSION_SNAPSHOT_KEY = 'fleetguard.session';
+
+export interface SessionSnapshot {
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    organizationId: string;
+    organizationName: string;
+  };
+  permissions: string[];
+}
+
+export function readSessionSnapshot(): SessionSnapshot | null {
+  try {
+    const raw = localStorage.getItem(SESSION_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SessionSnapshot;
+    // Une empreinte tronquée vaut mieux ignorée qu'à moitié appliquée.
+    return parsed?.user?.id && Array.isArray(parsed.permissions) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeSessionSnapshot(snapshot: SessionSnapshot | null): void {
+  try {
+    if (snapshot) localStorage.setItem(SESSION_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    else localStorage.removeItem(SESSION_SNAPSHOT_KEY);
   } catch {
     /* stockage indisponible : sans effet */
   }

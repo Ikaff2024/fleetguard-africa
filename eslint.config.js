@@ -75,6 +75,17 @@ export default tseslint.config(
     },
   },
 
+  {
+    // Ce contrôle interroge le cache du navigateur, l'enregistrement du service
+    // worker et le stockage local — trois choses qu'aucun locator Playwright
+    // n'atteint. Le code passé à `page.evaluate` s'exécute dans la page, pas
+    // dans Node : les globales du navigateur y sont donc légitimes.
+    files: ['scripts/verify-offline-shell.mjs'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+
   // Prettier en dernier : désactive toute règle de formatage conflictuelle
   prettier,
 );

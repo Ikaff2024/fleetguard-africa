@@ -74,13 +74,57 @@ const serverEnv = {
 // la seule façon de savoir pourquoi. Un « démarrage impossible » sans cause est
 // inexploitable.
 const serverOutput = [];
+/**
+ * Le serveur est lancé sans passer par un interpréteur de commandes.
+ *
+ * Avec `shell: true`, Windows insère un `cmd.exe` entre ce script et Node :
+ * `server.kill()` ne tue alors que l'interpréteur, et le serveur survit. Chaque
+ * exécution laissait ainsi un processus derrière elle, retenant son port et sa
+ * connexion à la base — jusqu'à ce qu'une exécution ultérieure échoue sur un
+ * port occupé, pour une raison sans rapport avec le code vérifié.
+ *
+ * `node` est un exécutable : aucun interpréteur n'est nécessaire.
+ */
 const server = spawn('node', [DATABASE_READY ? 'scripts/start-production.mjs' : 'dist/server.js'], {
   env: serverEnv,
   stdio: ['ignore', 'pipe', 'pipe'],
-  shell: process.platform === 'win32',
 });
 server.stdout.on('data', chunk => serverOutput.push(chunk.toString()));
 server.stderr.on('data', chunk => serverOutput.push(chunk.toString()));
+
+/**
+ * Arrêt du serveur, y compris ses descendants.
+ *
+ * `start-production.mjs` lance `prisma migrate deploy` puis importe le serveur :
+ * tuer le seul processus parent laisserait un enfant en vie. Sous Windows,
+ * `taskkill /T` est le seul moyen fiable de couper l'arborescence.
+ */
+let stopped = false;
+function stopServer() {
+  if (stopped || !server.pid) return;
+  stopped = true;
+
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(server.pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    try {
+      process.kill(-server.pid, 'SIGTERM');
+    } catch {
+      server.kill('SIGTERM');
+    }
+  }
+}
+
+// Une interruption au clavier ne doit pas davantage laisser de serveur orphelin.
+process.on('exit', stopServer);
+process.on('SIGINT', () => {
+  stopServer();
+  process.exit(130);
+});
+process.on('SIGTERM', () => {
+  stopServer();
+  process.exit(143);
+});
 
 const baseUrl = `http://localhost:${PORT}`;
 // Le démarrage applique migrations et scripts SQL : compter large.
@@ -100,6 +144,19 @@ if (!ready) {
 
   run('Contrôle de fumée', 'node', ['scripts/smoke-test.mjs', baseUrl], { env: smokeEnv });
 
+  // Le mode hors connexion se vérifie dans les deux cas : le shell ne dépend
+  // pas de la base. Avec une session, le contrôle va plus loin et vérifie qu'un
+  // exploitant déjà connecté conserve son espace de travail après une coupure.
+  run('Fonctionnement hors connexion', 'node', ['scripts/verify-offline-shell.mjs', baseUrl], {
+    env: DATABASE_READY
+      ? {
+          ...process.env,
+          OFFLINE_CHECK_EMAIL: process.env.SMOKE_EMAIL ?? 'manager@transafrik.bj',
+          OFFLINE_CHECK_PASSWORD: process.env.SMOKE_PASSWORD ?? 'FleetGuard2026!Demo',
+        }
+      : process.env,
+  });
+
   if (DATABASE_READY) {
     run('Isolation multi-tenant (API)', 'npx', ['vitest', 'run', 'tests/tenant-isolation.test.ts']);
     run('Cloisonnement visible à l’écran', 'node', ['scripts/verify-tenant-isolation-ui.mjs', baseUrl]);
@@ -109,7 +166,7 @@ if (!ready) {
   }
 }
 
-server.kill();
+stopServer();
 
 // --- Bilan ------------------------------------------------------------------
 console.log('\n═══ Bilan ═══\n');

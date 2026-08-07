@@ -85,13 +85,35 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
           exit $STATUS
 
+      - name: Fonctionnement hors connexion
+        # Le service worker peut s'enregistrer sans rien précacher d'utile, et
+        # la panne ne se voit alors qu'au moment où l'utilisateur en a besoin :
+        # sur la route, sans réseau. Ce contrôle coupe réellement la connexion
+        # dans le navigateur. Il vérifie aussi qu'aucune réponse d'API n'est
+        # mise en cache — un poste partagé au dépôt ne doit jamais montrer la
+        # flotte du client précédent.
+        run: |
+          NODE_ENV=development PORT=3000 node dist/server.js &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/v1/health > /dev/null && break
+            sleep 1
+          done
+          node scripts/verify-offline-shell.mjs http://localhost:3000
+          STATUS=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $STATUS
+
       - name: Capture en cas d'échec
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: smoke-screenshot
-          path: smoke-screenshot.png
+          name: captures-echec
+          path: |
+            smoke-screenshot.png
+            offline-screenshot.png
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: Contrôle du poids de l'écran d'accueil
         # Garde-fou anti-régression : sur une 3G de corridor, chaque centaine de
