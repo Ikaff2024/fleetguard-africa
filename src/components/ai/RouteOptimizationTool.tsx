@@ -192,6 +192,8 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
   const [stops, setStops] = useState<DeliveryStop[]>(defaultPreset.stops);
   const [newStopName, setNewStopName] = useState<string>('');
   const [newStopAddress, setNewStopAddress] = useState<string>('');
+  const [newStopLat, setNewStopLat] = useState<string>('');
+  const [newStopLng, setNewStopLng] = useState<string>('');
 
   // Active Route Calculation Results
   const [selectedRouteType, setSelectedRouteType] = useState<'ECO_FUEL' | 'STANDARD_FASTEST' | 'BYPASS'>(
@@ -258,9 +260,22 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
     }
   };
 
-  // Add custom delivery stop
+  /**
+   * Ajout d'une étape.
+   *
+   * Les coordonnées étaient tirées au hasard autour du centre de la région :
+   * l'itinéraire calculé et ses distances reposaient alors sur un point
+   * inventé, tout en paraissant précis. Un planificateur y aurait lu un
+   * kilométrage et une heure d'arrivée sans fondement.
+   *
+   * La position est désormais saisie. Sans elle, l'étape n'est pas ajoutée.
+   */
   const handleAddStop = () => {
     if (!newStopName.trim()) return;
+
+    const lat = Number(newStopLat);
+    const lng = Number(newStopLng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return;
     const newStop: DeliveryStop = {
       id: `custom_stop_${Date.now()}`,
       name: newStopName,
@@ -268,14 +283,16 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
       cargoWeightTons: 8,
       timeWindowStart: '11:00',
       timeWindowEnd: '13:00',
-      lat: 8.5 + (Math.random() - 0.5) * 1.5,
-      lng: 2.3 + (Math.random() - 0.5) * 1.5,
+      lat,
+      lng,
       trafficRisk: 'MEDIUM',
       priority: 'NORMAL',
     };
 
     setStops(prev => [...prev, newStop]);
     setNewStopName('');
+    setNewStopLat('');
+    setNewStopLng('');
     setNewStopAddress('');
   };
 
@@ -640,22 +657,47 @@ export const RouteOptimizationTool: React.FC<RouteOptimizationToolProps> = ({ cu
               ))}
             </div>
 
-            {/* Add Custom Stop Input */}
-            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+            {/* Ajout d'une étape. La position est saisie, jamais devinée : un
+                kilométrage calculé sur un point inventé paraît précis et ne
+                vaut rien. */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
               <input
                 type="text"
-                placeholder="Ajouter une étape (ex: 'Magasin Parakou Nord')"
+                placeholder="Nom de l'étape (ex : Magasin Parakou Nord)"
                 value={newStopName}
                 onChange={e => setNewStopName(e.target.value)}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none placeholder-slate-400"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none placeholder-slate-400"
               />
-              <button
-                onClick={handleAddStop}
-                className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition cursor-pointer shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Ajouter</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  step="0.000001"
+                  placeholder="Latitude"
+                  value={newStopLat}
+                  onChange={e => setNewStopLat(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none placeholder-slate-400"
+                />
+                <input
+                  type="number"
+                  step="0.000001"
+                  placeholder="Longitude"
+                  value={newStopLng}
+                  onChange={e => setNewStopLng(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none placeholder-slate-400"
+                />
+                <button
+                  onClick={handleAddStop}
+                  disabled={!newStopName.trim() || !newStopLat || !newStopLng}
+                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ajouter</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                Coordonnées en degrés décimaux, relevées depuis une carte. Sans elles, la distance et l’heure
+                d’arrivée calculées ne voudraient rien dire.
+              </p>
             </div>
           </div>
         </div>
