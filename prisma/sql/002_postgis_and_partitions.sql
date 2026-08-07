@@ -41,6 +41,17 @@ CREATE TRIGGER safety_events_sync_location
 -- entière. À 43 millions de points par mois, la différence n'est pas une
 -- optimisation : c'est ce qui rend la fonctionnalité possible ou non.
 
+-- Les stations sont interrogées « autour du véhicule » : sans géométrie ni
+-- index spatial, chercher la plus proche imposerait de calculer la distance à
+-- chacune, à chaque rafraîchissement de la carte.
+DROP TRIGGER IF EXISTS fuel_stations_sync_location ON public.fuel_stations;
+CREATE TRIGGER fuel_stations_sync_location
+  BEFORE INSERT OR UPDATE OF latitude, longitude ON public.fuel_stations
+  FOR EACH ROW EXECUTE FUNCTION sync_location_from_latlng();
+
+CREATE INDEX IF NOT EXISTS fuel_stations_location_idx
+  ON public.fuel_stations USING GIST (location);
+
 CREATE INDEX IF NOT EXISTS gps_points_location_idx
   ON public.gps_points USING GIST (location);
 

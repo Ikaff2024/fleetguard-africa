@@ -1,10 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Organization, Driver, Vehicle } from '../../types';
-import {
-  MOCK_DRIVER_FATIGUE_METRICS,
-  MOCK_SHIFT_SCHEDULE_SLOTS,
-  MOCK_LEGAL_FRAMEWORKS,
-} from '../../data/mock-data';
+import { useFatigue, useFatigueFrameworks } from '../../hooks/useFleetData';
 import {
   DriverFatigueMetrics,
   ShiftScheduleSlot,
@@ -25,7 +21,6 @@ import {
   AlertTriangle,
   UserX,
   CheckCircle2,
-  Sliders,
   Calendar,
   Send,
   Sparkles,
@@ -52,22 +47,85 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
 }) => {
   // Region / Legal Framework
   const [selectedRegion, setSelectedRegion] = useState<LegalRegionFramework>('UEMOA_CEDEAO');
-  const activeFramework: LegalDrivingFrameworkConfig = useMemo(() => {
-    return MOCK_LEGAL_FRAMEWORKS.find(f => f.region === selectedRegion) || MOCK_LEGAL_FRAMEWORKS[0];
-  }, [selectedRegion]);
+
+  /**
+   * Charge de travail mesurée, et non planifiée.
+   *
+   * Les heures viennent des trajets reconstruits à partir des positions
+   * remontées du terrain. L'écran affichait auparavant un jeu de démonstration
+   * filtré sur l'identifiant d'organisation : en base réelle, cet identifiant
+   * est un UUID qui ne correspondait à rien, et tous les compteurs restaient à
+   * zéro.
+   */
+  const fatigueQuery = useFatigue(selectedRegion);
+  const frameworksQuery = useFatigueFrameworks();
+
+  const activeFramework: LegalDrivingFrameworkConfig = useMemo(
+    () =>
+      fatigueQuery.data?.framework ?? {
+        region: selectedRegion,
+        name: 'Cadre en cours de chargement',
+        maxDailyDrivingHours: 9,
+        maxWeeklyDrivingHours: 56,
+        maxBiWeeklyDrivingHours: 90,
+        mandatoryBreakAfterHours: 4.5,
+        mandatoryBreakDurationMinutes: 45,
+        minDailyRestHours: 11,
+        minWeeklyRestHours: 45,
+        maxNightHoursPerShift: 4,
+        description: '',
+      },
+    [fatigueQuery.data, selectedRegion],
+  );
 
   // Main Active Sub-Tab
   const [activeTab, setActiveTab] = useState<'SUGGESTIONS' | 'MATRIX' | 'PLANNER' | 'COMPLIANCE'>(
     'SUGGESTIONS',
   );
 
-  // State for Fatigue Metrics and Schedule Slots (Mutable in component)
-  const [fatigueMetrics, setFatigueMetrics] = useState<DriverFatigueMetrics[]>(
-    MOCK_DRIVER_FATIGUE_METRICS.filter(m => m.organizationId === currentOrg.id),
+  const fatigueMetrics = useMemo<DriverFatigueMetrics[]>(
+    () =>
+      (fatigueQuery.data?.drivers ?? []).map(driver => ({
+        ...driver,
+        organizationId: currentOrg.id,
+      })),
+    [fatigueQuery.data, currentOrg.id],
   );
 
-  const [scheduleSlots, setScheduleSlots] = useState<ShiftScheduleSlot[]>(
-    MOCK_SHIFT_SCHEDULE_SLOTS.filter(s => s.organizationId === currentOrg.id),
+  /**
+   * Missions réellement effectuées, déduites des trajets.
+   *
+   * Le planning prévisionnel n'existe pas encore côté serveur : plutôt que
+   * d'afficher des créneaux inventés, l'écran montre ce que chaque chauffeur a
+   * fait. C'est ce qui fonde une décision d'affectation.
+   */
+  const scheduleSlots = useMemo<ShiftScheduleSlot[]>(
+    () =>
+      (fatigueQuery.data?.shifts ?? []).map(shift => {
+        const start = new Date(shift.startedAt);
+        const end = new Date(shift.endedAt);
+        const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+        return {
+          id: shift.id,
+          organizationId: currentOrg.id,
+          driverId: shift.driverId,
+          driverName: shift.driverName,
+          assignedVehicleId: '',
+          vehicleImmatriculation: shift.vehicleImmatriculation,
+          routeTitle: `${Math.round(shift.distanceKm)} km parcourus`,
+          corridorDistanceKm: Math.round(shift.distanceKm),
+          dayOfWeek: days[start.getDay()]!,
+          shiftDate: shift.startedAt.slice(0, 10),
+          startTime: start.toTimeString().slice(0, 5),
+          endTime: end.toTimeString().slice(0, 5),
+          plannedHours: shift.drivingHours,
+          nightHours: shift.nightHours,
+          fatigueRiskOnCompletion:
+            fatigueQuery.data?.drivers.find(d => d.driverId === shift.driverId)?.fatigueScore ?? 0,
+          status: 'COMPLETED' as const,
+        };
+      }),
+    [fatigueQuery.data, currentOrg.id],
   );
 
   // Selected Corridor Route for Algorithmic Rotation
@@ -85,7 +143,6 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
 
   // Modal / Alert Notifications State
   const [notificationToast, setNotificationToast] = useState<string | null>(null);
-  const [selectedDriverForRest, setSelectedDriverForRest] = useState<DriverFatigueMetrics | null>(null);
   const [appliedRotationSuccessModal, setAppliedRotationSuccessModal] = useState<boolean>(false);
 
   // Matrix Filter
@@ -93,7 +150,6 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
   const [searchDriverQuery, setSearchDriverQuery] = useState<string>('');
 
   // Auto-Balance Animation
-  const [isAutoBalancing, setIsAutoBalancing] = useState<boolean>(false);
 
   // Filter metrics for organization drivers
   const orgDriversMap = useMemo(() => {
@@ -212,53 +268,6 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
     }, 600);
   };
 
-  // Toggle Enforce Mandatory Rest for a Driver
-  const handleToggleMandatoryRest = (driverId: string) => {
-    setFatigueMetrics(prev =>
-      prev.map(m => {
-        if (m.driverId === driverId) {
-          const nextEnforced = !m.isMandatoryRestEnforced;
-          return {
-            ...m,
-            isMandatoryRestEnforced: nextEnforced,
-            fatigueLevel: nextEnforced ? 'CRITICAL' : m.fatigueScore > 75 ? 'HIGH' : 'MODERATE',
-            primaryRecommendation: nextEnforced
-              ? '🚨 REPOS OBLIGATOIRE ENFORCÉ (24h - 45h). Conducteur consigné hors service pour prévenir tout risque de somnolence.'
-              : 'Repos levé par le régulateur. Réintégration progressive autorisée.',
-          };
-        }
-        return m;
-      }),
-    );
-
-    const driverName = orgDriversMap.get(driverId)?.fullName || 'Le conducteur';
-    showToast(`Mise à jour du statut de repos obligatoire pour ${driverName}.`);
-  };
-
-  // Auto-Balance 7-Day Schedule
-  const handleAutoBalanceSchedule = () => {
-    setIsAutoBalancing(true);
-    setTimeout(() => {
-      setScheduleSlots(prev =>
-        prev.map(slot => {
-          if (slot.status === 'REST_ENFORCED') return slot;
-          return {
-            ...slot,
-            status: 'SCHEDULED',
-            fatigueRiskOnCompletion: Math.min(65, Math.max(25, slot.fatigueRiskOnCompletion - 15)),
-          };
-        }),
-      );
-      setIsAutoBalancing(false);
-      showToast('Planning hebdomadaire rééquilibré avec succès. Charge horaire lissée.');
-    }, 700);
-  };
-
-  const showToast = (msg: string) => {
-    setNotificationToast(msg);
-    setTimeout(() => setNotificationToast(null), 3500);
-  };
-
   return (
     <div className="space-y-6">
       {/* Toast Notification Banner */}
@@ -301,7 +310,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
               onChange={e => setSelectedRegion(e.target.value as LegalRegionFramework)}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs focus:ring-2 focus:ring-orange-500 cursor-pointer"
             >
-              {MOCK_LEGAL_FRAMEWORKS.map(fw => (
+              {(frameworksQuery.data ?? []).map(fw => (
                 <option key={fw.region} value={fw.region}>
                   {fw.name}
                 </option>
@@ -936,17 +945,25 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
 
                     {/* Action Buttons */}
                     <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => handleToggleMandatoryRest(metric.driverId)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      {/* Le repos obligatoire découle des heures mesurées et du
+                          cadre réglementaire : il se constate, il ne se décide
+                          pas d'un clic. Un bouton « lever le repos » laisserait
+                          croire qu'une obligation légale s'annule à la
+                          demande. */}
+                      <span
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 ${
                           metric.isMandatoryRestEnforced
-                            ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300'
-                            : 'bg-rose-600 hover:bg-rose-700 text-white shadow-2xs'
+                            ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                            : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                         }`}
                       >
                         <ShieldAlert className="w-3.5 h-3.5" />
-                        <span>{metric.isMandatoryRestEnforced ? 'Lever le Repos' : 'Imposer Repos 24h'}</span>
-                      </button>
+                        <span>
+                          {metric.isMandatoryRestEnforced
+                            ? 'Repos réglementaire requis'
+                            : 'Peut prendre la route'}
+                        </span>
+                      </span>
 
                       {onNavigateToMessaging && (
                         <button
@@ -981,17 +998,17 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                 </p>
               </div>
 
+              {/* Le tableau montre les missions réellement effectuées : on ne
+                  rééquilibre pas le passé. La planification prévisionnelle
+                  n'existe pas encore côté serveur, et un bouton qui réordonne
+                  des créneaux dans le navigateur n'en tiendrait pas lieu. */}
               <button
-                onClick={handleAutoBalanceSchedule}
-                disabled={isAutoBalancing}
+                onClick={fatigueQuery.reload}
+                disabled={fatigueQuery.isLoading}
                 className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs flex items-center gap-2 shadow-xs transition cursor-pointer disabled:opacity-50"
               >
-                {isAutoBalancing ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sliders className="w-4 h-4 text-orange-400" />
-                )}
-                <span>⚖️ Équilibrer Automatiquement les Heures Flotte</span>
+                <RefreshCw className={`w-4 h-4 ${fatigueQuery.isLoading ? 'animate-spin' : ''}`} />
+                <span>Actualiser les heures relevées</span>
               </button>
             </div>
 

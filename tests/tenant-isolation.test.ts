@@ -849,3 +849,80 @@ describe.skipIf(!DATABASE_CONFIGURED)('Primes de conduite économe', () => {
     expect(theirs.body.data.some((p: { driverId: string }) => myDrivers.has(p.driverId))).toBe(false);
   });
 });
+
+describe.skipIf(!DATABASE_CONFIGURED)('Réseau de ravitaillement et fatigue', () => {
+  let adminToken: string;
+
+  beforeAll(async () => {
+    app = await createApp();
+    adminToken = await tokenFor('admin@transafrik.bj');
+  });
+
+  it('sert le réseau conventionné de l’organisation', async () => {
+    const res = await request(app).get('/api/v1/fuel-stations').set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+
+    for (const station of res.body.data) {
+      // Un tarif sans date de relevé ne permettrait aucune prévision de coût.
+      if (station.dieselPrice !== undefined) {
+        expect(station.priceObservedAt).toBeTruthy();
+      }
+      // Le niveau de stock a été retiré : aucun flux ne le renseigne.
+      expect(station.fuelStockStatus).toBeUndefined();
+    }
+  });
+
+  it('ne montre pas le réseau d’un transporteur à un autre', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    const mine = await request(app).get('/api/v1/fuel-stations').set('Authorization', `Bearer ${adminToken}`);
+    const theirs = await request(app)
+      .get('/api/v1/fuel-stations')
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    const myIds = new Set(mine.body.data.map((s: { id: string }) => s.id));
+    expect(theirs.body.data.some((s: { id: string }) => myIds.has(s.id))).toBe(false);
+  });
+
+  it('mesure la fatigue sur les trajets reconstruits', async () => {
+    const res = await request(app).get('/api/v1/fatigue').set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.framework.maxDailyDrivingHours).toBeGreaterThan(0);
+    expect(res.body.data.drivers.length).toBeGreaterThan(0);
+
+    for (const driver of res.body.data.drivers) {
+      // Un chauffeur sans trajet ne doit pas être présenté comme « peu fatigué » :
+      // l'absence de mesure se dit.
+      if (!driver.hasData) {
+        expect(driver.primaryRecommendation).toContain('pas mesurable');
+        expect(driver.hoursDrivenThisWeek).toBe(0);
+      }
+      // Un repos exigé sans conduite mesurée serait incohérent.
+      if (driver.isMandatoryRestEnforced) {
+        expect(driver.hasData).toBe(true);
+      }
+    }
+  });
+
+  it('applique le cadre réglementaire demandé', async () => {
+    const eac = await request(app)
+      .get('/api/v1/fatigue?region=EAC_EAST_AFRICA')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(eac.body.data.framework.region).toBe('EAC_EAST_AFRICA');
+    expect(eac.body.data.framework.maxDailyDrivingHours).toBe(8);
+  });
+
+  it('ne mélange pas la charge de deux organisations', async () => {
+    const otherToken = await tokenFor(TENANT_B_USER);
+
+    const mine = await request(app).get('/api/v1/fatigue').set('Authorization', `Bearer ${adminToken}`);
+    const theirs = await request(app).get('/api/v1/fatigue').set('Authorization', `Bearer ${otherToken}`);
+
+    const myDrivers = new Set(mine.body.data.drivers.map((d: { driverId: string }) => d.driverId));
+    expect(theirs.body.data.drivers.some((d: { driverId: string }) => myDrivers.has(d.driverId))).toBe(false);
+  });
+});

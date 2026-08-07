@@ -120,6 +120,31 @@ export interface RewardProfileRecord {
   unlockedBadges: { badgeId: string; code: string; title: string; unlockedAt: string }[];
 }
 
+/** Mission réellement effectuée, déduite d'un trajet reconstruit. */
+export interface WorkedShift {
+  id: string;
+  driverId: string;
+  driverName: string;
+  vehicleImmatriculation: string;
+  startedAt: string;
+  endedAt: string;
+  drivingHours: number;
+  stopHours: number;
+  nightHours: number;
+  distanceKm: number;
+}
+
+export interface FatigueReport {
+  framework: LegalDrivingFrameworkConfig;
+  drivers: (DriverFatigueMetrics & {
+    driverName: string;
+    assignedVehicle?: string;
+    /** Faux quand aucun trajet n'a été reconstruit : rien n'est mesurable. */
+    hasData: boolean;
+  })[];
+  shifts: WorkedShift[];
+}
+
 export interface AlertRecord {
   id: string;
   organizationId: string;
@@ -362,6 +387,18 @@ export interface FleetIntelligenceReport {
   geminiAnalysisFrench: string;
 }
 
+/**
+ * Station du réseau conventionné de l'organisation.
+ *
+ * Les prix sont facultatifs et datés. Un tarif affiché sans date induirait en
+ * erreur le régulateur qui chiffre une mission : dans la sous-région, le prix à
+ * la pompe bouge plusieurs fois par an et diffère d'un pays à l'autre. Quand il
+ * manque, l'écran le dit plutôt que d'afficher une valeur par défaut.
+ *
+ * Le niveau de stock d'une station a été retiré : aucun flux ne le renseigne,
+ * et annoncer un « risque de pénurie » sans source enverrait un chauffeur faire
+ * un détour pour rien.
+ */
 export interface FuelStation {
   id: string;
   organizationId?: string;
@@ -377,12 +414,11 @@ export interface FuelStation {
   hasHeavyTruckParking: boolean;
   hasRestArea: boolean;
   hasMechanic: boolean;
-  fuelPrices: {
-    dieselPriceXOF: number;
-    adbluePriceXOF?: number;
-    gasolinePriceXOF?: number;
-  };
-  fuelStockStatus: 'OPTIMAL' | 'MEDIUM' | 'LOW_STOCK';
+  dieselPrice?: number;
+  adbluePrice?: number;
+  gasolinePrice?: number;
+  currency?: string;
+  priceObservedAt?: string;
   contactPhone?: string;
 }
 

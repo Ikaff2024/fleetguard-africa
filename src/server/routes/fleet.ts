@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { listStations } from '../repositories/station-repository.js';
 import { asyncHandler } from '../http/errors.js';
 import { requirePermission } from '../http/rbac.js';
 import { requireTenantId, resolveTenant } from '../http/tenant.js';
@@ -85,5 +86,20 @@ fleetRouter.get(
   requirePermission('compliance:read'),
   asyncHandler(async (req, res) => {
     res.json({ statusCode: 200, data: await listComplianceDocs(requireTenantId(req)) });
+  }),
+);
+
+/**
+ * Réseau de ravitaillement de l'organisation.
+ *
+ * Les stations proposées sur la carte sont celles où les cartes carburant de
+ * l'entreprise fonctionnent, pas des points d'intérêt génériques.
+ */
+fleetRouter.get(
+  '/fuel-stations',
+  resolveTenant,
+  requirePermission('fuel:read'),
+  asyncHandler(async (req, res) => {
+    res.json({ statusCode: 200, data: await listStations(requireTenantId(req)) });
   }),
 );

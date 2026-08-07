@@ -93,6 +93,7 @@ model Organization {
   rewardProfiles   DriverRewardProfile[]
   trips            Trip[]
   alerts           Alert[]
+  fuelStations     FuelStation[]
 
   @@index([code])
   @@map("organizations")
@@ -935,4 +936,72 @@ model Alert {
   @@index([organizationId, status, recordedAt])
   @@index([organizationId, category, recordedAt])
   @@map("alerts")
+}
+
+// ============================================================================
+// RÉSEAU DE RAVITAILLEMENT
+// ============================================================================
+
+enum FuelBrand {
+  TOTAL_ENERGIES
+  ORYX
+  CORLAY
+  SHELL
+  PUMA
+  PETROCI
+  STAR_OIL
+  OTHER
+}
+
+/// Station de ravitaillement du réseau conventionné d'un transporteur.
+///
+/// Ce ne sont pas des points d'intérêt génériques : chaque entreprise négocie
+/// ses accords avec une ou plusieurs enseignes, et ses cartes carburant ne
+/// fonctionnent que dans ce réseau. Envoyer un chauffeur vers une station hors
+/// convention lui impose d'avancer l'argent du plein. Les stations sont donc
+/// rattachées à l'organisation, comme le reste.
+///
+/// Le prix porte sa date de relevé. Un tarif sans date induirait en erreur le
+/// régulateur qui planifie un coût de mission : dans la sous-région, le prix à
+/// la pompe bouge plusieurs fois par an et diffère d'un pays à l'autre.
+model FuelStation {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name    String
+  brand   FuelBrand
+  address String
+  city    String
+  country String
+
+  latitude  Decimal                                @db.Decimal(9, 6)
+  longitude Decimal                                @db.Decimal(9, 6)
+  location  Unsupported("geography(Point, 4326)")?
+
+  // Services décisifs pour un poids lourd sur corridor : sans parking sécurisé,
+  // une pause de nuit n'est pas envisageable.
+  is24h                Boolean @default(false)
+  hasAdBlue            Boolean @default(false)
+  hasHeavyTruckParking Boolean @default(false)
+  hasRestArea          Boolean @default(false)
+  hasMechanic          Boolean @default(false)
+
+  dieselPrice     Decimal?      @db.Decimal(10, 2)
+  adbluePrice     Decimal?      @db.Decimal(10, 2)
+  gasolinePrice   Decimal?      @db.Decimal(10, 2)
+  currency        CurrencyCode?
+  /// Date du relevé de prix. Sans elle, un tarif ne vaut rien.
+  priceObservedAt DateTime?
+
+  contactPhone String?
+  isActive     Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("fuel_stations")
 }

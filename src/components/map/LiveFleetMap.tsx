@@ -1,10 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useDrivers, useGeofences, useVehicles } from '../../hooks/useFleetData';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useDrivers,
+  useFuelStations,
+  useGeofences,
+  useVehicleTrack,
+  useVehicles,
+} from '../../hooks/useFleetData';
 import { DataState } from '../common/DataState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MOCK_ROUTE_POINTS, MOCK_FUEL_STATIONS } from '../../data/mock-data';
-import { Organization, GpsPoint } from '../../types';
+import { Organization } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import {
   MapPin,
@@ -12,8 +17,6 @@ import {
   ShieldAlert,
   Radio,
   RefreshCw,
-  Send,
-  CheckCircle2,
   Layers,
   CloudRain,
   Activity,
@@ -72,9 +75,6 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
    * avant même le chargement.
    */
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-  const [routePoints, setRoutePoints] = useState<GpsPoint[]>(MOCK_ROUTE_POINTS);
-  const [isSimulatingBatch, setIsSimulatingBatch] = useState<boolean>(false);
-  const [simulatedBatchCount, setSimulatedBatchCount] = useState<number>(0);
 
   // Map Layer States
   const [baseMapStyle, setBaseMapStyle] = useState<BaseMapStyle>('streets');
@@ -92,11 +92,18 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
   const activeVehicle = tenantVehicles.find(v => v.id === selectedVehicleId) || tenantVehicles[0];
   const activeDriver = (driversQuery.data ?? []).find(d => d.id === activeVehicle?.currentDriverId);
 
+  // Trace réellement remontée par le véhicule sélectionné.
+  const trackQuery = useVehicleTrack(activeVehicle?.id);
+  const routePoints = useMemo(() => trackQuery.data ?? [], [trackQuery.data]);
+
+  const stationsQuery = useFuelStations();
+  const stations = useMemo(() => stationsQuery.data ?? [], [stationsQuery.data]);
+
   // Active Vehicle GPS Position
   const lastGpsPoint = routePoints[routePoints.length - 1] || { latitude: 7.9124, longitude: 2.1092 };
 
-  // Calculate nearby fuel stations sorted by distance from active vehicle
-  const sortedFuelStations = [...MOCK_FUEL_STATIONS]
+  // Stations conventionnées, classées par distance au véhicule suivi.
+  const sortedFuelStations = [...stations]
     .map(stn => {
       const distanceKm = calculateDistanceKm(
         lastGpsPoint.latitude,
@@ -301,12 +308,19 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                     ? '#16a34a'
                     : '#6366f1';
 
-          const stockColor =
-            stn.fuelStockStatus === 'OPTIMAL'
-              ? '#10b981'
-              : stn.fuelStockStatus === 'MEDIUM'
-                ? '#f59e0b'
-                : '#ef4444';
+          // Un prix sans date de relevé ne permet aucune prévision de coût.
+          const priceLine = (label: string, value: number | undefined) =>
+            value === undefined
+              ? `<div style="display: flex; justify-content: space-between; margin-top: 2px; color: #64748b;">
+                   <span>${label}</span><i>prix non relevé</i>
+                 </div>`
+              : `<div style="display: flex; justify-content: space-between; margin-top: 2px;">
+                   <span>${label}</span><b>${value} ${stn.currency ?? ''}</b>
+                 </div>`;
+
+          const observed = stn.priceObservedAt
+            ? new Date(stn.priceObservedAt).toLocaleDateString('fr-FR')
+            : null;
 
           const markerHtml = `
             <div style="
@@ -328,7 +342,7 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
             ">
               <span style="font-size: 12px;">⛽</span>
               <span>${stn.brand}</span>
-              <span style="background: ${stockColor}; width: 6px; height: 6px; border-radius: 50%; display: inline-block;"></span>
+              ${stn.is24h ? '<span title="Ouverte 24h/24" style="background: #10b981; width: 6px; height: 6px; border-radius: 50%; display: inline-block;"></span>' : ''}
             </div>
           `;
 
@@ -356,16 +370,11 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                     <span>📍 Distance du camion (${activeVehicle?.immatriculation || 'Flotte'}):</span>
                     <b style="color: #ea580c;">${stn.distanceKm} km</b>
                   </div>
-                  <div style="display: flex; justify-content: space-between; margin-top: 2px;">
-                    <span>⛽ Prix Gazole / L :</span>
-                    <b>${stn.fuelPrices.dieselPriceXOF} ${currentOrg.currency}</b>
-                  </div>
+                  ${priceLine('⛽ Prix Gazole / L :', stn.dieselPrice)}
+                  ${stn.hasAdBlue ? priceLine('💧 AdBlue Poids Lourds :', stn.adbluePrice) : ''}
                   ${
-                    stn.hasAdBlue
-                      ? `<div style="display: flex; justify-content: space-between; color: #0284c7; margin-top: 2px;">
-                          <span>💧 AdBlue Poids Lourds :</span>
-                          <b>${stn.fuelPrices.adbluePriceXOF || 1200} ${currentOrg.currency}/L</b>
-                        </div>`
+                    observed
+                      ? `<div style="margin-top: 3px; color: #64748b; font-size: 9px;">Relevé du ${observed}</div>`
                       : ''
                   }
                 </div>
@@ -377,9 +386,6 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                   ${stn.hasRestArea ? '<span style="background: #f3e8ff; color: #6b21a8; padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 9px;">Aire Repos</span>' : ''}
                 </div>
 
-                <div style="font-size: 10px; margin-bottom: 8px;">
-                  Stock Carburant : <b style="color: ${stockColor};">${stn.fuelStockStatus === 'OPTIMAL' ? 'Stock Optimal (Sans File)' : stn.fuelStockStatus === 'MEDIUM' ? 'Stock Limité' : 'Risque Pénurie'}</b>
-                </div>
               </div>
             `);
 
@@ -482,30 +488,6 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
     isDark,
   ]);
 
-  // Simulate Mobile GPS Batch Ingestion
-  const handleSimulateGPSBatch = () => {
-    setIsSimulatingBatch(true);
-    setTimeout(() => {
-      const lastPoint = routePoints[routePoints.length - 1];
-      const newPoint: GpsPoint = {
-        latitude: lastPoint.latitude + 0.05,
-        longitude: lastPoint.longitude + 0.03,
-        speedKmH: Math.floor(60 + Math.random() * 35),
-        headingDegree: Math.floor(Math.random() * 360),
-        timestamp: new Date().toISOString(),
-        accuracyMeters: 3.5,
-        ignitionOn: true,
-        batteryLevelPct: Math.max(20, lastPoint.batteryLevelPct - 1),
-        networkType: Math.random() > 0.3 ? '4G' : '3G',
-        eventFlags: Math.random() > 0.7 ? ['OVER_SPEED'] : undefined,
-      };
-
-      setRoutePoints(prev => [...prev, newPoint]);
-      setSimulatedBatchCount(c => c + 1);
-      setIsSimulatingBatch(false);
-    }, 800);
-  };
-
   if (vehiclesQuery.isLoading || vehiclesQuery.error) {
     return (
       <DataState
@@ -533,24 +515,22 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* La trace vient du terrain. Un bouton fabriquant des positions
+              n'aurait pas sa place sur un écran d'exploitation : le régulateur
+              doit pouvoir se fier à ce qu'il voit. */}
           <button
-            onClick={handleSimulateGPSBatch}
-            disabled={isSimulatingBatch}
+            onClick={trackQuery.reload}
+            disabled={trackQuery.isLoading}
             className="px-3.5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-2 shadow-xs transition disabled:opacity-50 cursor-pointer"
           >
-            {isSimulatingBatch ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-            <span>Simuler une remontée terrain</span>
+            <RefreshCw className={`w-4 h-4 ${trackQuery.isLoading ? 'animate-spin' : ''}`} />
+            <span>Actualiser les positions</span>
           </button>
-          {simulatedBatchCount > 0 && (
-            <span className="px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 text-xs font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-              {simulatedBatchCount} Batch(s) Synchronisé(s)
-            </span>
-          )}
+          <span className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+            {routePoints.length > 0
+              ? `${routePoints.length} position(s) remontée(s)`
+              : 'Aucune position remontée'}
+          </span>
         </div>
       </div>
 
@@ -930,32 +910,39 @@ export const LiveFleetMap: React.FC<LiveFleetMapProps> = ({ currentOrg }) => {
                     </div>
                   </div>
 
-                  {/* Fuel Prices & Stock Badge */}
+                  {/* Tarifs relevés. Le niveau de stock n'apparaît plus : aucun
+                      flux ne le renseigne, et l'annoncer enverrait un chauffeur
+                      faire un détour sur une supposition. */}
                   <div className="mt-3 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700/80 text-xs space-y-1 font-mono">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500 dark:text-slate-400 text-[11px]">
                         Gazole / Diesel :
                       </span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
-                        {stn.fuelPrices.dieselPriceXOF} {currentOrg.currency} / L
+                        {stn.dieselPrice !== undefined ? (
+                          `${stn.dieselPrice} ${stn.currency ?? ''} / L`
+                        ) : (
+                          <em className="font-sans font-normal text-slate-400">prix non relevé</em>
+                        )}
                       </span>
                     </div>
                     {stn.hasAdBlue && (
                       <div className="flex justify-between items-center text-sky-600 dark:text-sky-400">
                         <span className="text-[11px]">AdBlue Poids Lourds :</span>
                         <span className="font-bold">
-                          {stn.fuelPrices.adbluePriceXOF || 1200} {currentOrg.currency} / L
+                          {stn.adbluePrice !== undefined ? (
+                            `${stn.adbluePrice} ${stn.currency ?? ''} / L`
+                          ) : (
+                            <em className="font-sans font-normal text-slate-400">non relevé</em>
+                          )}
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between items-center pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]">
-                      <span className="text-slate-400 font-sans">Stock Carburant :</span>
-                      <span
-                        className={`font-bold font-sans ${stn.fuelStockStatus === 'OPTIMAL' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
-                      >
-                        {stn.fuelStockStatus === 'OPTIMAL' ? 'Optimal (Sans Attente)' : 'Réapprovisionnement'}
-                      </span>
-                    </div>
+                    {stn.priceObservedAt && (
+                      <div className="pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 font-sans">
+                        Relevé du {new Date(stn.priceObservedAt).toLocaleDateString('fr-FR')}
+                      </div>
+                    )}
                   </div>
 
                   {/* Amenity Badges */}

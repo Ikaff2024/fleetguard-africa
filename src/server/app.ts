@@ -5,6 +5,7 @@ import { applySecurity, globalRateLimit } from './http/security.js';
 import { httpLogger } from './logger.js';
 import { alertsRouter } from './routes/alerts.js';
 import { authRouter } from './routes/auth.js';
+import { fatigueRouter } from './routes/fatigue.js';
 import { fleetRouter } from './routes/fleet.js';
 import { fleetWriteRouter } from './routes/fleet-write.js';
 import { healthRouter } from './routes/health.js';
@@ -42,6 +43,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   api.use(healthRouter);
   api.use(authRouter);
   api.use(alertsRouter);
+  api.use(fatigueRouter);
   api.use(fleetRouter);
   api.use(fleetWriteRouter);
   api.use(rewardsRouter);

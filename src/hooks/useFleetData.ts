@@ -4,9 +4,13 @@ import type {
   Driver,
   DriverScoreConfig,
   FuelLog,
+  FatigueReport,
+  FuelStation,
   Geofence,
+  LegalDrivingFrameworkConfig,
   MaintenanceLog,
   DigitalBadge,
+  GpsPoint,
   Organization,
   RewardProfileRecord,
   Trip,
@@ -87,3 +91,37 @@ export const useBonusRules = () =>
     baseTierBonus: number;
     bonusPayoutCycle: 'WEEKLY' | 'MONTHLY';
   }>('/rewards/rules');
+
+/**
+ * Trace récente d'un véhicule.
+ *
+ * Les positions viennent du terrain, jamais d'une génération locale : la carte
+ * est l'écran sur lequel un régulateur décide d'appeler un chauffeur ou de
+ * prévenir un client d'un retard.
+ */
+export const useVehicleTrack = (vehicleId: string | undefined, limit = 500) =>
+  useApiResource<GpsPoint[]>(vehicleId ? `/tracking/vehicles/${vehicleId}/points?limit=${limit}` : null, {
+    enabled: Boolean(vehicleId),
+  });
+
+/**
+ * Réseau de ravitaillement de l'organisation.
+ *
+ * Ce sont les stations conventionnées, où les cartes carburant de l'entreprise
+ * fonctionnent — pas des points d'intérêt génériques.
+ */
+export const useFuelStations = () => useApiResource<FuelStation[]>('/fuel-stations');
+
+/**
+ * Charge de travail et fatigue.
+ *
+ * Les heures viennent des trajets reconstruits : ce qui a été fait, pas ce qui
+ * avait été prévu. C'est la seule des deux mesures qui permette de dire à un
+ * exploitant que son chauffeur ne doit pas repartir.
+ */
+export const useFatigue = (region?: string) =>
+  useApiResource<FatigueReport>(`/fatigue${region ? `?region=${region}` : ''}`);
+
+/** Cadres réglementaires applicables — références documentées côté serveur. */
+export const useFatigueFrameworks = () =>
+  useApiResource<LegalDrivingFrameworkConfig[]>('/fatigue/frameworks');

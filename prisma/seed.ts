@@ -20,6 +20,7 @@ import {
   MOCK_DIGITAL_BADGES,
   MOCK_DRIVERS,
   MOCK_FUEL_LOGS,
+  MOCK_FUEL_STATIONS,
   MOCK_GEOFENCES,
   MOCK_MAINTENANCE_LOGS,
   MOCK_ORGANIZATIONS,
@@ -471,6 +472,49 @@ async function main() {
     });
   }
   console.log(`  ${MOCK_DIGITAL_BADGES.length} distinctions au catalogue`);
+
+  // --- Réseau de ravitaillement --------------------------------------------
+  // Le réseau appartient à chaque transporteur : ce sont les stations où ses
+  // cartes carburant fonctionnent. Le jeu de démonstration attribue le corridor
+  // béninois à TransAfrik ; Sahel Express ouvrira le sien, et n'a donc aucune
+  // raison de voir celles de son concurrent.
+  const stationOrg = stableUuid(MOCK_ORGANIZATIONS[0]!.id);
+  for (const station of MOCK_FUEL_STATIONS) {
+    await prisma.fuelStation.upsert({
+      where: { organizationId_name: { organizationId: stationOrg, name: station.name } },
+      update: {
+        dieselPrice: station.dieselPrice,
+        adbluePrice: station.adbluePrice,
+        gasolinePrice: station.gasolinePrice,
+        // Le relevé est daté du peuplement : un prix sans date ne permettrait
+        // aucune prévision de coût de mission.
+        priceObservedAt: new Date(),
+      },
+      create: {
+        id: stableUuid(station.id),
+        organizationId: stationOrg,
+        name: station.name,
+        brand: station.brand,
+        address: station.address,
+        city: station.city,
+        country: station.country,
+        latitude: station.latitude,
+        longitude: station.longitude,
+        is24h: station.is24h,
+        hasAdBlue: station.hasAdBlue,
+        hasHeavyTruckParking: station.hasHeavyTruckParking,
+        hasRestArea: station.hasRestArea,
+        hasMechanic: station.hasMechanic,
+        dieselPrice: station.dieselPrice,
+        adbluePrice: station.adbluePrice,
+        gasolinePrice: station.gasolinePrice,
+        currency: 'XOF',
+        priceObservedAt: new Date(),
+        contactPhone: station.contactPhone,
+      },
+    });
+  }
+  console.log(`  ${MOCK_FUEL_STATIONS.length} stations conventionnées`);
 
   // --- Trace GPS et trajets reconstruits ------------------------------------
   // Deux missions sur les jours précédents, pour que l'historique ne soit pas

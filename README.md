@@ -146,10 +146,9 @@ chaque centaine de kilo-octets se paie en secondes d'attente.
   explicitement plutôt que d'annoncer un envoi.
 - **Pas d'application mobile chauffeur** : la télémétrie s'ingère par l'API,
   mais rien ne l'émet encore depuis le terrain.
-- **Fatigue et optimisation d'itinéraires** : ces deux modules, hors périmètre
-  du cahier des charges mais conservés, restent alimentés par un jeu de
-  démonstration ; l'API ne les expose pas encore. Les primes, elles, sont
-  désormais calculées sur les pleins et les distances réellement enregistrés.
+- **Pas de planification prévisionnelle** : l'écran de charge montre les
+  missions réellement effectuées, déduites des trajets. Affecter un chauffeur à
+  une mission future suppose une table de planning qui n'existe pas encore.
 - **Tuiles cartographiques** : les serveurs OpenStreetMap publics sont interdits
   en usage commercial. Prévoir un fournisseur dédié avant le premier client.
 - **Primes en monnaie électronique** : verser du cash via Orange Money, MTN MoMo
