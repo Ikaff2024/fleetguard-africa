@@ -394,7 +394,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
             {kpiStats.highCount}
           </div>
           <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold mt-1">
-            Relais à prévoir sous 2h
+            Marge de conduite à surveiller
           </div>
         </div>
 
@@ -407,7 +407,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
             {kpiStats.criticalCount}
           </div>
           <div className="text-[10px] text-rose-700 dark:text-rose-300 font-bold mt-1">
-            Consignation en cours
+            Repos obligatoire atteint
           </div>
         </div>
 
@@ -562,7 +562,7 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
                       Trajet de Nuit (22h - 06h)
                     </span>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                      Pondération de fatigue x1.5 sous l'algorithme
+                      Les heures de nuit pèsent 2,5 points par heure dans le calcul
                     </span>
                   </div>
                   <input
@@ -1213,10 +1213,12 @@ export const ShiftFatigueOptimizer: React.FC<ShiftFatigueOptimizerProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Feuille de Route & Rotation Appliquées avec Succès
+                  Rotation notée pour votre organisation
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  La rotation recommandée a été consignée sur le registre officiel du corridor.
+                  Cette proposition n’est pas enregistrée par l’application : reportez-la sur vos affectations
+                  depuis « Planification des missions », où elle sera vérifiée contre les plafonds de
+                  conduite.
                 </p>
               </div>
             </div>

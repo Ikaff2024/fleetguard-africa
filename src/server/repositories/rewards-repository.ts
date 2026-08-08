@@ -9,6 +9,8 @@ import {
   measureConsumption,
 } from '../services/rewards-builder.js';
 import { toNumber } from './mappers.js';
+import { type DriverBadgeMetrics, evaluateBadges } from '../services/badge-evaluator.js';
+import { nightHoursOf } from '../services/fatigue-builder.js';
 
 /**
  * Primes et classement.
@@ -43,6 +45,7 @@ export interface RewardProfile {
   totalPoints: number;
   rankInCompany: number;
   unlockedBadges: { badgeId: string; code: string; title: string; unlockedAt: string }[];
+  badgeProgress: { code: string; criterion: string; earned: boolean; missing?: string }[];
 }
 
 /** Période de référence des primes : le cycle mensuel du partage de gain. */
@@ -169,6 +172,68 @@ export async function listRewardProfiles(
     });
     const payoutForPeriod = new Map(payouts.map(payout => [payout.driverId, payout]));
 
+    /**
+     * Mesures nécessaires à l'évaluation des distinctions.
+     *
+     * Elles viennent des mêmes sources que le reste : trajets reconstruits pour
+     * la distance et les heures de nuit, infractions relevées sur la trace pour
+     * les excès et les freinages. Rien n'est estimé.
+     */
+    const [tripsForBadges, eventsForBadges, catalogue] = await Promise.all([
+      tx.trip.findMany({
+        where: { startedAt: { gte: since } },
+        select: {
+          driverId: true,
+          startedAt: true,
+          endedAt: true,
+          durationSeconds: true,
+          stopSeconds: true,
+          distanceKm: true,
+        },
+      }),
+      tx.safetyEvent.findMany({
+        where: { recordedAt: { gte: since } },
+        select: { driverId: true, eventType: true, severity: true },
+      }),
+      tx.digitalBadge.findMany({ select: { id: true, code: true } }),
+    ]);
+
+    const badgeIdByCode = new Map(catalogue.map(badge => [badge.code, badge.id]));
+
+    const badgeMetricsOf = (
+      driverId: string,
+      safetyScore: number,
+      totalKmDriven: number,
+      saving?: number,
+    ): DriverBadgeMetrics => {
+      const trips = tripsForBadges.filter(trip => trip.driverId === driverId);
+      const events = eventsForBadges.filter(event => event.driverId === driverId);
+
+      return {
+        driverId,
+        safetyScore,
+        distanceKm: trips.reduce((sum, trip) => sum + toNumber(trip.distanceKm), 0),
+        totalKmDriven,
+        nightHours: trips.reduce(
+          (sum, trip) =>
+            sum +
+            nightHoursOf({
+              startedAt: trip.startedAt,
+              endedAt: trip.endedAt,
+              durationSeconds: trip.durationSeconds,
+              stopSeconds: trip.stopSeconds,
+              distanceKm: toNumber(trip.distanceKm),
+            }),
+          0,
+        ),
+        overspeedCount: events.filter(event => event.eventType === 'OVER_SPEED').length,
+        harshBrakingCount: events.filter(event => event.eventType === 'HARSH_BRAKING').length,
+        severeEventCount: events.filter(event => event.severity === 'HIGH' || event.severity === 'CRITICAL')
+          .length,
+        consumptionSavingL100km: saving,
+      };
+    };
+
     const unlocked = await tx.driverUnlockedBadge.findMany({
       where: { driverId: { in: drivers.map(driver => driver.id) } },
       include: { badge: { select: { code: true, title: true } } },
@@ -215,6 +280,64 @@ export async function listRewardProfiles(
       });
     }
 
+    /**
+     * Attribution des distinctions nouvellement acquises.
+     *
+     * Un badge obtenu reste acquis : il n'est jamais retiré parce que le mois
+     * suivant a été moins bon. C'est une médaille, pas un statut.
+     */
+    const driverById = new Map(drivers.map(driver => [driver.id, driver]));
+    const badgeProgressByDriver = new Map<string, ReturnType<typeof evaluateBadges>>();
+
+    for (const reward of leaderboard) {
+      const driver = driverById.get(reward.driverId);
+      if (!driver) continue;
+
+      const outcomes = evaluateBadges(
+        badgeMetricsOf(
+          reward.driverId,
+          toNumber(driver.currentSafetyScore),
+          driver.totalKmDriven,
+          reward.fuelEfficiencySavingsL100km === 0 && !reward.eligible
+            ? undefined
+            : reward.fuelEfficiencySavingsL100km,
+        ),
+      );
+      badgeProgressByDriver.set(reward.driverId, outcomes);
+
+      for (const outcome of outcomes) {
+        if (!outcome.earned) continue;
+        const badgeId = badgeIdByCode.get(outcome.code);
+        if (!badgeId) continue;
+
+        const already = unlocked.some(
+          entry => entry.driverId === reward.driverId && entry.badgeId === badgeId,
+        );
+        if (already) continue;
+
+        // La période fait partie de la clé : une distinction peut se mériter à
+        // nouveau le mois suivant, mais jamais deux fois pour le même mois.
+        const periodLabel = new Date().toISOString().slice(0, 7);
+
+        const granted = await tx.driverUnlockedBadge.upsert({
+          where: {
+            driverId_badgeId_periodLabel: { driverId: reward.driverId, badgeId, periodLabel },
+          },
+          update: {},
+          create: {
+            driverId: reward.driverId,
+            badgeId,
+            periodLabel,
+            // L'attribution vient de la mesure, pas d'une personne : le dire
+            // évite qu'un chauffeur croie devoir sa distinction à une faveur.
+            grantedBy: 'Attribution automatique',
+          },
+          include: { badge: { select: { code: true, title: true } } },
+        });
+        unlocked.push(granted);
+      }
+    }
+
     return leaderboard.map(reward => {
       return {
         driverId: reward.driverId,
@@ -243,6 +366,13 @@ export async function listRewardProfiles(
           : undefined,
         totalPoints: reward.totalPoints,
         rankInCompany: reward.rankInCompany,
+        /** Ce qui manque pour chaque distinction non acquise, dit en clair. */
+        badgeProgress: (badgeProgressByDriver.get(reward.driverId) ?? []).map(outcome => ({
+          code: outcome.code,
+          criterion: outcome.criterion,
+          earned: outcome.earned,
+          missing: outcome.missing,
+        })),
         unlockedBadges: unlocked
           .filter(entry => entry.driverId === reward.driverId)
           .map(entry => ({

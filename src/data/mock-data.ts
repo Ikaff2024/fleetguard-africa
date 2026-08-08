@@ -1377,7 +1377,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     rarity: 'GOLD',
     iconName: 'ShieldCheck',
     expBonusPoints: 500,
-    criterion: 'Dépassement de vitesse = 0 pendant 30j glissants sur plus de 1 000 km.',
+    criterion: 'Aucun excès de vitesse relevé sur 30 jours, pour plus de 1 000 km parcourus.',
     fuelBonusMultiplier: 1.15,
   },
   {
@@ -1389,7 +1389,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     rarity: 'PLATINUM',
     iconName: 'Zap',
     expBonusPoints: 750,
-    criterion: 'Réduction moyenne de consommation de ≥ 3.5 L/100km sur le mois.',
+    criterion: 'Consommation inférieure d’au moins 3,5 L/100 km à la référence du véhicule.',
     fuelBonusMultiplier: 1.25,
   },
   {
@@ -1401,7 +1401,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     rarity: 'SILVER',
     iconName: 'Moon',
     expBonusPoints: 350,
-    criterion: '≥ 20h de conduite de nuit sans événement de freinage brusque.',
+    criterion: 'Au moins 20 h de conduite de nuit (22 h – 6 h) sans aucun freinage brusque.',
     fuelBonusMultiplier: 1.1,
   },
   {
@@ -1413,7 +1413,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     rarity: 'DIAMOND',
     iconName: 'Trophy',
     expBonusPoints: 1200,
-    criterion: 'Cumul ≥ 10 000 km sur corridors Cotonou-Niamey ou Dakar-Bamako sans alerte majeure.',
+    criterion: 'Plus de 10 000 km au compteur, sans aucune infraction grave sur la période.',
     fuelBonusMultiplier: 1.3,
   },
   {
@@ -1425,7 +1425,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     rarity: 'BRONZE',
     iconName: 'Award',
     expBonusPoints: 200,
-    criterion: 'Moins de 2 freinages brusques pour 1 000 km parcourus.',
+    criterion: 'Moins de 2 freinages brusques pour 1 000 km, sur au moins 1 000 km parcourus.',
     fuelBonusMultiplier: 1.05,
   },
   {
@@ -1437,7 +1437,7 @@ export const MOCK_DIGITAL_BADGES: DigitalBadge[] = [
     rarity: 'PLATINUM',
     iconName: 'Flame',
     expBonusPoints: 850,
-    criterion: 'Safety Score moyen mensuel ≥ 95/100.',
+    criterion: 'Score de conduite d’au moins 95/100.',
     fuelBonusMultiplier: 1.2,
   },
 ];

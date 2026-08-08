@@ -888,10 +888,14 @@ export const RewardsModule: React.FC<RewardsModuleProps> = ({ currentOrg, onNavi
                       </div>
 
                       <div className="flex items-center justify-between text-xs font-mono pt-1">
-                        <span className="text-slate-500">Multiplicateur Prime:</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400">
-                          x{badge.fuelBonusMultiplier} (+
-                          {Math.round((badge.fuelBonusMultiplier - 1) * 100)}% de bonus)
+                        {/* « Multiplicateur Prime : x1,3 (+30 % de bonus) » était
+                            une promesse que rien n'honorait : le calcul de prime
+                            ne consulte jamais les badges d'un chauffeur. Majorer
+                            une prime est une décision d'entreprise, pas un effet
+                            de bord d'un affichage. */}
+                        <span className="text-slate-500">Distinction :</span>
+                        <strong className="text-slate-700 dark:text-slate-300">
+                          reconnaissance, sans effet sur le montant de la prime
                         </strong>
                       </div>
                     </div>

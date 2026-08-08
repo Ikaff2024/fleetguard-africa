@@ -177,7 +177,7 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
           <div>
             <div className="flex items-center gap-2 text-orange-400 font-bold text-xs uppercase tracking-wider mb-2">
               <Sparkles className="w-4 h-4 text-orange-400 animate-pulse" />
-              <span>Générateur de Fiches Coaching IA Gemini 3.6</span>
+              <span>Fiches de coaching produites par l’assistant</span>
             </div>
             <h2 className="text-2xl font-bold text-white tracking-tight">
               Conseils de Sécurité & Éco-Conduite Proactifs
@@ -451,7 +451,7 @@ BONUS : ${tipsData.targetMilestone.potentialBonusReward}`;
                       </div>
 
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                        <span className="text-slate-500 font-medium">Gain estimé:</span>
+                        <span className="text-slate-500 font-medium">Effet attendu, selon l’assistant :</span>
                         <span className="font-mono font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded border border-green-200">
                           {tip.expectedImpact}
                         </span>

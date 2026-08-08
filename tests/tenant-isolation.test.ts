@@ -894,8 +894,9 @@ describe.skipIf(!DATABASE_CONFIGURED)('Primes de conduite économe', () => {
 
   it('refuse de décorer un chauffeur d’une autre organisation', async () => {
     const otherToken = await tokenFor(TENANT_B_USER);
-    const list = await profiles(adminToken);
-    const target = list.body.data[0];
+    const before = await profiles(adminToken);
+    const target = before.body.data[0];
+    const badgesBefore = new Set(target.unlockedBadges.map((b: { code: string }) => b.code));
 
     const res = await request(app)
       .post(`/api/v1/rewards/profiles/${target.driverId}/badges`)
@@ -907,12 +908,23 @@ describe.skipIf(!DATABASE_CONFIGURED)('Primes de conduite économe', () => {
     // de décerner ; il serait de toute façon arrêté par la seconde.
     expect([403, 404]).toContain(res.status);
 
-    // Ce qui compte reste vérifié : rien n'a été inscrit.
+    /**
+     * Ce qui compte est que la tentative n'ait rien écrit — et non que le badge
+     * soit absent : depuis que les critères sont réellement évalués, un
+     * chauffeur peut l'obtenir de plein droit entre deux relevés. Comparer
+     * l'avant et l'après vérifie la règle sans dépendre de l'état du parc.
+     */
     const after = await profiles(adminToken);
     const reloaded = after.body.data.find((p: { driverId: string }) => p.driverId === target.driverId);
-    expect(reloaded.unlockedBadges.some((b: { code: string }) => b.code === 'ZERO_OVERSPEED_30D')).toBe(
-      false,
-    );
+    const badgesAfter = new Set(reloaded.unlockedBadges.map((b: { code: string }) => b.code));
+
+    for (const code of badgesAfter) {
+      if (badgesBefore.has(code)) continue;
+      // Une distinction apparue entre-temps ne peut venir que de l'évaluation
+      // automatique, jamais de l'appel refusé.
+      const outcome = reloaded.badgeProgress.find((b: { code: string }) => b.code === code);
+      expect(outcome?.earned, `distinction ${code} apparue sans être méritée`).toBe(true);
+    }
   });
 
   it('ne montre pas les primes d’une organisation à une autre', async () => {
@@ -1517,13 +1529,11 @@ describe.skipIf(!DATABASE_CONFIGURED)('Réglages de détection et carte', () => 
 });
 
 describe.skipIf(!DATABASE_CONFIGURED)('Protection des données personnelles', () => {
-  let adminToken: string;
   let driverToken: string;
   let managerToken: string;
 
   beforeAll(async () => {
     app = await createApp();
-    adminToken = await tokenFor('admin@transafrik.bj');
     driverToken = await tokenFor('chauffeur@transafrik.bj');
     managerToken = await tokenFor('manager@transafrik.bj');
   });
@@ -1585,22 +1595,28 @@ describe.skipIf(!DATABASE_CONFIGURED)('Protection des données personnelles', ()
   });
 
   it('efface les traces de déplacement sans supprimer la fiche', async () => {
-    // Un chauffeur créé pour ce contrôle : l'effacement est irréversible.
+    /**
+     * Un chauffeur créé pour ce contrôle, dans le bac à sable : l'effacement
+     * est irréversible, et six fiches « Effacement Test » s'étaient déjà
+     * accumulées dans le parc de démonstration où elles apparaissaient au
+     * classement et récoltaient des distinctions.
+     */
+    const sandboxAdmin = await tokenFor('admin@sandbox.fleetguard.local');
     const created = await request(app)
       .post('/api/v1/drivers')
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Authorization', `Bearer ${sandboxAdmin}`)
       .send({
-        fullName: `Effacement Test ${Date.now()}`,
-        phone: '+229 97 00 00 00',
-        licenseNumber: `EFF-${Date.now()}`,
+        fullName: `SB-Effacement ${Date.now()}`,
+        phone: '+225 00 00 00 02',
+        licenseNumber: `SB-EFF-${Date.now()}`,
         licenseCategory: 'CE',
         licenseExpiryDate: '2029-01-01',
       });
-    expect(created.status).toBe(201);
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
 
     const erased = await request(app)
       .delete(`/api/v1/privacy/drivers/${created.body.data.id}/location-data`)
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Authorization', `Bearer ${sandboxAdmin}`);
 
     expect(erased.status).toBe(200);
     expect(erased.body.data.notice).toContain('fiche du chauffeur est conservée');
@@ -1608,8 +1624,13 @@ describe.skipIf(!DATABASE_CONFIGURED)('Protection des données personnelles', ()
     // La fiche survit : elle porte des obligations qui dépassent le contrat.
     const still = await request(app)
       .get(`/api/v1/privacy/drivers/${created.body.data.id}/data`)
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Authorization', `Bearer ${sandboxAdmin}`);
     expect(still.status).toBe(200);
     expect(still.body.data.counts.gpsPoints).toBe(0);
+
+    // La fiche a joué son rôle : elle est retirée du parc.
+    await request(app)
+      .delete(`/api/v1/drivers/${created.body.data.id}`)
+      .set('Authorization', `Bearer ${sandboxAdmin}`);
   });
 });
